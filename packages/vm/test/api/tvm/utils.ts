@@ -257,11 +257,11 @@ export function setLibraryAddress(
 ) {
   if (positions) {
     for (const pos of positions) {
-      const regpos = bytecodeToLink.match(
+      const regexMatch = bytecodeToLink.match(
         new RegExp(`(.{${2 * pos.start}})(.{${2 * pos.length}})(.*)`),
       )
-      if (regpos) {
-        bytecodeToLink = regpos[1] + address.replace('0x', '') + regpos[3]
+      if (regexMatch) {
+        bytecodeToLink = regexMatch[1] + address.replace('0x', '') + regexMatch[3]
       }
     }
   }

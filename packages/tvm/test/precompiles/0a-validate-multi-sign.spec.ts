@@ -16,12 +16,12 @@ import { type VM, createVM } from '@tvmjs/vm'
 import { utils } from 'tronweb'
 import { assert, describe, it } from 'vitest'
 
-const precomileContractAddr = '000000000000000000000000000000000000000a'
+const precompileContractAddr = '000000000000000000000000000000000000000a'
 
 describe('Precompiles: VALIDATE-MULTI_SIGN', () => {
   it('address do not exist', async () => {
     const common = new Common({ chain: Mainnet })
-    const FUNC = getActivePrecompiles(common).get(precomileContractAddr)!
+    const FUNC = getActivePrecompiles(common).get(precompileContractAddr)!
     const input =
       '0x0000000000000000000000a04223d4536f8b3888cffb8643338e7c0ee223a30c00000000000000000000000000000000000000000000000000000000000000023500d93214caf7f502af5adcd28f8f4fb3620eae3bedbeb327cc5c68a57b312900000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000001600000000000000000000000000000000000000000000000000000000000000041b8a22587f28dd76c28440cfbe57ed3f3be87cd1d3327813950469eb4839d9ed26c61cd5913086628ca80ff6006dd1e4bd145410936b6db08c503a596b98f805601000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041b8a22587f28dd76c28440cfbe57ed3f3be87cd1d3327813950469eb4839d9ed26c61cd5913086628ca80ff6006dd1e4bd145410936b6db08c503a596b98f805601000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000041eb52ed2f5dcde641aaa9ddd8a35e1ba981a9409f3b6ca0512d9bfe6e0c9e8ba96da1da07198a3037b2515fb0103d8eb1e4b3b524a7e7155637ab33c3b104a7f90100000000000000000000000000000000000000000000000000000000000000'
 
@@ -42,7 +42,7 @@ describe('Precompiles: VALIDATE-MULTI_SIGN', () => {
     const common = new Common({ chain: Mainnet })
     const vm = await createVM({ common })
 
-    const FUNC = getActivePrecompiles(common).get(precomileContractAddr)!
+    const FUNC = getActivePrecompiles(common).get(precompileContractAddr)!
 
     const data = hexToBytes(await prepareAccount(vm, 1))
 
@@ -61,7 +61,7 @@ describe('Precompiles: VALIDATE-MULTI_SIGN', () => {
     const common = new Common({ chain: Mainnet })
     const vm = await createVM({ common })
 
-    const FUNC = getActivePrecompiles(common).get(precomileContractAddr)!
+    const FUNC = getActivePrecompiles(common).get(precompileContractAddr)!
 
     const data = hexToBytes(await prepareAccount(vm, 2))
 
@@ -83,7 +83,7 @@ describe('Precompiles: VALIDATE-MULTI_SIGN', () => {
 
     const input = await prepareAccount(vm, 3)
 
-    const FUNC = getActivePrecompiles(common).get(precomileContractAddr)!
+    const FUNC = getActivePrecompiles(common).get(precompileContractAddr)!
 
     const data = hexToBytes(input)
 
