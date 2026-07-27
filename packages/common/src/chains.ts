@@ -1,3 +1,5 @@
+import { tronHardforksDict } from './hardforks.ts'
+
 import type { ChainConfig } from './types.ts'
 
 export const Mainnet: ChainConfig = {
@@ -99,6 +101,11 @@ export const Mainnet: ChainConfig = {
       forkHash: '0xcb6b9941',
     },
   ],
+  // Transitional modification point for the TRON chain configuration:
+  // entries defined in tronHardforksDict take precedence, missing hardforks
+  // (e.g. berlin) still fall back to the Ethereum hardforksDict (see the
+  // per-name lookup in the Common constructor).
+  customHardforks: tronHardforksDict,
   bootstrapNodes: [
     {
       ip: '127.0.0.1',

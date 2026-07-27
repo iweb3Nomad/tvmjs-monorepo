@@ -40,7 +40,7 @@ export function createCustomCommon(
  */
 export function createCommonFromGethGenesis(
   genesisJSON: GethGenesis,
-  { chain, eips, genesisHash, hardfork, params, customCrypto }: GethConfigOpts,
+  { chain, eips, genesisHash, hardfork, params, customCrypto, activatedProposals }: GethConfigOpts,
 ): Common {
   const genesisParams = parseGethGenesis(genesisJSON, chain)
   const common = new Common({
@@ -52,6 +52,7 @@ export function createCommonFromGethGenesis(
     params,
     hardfork: hardfork ?? genesisParams.hardfork,
     customCrypto,
+    activatedProposals,
   })
   if (genesisHash !== undefined) {
     common.setForkHashes(genesisHash)
