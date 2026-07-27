@@ -1,7 +1,7 @@
 import { shanghaiTimeGethGenesis } from '@tvmjs/testdata'
 import { assert, describe, it } from 'vitest'
 
-import { hardforksDict } from '../src/hardforks.ts'
+import { tronHardforksDict } from '../src/hardforks.ts'
 import {
   Common,
   Mainnet,
@@ -112,7 +112,7 @@ describe('[Common]: TRON custom hardforks wiring (tronHardforksDict via customHa
     const overlayChain: ChainConfig = {
       ...Mainnet,
       customHardforks: {
-        ...hardforksDict,
+        ...tronHardforksDict,
         cancun: { eips: [1153] }, // drop 4844/4788/5656/6780/7516 vs. ethereum cancun
       },
     }
