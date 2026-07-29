@@ -1236,7 +1236,12 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
         let newAccountGas = BIGINT_0
         if (common.gteHardfork(Hardfork.SpuriousDragon)) {
           // EIP-161: State Trie Clearing
-          if (balance > BIGINT_0) {
+          const transfersValue =
+            balance > BIGINT_0 ||
+            Object.values(runState.env.contract.asset!).some(
+              (tokenBalance) => tokenBalance > BIGINT_0,
+            )
+          if (transfersValue) {
             // This technically checks if account is empty or non-existent
             const account = await runState.stateManager.getAccount(selfdestructToAddress)
             if (account === undefined || account.isEmpty()) {

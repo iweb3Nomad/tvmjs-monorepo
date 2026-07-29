@@ -5,6 +5,7 @@ import {
   Account,
   Address,
   MAX_UINT64,
+  MIN_TOKEN_ID,
   bytesToBigInt,
   bytesToHex,
   concatBytes,
@@ -303,6 +304,95 @@ describe('RunCall tests', () => {
     assert.strictEqual(result.execResult.executionGasUsed, BigInt(30003), 'gas used correct')
     // selfdestruct refund
     assert.strictEqual(result.execResult.gasRefund, BigInt(24000), 'gas refund correct')
+  })
+
+  const selfdestructNewAccountCases = (['missing', 'empty', 'existing', 'self'] as const).flatMap(
+    (beneficiaryState) =>
+      [0n, 1n].flatMap((trxBalance) =>
+        [0n, 100n].map((tokenBalance) => ({ beneficiaryState, tokenBalance, trxBalance })),
+      ),
+  )
+
+  it.each(selfdestructNewAccountCases)(
+    'charges SELFDESTRUCT new-account gas correctly for beneficiary=$beneficiaryState, TRX=$trxBalance, Token=$tokenBalance',
+    async ({ beneficiaryState, tokenBalance, trxBalance }) => {
+      const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee'))
+      const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
+      const externalBeneficiary = new Address(
+        hexToBytes('0x00000000000000000000000000000000000000fe'),
+      )
+      const beneficiary = beneficiaryState === 'self' ? address : externalBeneficiary
+      const tokenId = MIN_TOKEN_ID + 1n
+      const common = new Common({ chain: Mainnet, hardfork: Hardfork.SpuriousDragon })
+      const tvm = await createTVM({ common })
+      const code = `0x73${beneficiary.toString().slice(2)}ff` as `0x${string}`
+      let initialBeneficiaryBalance = 0n
+
+      if (beneficiaryState === 'empty') {
+        await tvm.stateManager.putAccount(beneficiary, new Account())
+      } else if (beneficiaryState === 'existing') {
+        initialBeneficiaryBalance = 1n
+        await tvm.stateManager.putAccount(beneficiary, new Account(0n, 1n))
+      }
+
+      await tvm.stateManager.putCode(address, hexToBytes(code))
+      const contractAccount = await tvm.stateManager.getAccount(address)
+      contractAccount!.balance = trxBalance
+      contractAccount!.asset = { [Number(tokenId)]: tokenBalance }
+      await tvm.stateManager.putAccount(address, contractAccount!)
+
+      const result = await tvm.runCall({
+        caller,
+        to: address,
+        gasLimit: BigInt(0xffffffffff),
+      })
+
+      const transfersValue = trxBalance > 0n || tokenBalance > 0n
+      const beneficiaryIsNew = beneficiaryState === 'missing' || beneficiaryState === 'empty'
+      const expectedGas = 5003n + (transfersValue && beneficiaryIsNew ? 25000n : 0n)
+      assert.strictEqual(result.execResult.executionGasUsed, expectedGas, 'gas used correct')
+      assert.strictEqual(result.execResult.gasRefund, 24000n, 'selfdestruct refund correct')
+
+      if (beneficiaryState !== 'self') {
+        const beneficiaryAccount = await tvm.stateManager.getAccount(beneficiary)
+        assert.strictEqual(
+          beneficiaryAccount?.balance,
+          initialBeneficiaryBalance + trxBalance,
+          'TRX balance transferred to beneficiary',
+        )
+        assert.strictEqual(
+          beneficiaryAccount?.getTokenBalance(tokenId),
+          tokenBalance,
+          'token balance transferred to beneficiary',
+        )
+      }
+    },
+  )
+
+  it('rolls back SELFDESTRUCT token transfer when new-account gas runs out', async () => {
+    const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee'))
+    const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
+    const beneficiary = new Address(hexToBytes('0x00000000000000000000000000000000000000fe'))
+    const tokenId = MIN_TOKEN_ID + 1n
+    const tokenBalance = 100n
+    const common = new Common({ chain: Mainnet, hardfork: Hardfork.SpuriousDragon })
+    const tvm = await createTVM({ common })
+
+    await tvm.stateManager.putCode(address, hexToBytes('0x60FEFF'))
+    const contractAccount = await tvm.stateManager.getAccount(address)
+    contractAccount!.asset = { [Number(tokenId)]: tokenBalance }
+    await tvm.stateManager.putAccount(address, contractAccount!)
+
+    const result = await tvm.runCall({ caller, to: address, gasLimit: 30002n })
+
+    assert.strictEqual(result.execResult.executionGasUsed, 30002n, 'all available gas consumed')
+    assert.strictEqual(result.execResult.exceptionError?.error, TVMError.errorMessages.OUT_OF_GAS)
+    assert.isUndefined(await tvm.stateManager.getAccount(beneficiary), 'beneficiary not created')
+    assert.strictEqual(
+      (await tvm.stateManager.getAccount(address))?.getTokenBalance(tokenId),
+      tokenBalance,
+      'source token balance preserved',
+    )
   })
 
   it('ensure that sstores pay for the right gas costs pre-byzantium', async () => {

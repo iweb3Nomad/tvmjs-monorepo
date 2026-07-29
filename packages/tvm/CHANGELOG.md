@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 (modification: no type change headlines) and this project adheres to
 [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Bug Fixes
+
+- Charge `SELFDESTRUCT` new-account gas when a contract with zero TRX transfers a non-zero TRC-10 balance to a nonexistent or empty beneficiary
+
 ## 1.0.0
 
 ### Features
@@ -33,5 +39,4 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Rename package namespace from `@ethereumjs/tvm` to `@tvmjs/tvm`; update all internal imports
 - Bump package version to `1.0.0`
 - Lock all dependency versions by removing `^` and `~` prefixes
-
 
