@@ -365,9 +365,63 @@ describe('RunCall tests', () => {
           tokenBalance,
           'token balance transferred to beneficiary',
         )
+        // Verify source account is cleared
+        const sourceAccount = await tvm.stateManager.getAccount(address)
+        assert.strictEqual(sourceAccount?.balance, 0n, 'source TRX balance cleared')
+        assert.strictEqual(
+          sourceAccount?.getTokenBalance(tokenId),
+          0n,
+          'source token balance cleared',
+        )
+      } else {
+        // Self-destruct to self: account still marked for deletion, balance cleared
+        const selfAccount = await tvm.stateManager.getAccount(address)
+        assert.strictEqual(selfAccount?.balance, 0n, 'self TRX balance cleared after selfdestruct')
+        assert.strictEqual(
+          selfAccount?.getTokenBalance(tokenId),
+          0n,
+          'self token balance cleared after selfdestruct',
+        )
       }
     },
   )
+
+  it('charges SELFDESTRUCT new-account gas on tron hardfork with EIP-2929/3529/6780 active', async () => {
+    // Regression: verify the fix works on the default tron hardfork, which has
+    // different gas schedule (EIP-2929 warm/cold, EIP-3529 reduced refund, EIP-6780
+    // same-tx destruction) than SpuriousDragon.
+    const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee'))
+    const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
+    const beneficiary = new Address(hexToBytes('0x00000000000000000000000000000000000000fe'))
+    const tokenId = MIN_TOKEN_ID + 1n
+    const tokenBalance = 100n
+    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Tron })
+    const tvm = await createTVM({ common })
+    const code = `0x73${beneficiary.toString().slice(2)}ff` as `0x${string}`
+
+    await tvm.stateManager.putCode(address, hexToBytes(code))
+    const contractAccount = await tvm.stateManager.getAccount(address)
+    contractAccount!.asset = { [Number(tokenId)]: tokenBalance }
+    await tvm.stateManager.putAccount(address, contractAccount!)
+
+    const result = await tvm.runCall({
+      caller,
+      to: address,
+      gasLimit: BigInt(0xffffffffff),
+    })
+
+    // Tron hardfork: base 5003 + new-account 25000 + EIP-2929 cold beneficiary 2600 = 32603
+    // EIP-3529 reduces refund from 24000 to 0
+    assert.strictEqual(result.execResult.executionGasUsed, 32603n, 'gas used correct on tron')
+    assert.strictEqual(result.execResult.gasRefund, 0n, 'EIP-3529 reduced refund on tron')
+
+    const beneficiaryAccount = await tvm.stateManager.getAccount(beneficiary)
+    assert.strictEqual(
+      beneficiaryAccount?.getTokenBalance(tokenId),
+      tokenBalance,
+      'token transferred on tron hardfork',
+    )
+  })
 
   it('rolls back SELFDESTRUCT token transfer when new-account gas runs out', async () => {
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee'))
