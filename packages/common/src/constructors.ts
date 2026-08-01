@@ -1,3 +1,6 @@
+import { EthereumJSErrorWithoutCode } from '@tvmjs/util'
+
+import { Mainnet } from './chains.ts'
 import { Common, parseGethGenesis } from './index.ts'
 
 import type { GethGenesis } from './gethGenesis.ts'
@@ -58,4 +61,61 @@ export function createCommonFromGethGenesis(
     common.setForkHashes(genesisHash)
   }
   return common
+}
+
+/**
+ * TRON network identifiers for chainId presets.
+ * These are execution-only presets for CHAINID opcode support, not full chain configurations.
+ */
+export type TronNetwork = 'mainnet' | 'nile' | 'shasta'
+
+/**
+ * TRON chainId values derived from block 0 hash of each network.
+ * @see https://developers.tron.network/docs/networks
+ */
+const TRON_CHAIN_IDS: Record<TronNetwork, number> = {
+  mainnet: 728126428, // 0x2b6653dc
+  nile: 3448148188, // 0xcd8690dc
+  shasta: 2494104990, // 0x94a9059e
+}
+
+/**
+ * Creates a {@link Common} instance with TRON network chainId preset for CHAINID opcode execution.
+ *
+ * This is an execution-only preset that provides the correct chainId value for TRON networks
+ * while inheriting the hardfork sequence, EIP activations, and parameters from Ethereum Mainnet.
+ * It does NOT represent a complete TRON chain configuration — genesis block data, consensus details,
+ * and P2P network parameters are inherited from Mainnet and should not be used for production purposes.
+ *
+ * Full TRON chain configurations with verified genesis and network data will be added in a future release.
+ *
+ * @param network - TRON network identifier ('mainnet', 'nile', or 'shasta')
+ * @param opts - Optional configuration (e.g., activatedProposals, hardfork)
+ * @returns A new {@link Common} instance with the specified TRON chainId
+ *
+ * @example
+ * ```typescript
+ * import { createTronChainIdCommon } from '@tvmjs/common'
+ *
+ * const common = createTronChainIdCommon('mainnet')
+ * console.log(common.chainId()) // 728126428n
+ * console.log(common.chainName()) // 'tron-mainnet'
+ * ```
+ */
+export function createTronChainIdCommon(network: TronNetwork, opts: BaseOpts = {}): Common {
+  if (!Object.prototype.hasOwnProperty.call(TRON_CHAIN_IDS, network)) {
+    throw EthereumJSErrorWithoutCode(
+      `Invalid TRON network: ${network}. Valid options: ${Object.keys(TRON_CHAIN_IDS).join(', ')}`,
+    )
+  }
+  const chainId = TRON_CHAIN_IDS[network]
+
+  return createCustomCommon(
+    {
+      name: `tron-${network}`,
+      chainId,
+    },
+    Mainnet,
+    opts,
+  )
 }

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 (modification: no type change headlines) and this project adheres to
 [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Features
+
+- **TRON chainId presets**: Add `createTronChainIdCommon(network, opts?)` factory function for execution-only chainId presets; supports `'mainnet'` (728126428), `'nile'` (3448148188), and `'shasta'` (2494104990); inherits Mainnet hardfork sequence and customHardforks for CHAINID opcode execution without providing full TRON chain configs
+
 ## 1.0.0
 
 ### Features

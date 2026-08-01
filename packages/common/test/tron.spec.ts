@@ -7,6 +7,7 @@ import {
   Mainnet,
   createCommonFromGethGenesis,
   createCustomCommon,
+  createTronChainIdCommon,
   tronProposalsDict,
 } from '../src/index.ts'
 
@@ -256,5 +257,144 @@ describe('[Common]: TRON proposal gating state', () => {
     })
     assert.isUndefined((tronProposalsDict as any)[97], 'new key must not be added')
     assert.strictEqual(tronProposalsDict[95].name, 'ALLOW_TVM_PRAGUE', 'name must be unchanged')
+  })
+})
+
+describe('[Common]: TRON network chainId presets (execution-only)', () => {
+  const mainnetBaseline = new Common({ chain: Mainnet })
+
+  it('should return correct chainId for each TRON network', () => {
+    const mainnet = createTronChainIdCommon('mainnet')
+    assert.strictEqual(mainnet.chainId(), 728126428n, 'mainnet chainId should be 728126428')
+    assert.strictEqual(mainnet.chainName(), 'tron-mainnet')
+
+    const nile = createTronChainIdCommon('nile')
+    assert.strictEqual(nile.chainId(), 3448148188n, 'nile chainId should be 3448148188')
+    assert.strictEqual(nile.chainName(), 'tron-nile')
+
+    const shasta = createTronChainIdCommon('shasta')
+    assert.strictEqual(shasta.chainId(), 2494104990n, 'shasta chainId should be 2494104990')
+    assert.strictEqual(shasta.chainName(), 'tron-shasta')
+  })
+
+  it('should keep Ethereum Mainnet chainId unchanged', () => {
+    const ethMainnet = new Common({ chain: Mainnet })
+    assert.strictEqual(ethMainnet.chainId(), 1n, 'Mainnet chainId should stay 1 (Ethereum)')
+    assert.strictEqual(ethMainnet.chainName(), 'mainnet')
+  })
+
+  it('should inherit hardfork sequence and default from Mainnet baseline', () => {
+    const tron = createTronChainIdCommon('mainnet')
+    assert.strictEqual(tron.hardfork(), mainnetBaseline.hardfork(), 'default hardfork should match')
+    assert.deepEqual(
+      tron.hardforks().map((hf) => hf.name),
+      mainnetBaseline.hardforks().map((hf) => hf.name),
+      'hardfork sequence should match Mainnet',
+    )
+  })
+
+  it('should inherit consensus type and algorithm from Mainnet baseline', () => {
+    const tron = createTronChainIdCommon('mainnet')
+    assert.strictEqual(
+      tron.consensusType(),
+      mainnetBaseline.consensusType(),
+      'consensus type should match Mainnet',
+    )
+    assert.strictEqual(
+      tron.consensusAlgorithm(),
+      mainnetBaseline.consensusAlgorithm(),
+      'consensus algorithm should match Mainnet',
+    )
+  })
+
+  it('should inherit EIP activations from Mainnet baseline', () => {
+    const tron = createTronChainIdCommon('mainnet')
+    const eipsToCheck = [1153, 1559, 2929, 2930, 3198, 3529, 3541, 3651, 3855, 3860]
+    for (const eip of eipsToCheck) {
+      assert.strictEqual(
+        tron.isActivatedEIP(eip),
+        mainnetBaseline.isActivatedEIP(eip),
+        `EIP-${eip} activation should match Mainnet baseline`,
+      )
+    }
+  })
+
+  it('should inherit configuration from Mainnet baseline', () => {
+    const tron = createTronChainIdCommon('mainnet')
+    const baseline = mainnetBaseline.copy()
+
+    // Verify hardfork structure matches
+    assert.strictEqual(
+      tron.hardforks().length,
+      baseline.hardforks().length,
+      'hardfork count should match',
+    )
+    assert.deepEqual(
+      tron.hardforks().map((hf) => hf.name),
+      baseline.hardforks().map((hf) => hf.name),
+      'hardfork sequence should match',
+    )
+
+    // Verify other config properties match (besides chainId and name)
+    assert.deepEqual(tron.genesis(), baseline.genesis(), 'genesis should match')
+    assert.deepEqual(
+      tron.bootstrapNodes(),
+      baseline.bootstrapNodes(),
+      'bootstrapNodes should match',
+    )
+    assert.deepEqual(tron.dnsNetworks(), baseline.dnsNetworks(), 'dnsNetworks should match')
+    assert.deepEqual(
+      tron.consensusConfig(),
+      baseline.consensusConfig(),
+      'consensusConfig should match',
+    )
+
+    // Verify only chainId and name differ
+    assert.notStrictEqual(tron.chainId(), baseline.chainId(), 'chainId should differ')
+    assert.notStrictEqual(tron.chainName(), baseline.chainName(), 'chainName should differ')
+  })
+
+  it('should return independent Common instances on each call', () => {
+    const a = createTronChainIdCommon('mainnet')
+    const b = createTronChainIdCommon('mainnet')
+    assert.notStrictEqual(a, b, 'each call should return a new instance')
+    assert.strictEqual(a.chainId(), b.chainId(), 'but both should have the same chainId')
+  })
+
+  it('should throw on invalid network name at runtime', () => {
+    assert.throws(
+      () => createTronChainIdCommon('invalid' as any),
+      /Invalid TRON network: invalid/,
+      'should throw with clear error message',
+    )
+  })
+
+  it('should throw on inherited property names (prototype pollution guard)', () => {
+    assert.throws(
+      () => createTronChainIdCommon('toString' as any),
+      /Invalid TRON network: toString/,
+      'should reject toString',
+    )
+    assert.throws(
+      () => createTronChainIdCommon('__proto__' as any),
+      /Invalid TRON network: __proto__/,
+      'should reject __proto__',
+    )
+  })
+
+  it('should pass through activatedProposals option', () => {
+    const withProposals = createTronChainIdCommon('mainnet', { activatedProposals: [95, 96] })
+    assert.isTrue(withProposals.isActivatedProposal(95))
+    assert.isTrue(withProposals.isActivatedProposal(96))
+    assert.deepEqual(withProposals.activatedProposals(), [95, 96])
+
+    const withoutProposals = createTronChainIdCommon('mainnet')
+    assert.deepEqual(withoutProposals.activatedProposals(), [], 'should default to empty')
+  })
+
+  it('should pass through hardfork option', () => {
+    const onCancun = createTronChainIdCommon('mainnet', { hardfork: 'cancun' })
+    assert.strictEqual(onCancun.hardfork(), 'cancun', 'should use specified hardfork')
+    assert.strictEqual(onCancun.chainId(), 728126428n, 'chainId should still be correct')
   })
 })
