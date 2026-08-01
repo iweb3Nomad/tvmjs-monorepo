@@ -394,6 +394,10 @@ export interface RunTxOpts {
    */
   tx: TypedTransaction
   /**
+   * The 32-byte TRON root transaction ID used for internal CREATE address derivation.
+   */
+  rootTransactionId?: Uint8Array
+  /**
    * If true, skips the nonce check
    */
   skipNonce?: boolean

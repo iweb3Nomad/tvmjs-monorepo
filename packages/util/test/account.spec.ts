@@ -21,6 +21,7 @@ import {
   equalsBytes,
   generateAddress,
   generateAddress2,
+  generateTronCreateAddress,
   hexToBytes,
   importPublic,
   intToBytes,
@@ -516,6 +517,45 @@ describe('Utility Functions', () => {
       bytesToHex(addr),
       '0xd658a4b8247c14868f3c512fa5cbb6e458e4a989',
       'should produce an address given a public key',
+    )
+  })
+
+  it('generateTronCreateAddress matches java-tron fixed vectors', () => {
+    // Source of truth: java-tron GreatVoyage-v4.8.2
+    // actuator/src/main/java/org/tron/core/utils/TransactionUtil.java:162-168
+    // generateContractAddress(transactionRootId, nonce) hashes the 32-byte root
+    // transaction ID followed by Guava Longs.toByteArray(nonce), i.e. an
+    // 8-byte big-endian value, and returns the low 20 bytes (sha3omit12).
+    // https://github.com/tronprotocol/java-tron/blob/GreatVoyage-v4.8.2/actuator/src/main/java/org/tron/core/utils/TransactionUtil.java#L162-L168
+    const rootTransactionId = hexToBytes(
+      '0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
+    )
+    const vectors = [
+      [0n, '0xe5732ce09bab3ecf290d7a67c4bbbf294ecec649'],
+      [1n, '0x92c8a5a62642e1621a9b7c850eec3e8023251dbf'],
+      [2n, '0xb0e9579bf706a1a5615857179942fcd54ed5fa1f'],
+      [255n, '0xeaa5699d81176fb65119bc3ec2034f1dac9697fc'],
+      [256n, '0x4750ec36e1db3d7748ef10c823d13b4f36bf3114'],
+    ] as const
+
+    for (const [nonce, expected] of vectors) {
+      assert.strictEqual(bytesToHex(generateTronCreateAddress(rootTransactionId, nonce)), expected)
+    }
+  })
+
+  it('generateTronCreateAddress validates its execution context', () => {
+    const rootTransactionId = new Uint8Array(32)
+    assert.throws(
+      () => generateTronCreateAddress(new Uint8Array(31), 0n),
+      /rootTransactionId to be of length 32/,
+    )
+    assert.throws(
+      () => generateTronCreateAddress(rootTransactionId, -1n),
+      /unsigned 64-bit integer/,
+    )
+    assert.throws(
+      () => generateTronCreateAddress(rootTransactionId, 0x10000000000000000n),
+      /unsigned 64-bit integer/,
     )
   })
 

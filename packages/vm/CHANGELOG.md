@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 (modification: no type change headlines) and this project adheres to
 [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Features
+
+- Add an optional `rootTransactionId` to `RunTxOpts` and forward it to TVM for java-tron-compatible internal CREATE address derivation
+
 ## 1.0.0
 
 ### Features
@@ -32,5 +38,4 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Upgrade `tronweb` to `6.3.0`
 - Bump package version to `1.0.0`
 - Lock all dependency versions by removing `^` and `~` prefixes
-
 

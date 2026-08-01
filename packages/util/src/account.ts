@@ -14,7 +14,7 @@ import {
   toBytes,
   utf8ToBytes,
 } from './bytes.ts'
-import { BIGINT_0, KECCAK256_NULL, KECCAK256_RLP } from './constants.ts'
+import { BIGINT_0, KECCAK256_NULL, KECCAK256_RLP, MAX_UINT64 } from './constants.ts'
 import { EthereumJSErrorWithoutCode } from './errors.ts'
 import { assertIsBytes, assertIsHexString, assertIsString } from './helpers.ts'
 import { stripHexPrefix } from './internal.ts'
@@ -620,6 +620,39 @@ export const generateAddress = function (from: Uint8Array, nonce: Uint8Array): U
 
   // Only take the lower 160bits of the hash
   return keccak_256(RLP.encode([from, nonce])).subarray(-20)
+}
+
+/**
+ * Generates the address for a contract created by the TRON CREATE opcode.
+ *
+ * java-tron derives internal CREATE addresses from the root transaction ID and
+ * the transaction-wide internal nonce, encoded like Guava's `Longs.toByteArray`.
+ * This is intentionally separate from {@link generateAddress}, which retains
+ * Ethereum's RLP-based address derivation.
+ *
+ * @param rootTransactionId The 32-byte TRON root transaction ID
+ * @param nonce The transaction-wide internal nonce
+ */
+export const generateTronCreateAddress = function (
+  rootTransactionId: Uint8Array,
+  nonce: bigint,
+): Uint8Array {
+  assertIsBytes(rootTransactionId)
+  if (rootTransactionId.length !== 32) {
+    throw EthereumJSErrorWithoutCode('Expected rootTransactionId to be of length 32')
+  }
+  if (nonce < BIGINT_0 || nonce > MAX_UINT64) {
+    throw EthereumJSErrorWithoutCode('Expected nonce to fit in an unsigned 64-bit integer')
+  }
+
+  const nonceBytes = new Uint8Array(8)
+  let remaining = nonce
+  for (let i = nonceBytes.length - 1; i >= 0; i--) {
+    nonceBytes[i] = Number(remaining & 0xffn)
+    remaining >>= 8n
+  }
+
+  return keccak_256(concatBytes(rootTransactionId, nonceBytes)).subarray(-20)
 }
 
 /**

@@ -1,4 +1,4 @@
-import { ConsensusAlgorithm } from '@tvmjs/common'
+import { ConsensusAlgorithm, Hardfork } from '@tvmjs/common'
 import {
   Account,
   BIGINT_0,
@@ -37,6 +37,7 @@ import type { BinaryTreeAccessWitnessInterface, Common, StateManagerInterface } 
 import type { Address, PrefixedHexString } from '@tvmjs/util'
 import { stackDelta } from './eof/stackDelta.ts'
 import type { Journal } from './journal.ts'
+import type { TronTransactionContext } from './message.ts'
 import type { AsyncOpHandler, Opcode, OpcodeMapEntry } from './opcodes/index.ts'
 import type { TVM } from './tvm.ts'
 import type {
@@ -97,6 +98,7 @@ export interface Env {
   chargeCodeAccesses?: boolean
   /** Logs to prepend (e.g. EIP-7708 ETH transfer log from message-level value transfer) */
   initialLogs?: Log[]
+  tronTransactionContext?: TronTransactionContext
 }
 
 export interface RunState {
@@ -1121,6 +1123,7 @@ export class Interpreter {
     const selfdestruct = new Map(this._result.selfdestruct)
     msg.selfdestruct = selfdestruct
     msg.gasRefund = this._runState.gasRefund
+    msg.tronTransactionContext = this._env.tronTransactionContext
 
     if (this._env.address.equals(msg.codeAddress)) {
       if (msg.value > BIGINT_0) {
@@ -1148,6 +1151,10 @@ export class Interpreter {
       (msg.delegatecall !== true && this._env.contract.balance < msg.value)
     ) {
       return BIGINT_0
+    }
+
+    if (this.common.gteHardfork(Hardfork.Tron) && this._env.tronTransactionContext !== undefined) {
+      this._env.tronTransactionContext.nonce += BIGINT_1
     }
 
     const results = await this._tvm.runCall({ message: msg })
@@ -1254,6 +1261,7 @@ export class Interpreter {
       gasRefund: this._runState.gasRefund,
       blobVersionedHashes: this._env.blobVersionedHashes,
       accessWitness: this._env.accessWitness,
+      tronTransactionContext: this._env.tronTransactionContext,
     })
 
     let createdAddresses: Set<PrefixedHexString>

@@ -878,6 +878,7 @@ async function _runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
     data,
     blobVersionedHashes,
     accessWitness: txAccesses,
+    rootTransactionId: opts.rootTransactionId,
   })) as RunTxResult
 
   if (vm.common.isActivatedEIP(7864)) {

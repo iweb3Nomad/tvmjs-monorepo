@@ -16,6 +16,7 @@ import {
   equalsBytes,
   generateAddress,
   generateAddress2,
+  generateTronCreateAddress,
   isDebugEnabled,
   short,
 } from '@tvmjs/util'
@@ -29,7 +30,7 @@ import { TVMError } from './errors.ts'
 import { Interpreter } from './interpreter.ts'
 import { Journal } from './journal.ts'
 import { TVMPerformanceLogger } from './logger.ts'
-import { Message } from './message.ts'
+import { Message, createTronTransactionContext } from './message.ts'
 import { getOpcodesForHF } from './opcodes/index.ts'
 import { paramsTVM } from './params.ts'
 import { NobleBLS, getActivePrecompiles, getPrecompileName } from './precompiles/index.ts'
@@ -668,6 +669,14 @@ export class TVM implements TVMInterface {
       }
     }
 
+    if (
+      message.depth > 0 &&
+      this.common.gteHardfork(Hardfork.Tron) &&
+      message.tronTransactionContext !== undefined
+    ) {
+      message.tronTransactionContext.nonce += BIGINT_1
+    }
+
     await this.journal.putAccount(message.to, toAccount)
     await this.stateManager.clearStorage(message.to)
 
@@ -980,6 +989,7 @@ export class TVM implements TVMInterface {
       accessWitness: message.accessWitness,
       createdAddresses: message.createdAddresses,
       initialLogs: opts.initialLogs,
+      tronTransactionContext: message.tronTransactionContext,
     }
 
     const interpreter = new Interpreter(
@@ -1098,7 +1108,16 @@ export class TVM implements TVMInterface {
         createdAddresses: opts.createdAddresses ?? new Set(),
         delegatecall: opts.delegatecall,
         blobVersionedHashes: opts.blobVersionedHashes,
+        tronTransactionContext:
+          opts.rootTransactionId === undefined
+            ? undefined
+            : createTronTransactionContext(opts.rootTransactionId),
       })
+    } else if (
+      opts.rootTransactionId !== undefined &&
+      message.tronTransactionContext === undefined
+    ) {
+      message.tronTransactionContext = createTronTransactionContext(opts.rootTransactionId)
     }
 
     if (message.depth === 0) {
@@ -1239,6 +1258,10 @@ export class TVM implements TVMInterface {
       selfdestruct: opts.selfdestruct ?? new Map(),
       isStatic: opts.isStatic,
       blobVersionedHashes: opts.blobVersionedHashes,
+      tronTransactionContext:
+        opts.rootTransactionId === undefined
+          ? undefined
+          : createTronTransactionContext(opts.rootTransactionId),
     })
 
     return this.runInterpreter(message, { pc: opts.pc })
@@ -1323,6 +1346,14 @@ export class TVM implements TVMInterface {
     let addr
     if (message.salt) {
       addr = generateAddress2(message.caller.bytes, message.salt, message.code as Uint8Array)
+    } else if (message.depth > 0 && this.common.gteHardfork(Hardfork.Tron)) {
+      const context = message.tronTransactionContext
+      if (context === undefined) {
+        throw EthereumJSErrorWithoutCode(
+          'rootTransactionId is required for TRON internal CREATE address derivation',
+        )
+      }
+      addr = generateTronCreateAddress(context.rootTransactionId, context.nonce)
     } else {
       let acc = await this.stateManager.getAccount(message.caller)
       if (!acc) {
