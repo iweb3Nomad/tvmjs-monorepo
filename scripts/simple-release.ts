@@ -1,10 +1,17 @@
 #!/usr/bin/env tsx
 /**
  * Simple release script for in-between releases (nightly, alpha, etc.)
- * 
+ *
+ * NOTE: Not applicable for official TVMJS releases. The version-bump step is
+ * disabled (commented out in main()), so this script only publishes packages
+ * that have never been published at their current version, under a specific tag.
+ * npm does NOT allow republishing the same version even with a different tag;
+ * to change the tag of an already-published version, use `npm dist-tag add`.
+ * Official releases follow a manual per-package flow (npm version + npm publish).
+ *
  * Usage:
  *   tsx scripts/simple-release.ts <tag> [--dry-run]
- * 
+ *
  * Example:
  *   tsx scripts/simple-release.ts nightly --dry-run
  */
