@@ -59,7 +59,10 @@
   },
   "devDependencies": {
     "@tvmjs/block": "1.0.0",
-    "@types/debug": "4.1.12",
-    "micro-eth-signer": "0.15.0"
+    "@tvmjs/testdata": "1.0.0",
+    "@tvmjs/tvm": "1.0.0",
+    "@tvmjs/tx": "1.0.0",
+    "@tvmjs/vm": "1.0.0",
+    "@types/debug": "4.1.12"
   }
 }

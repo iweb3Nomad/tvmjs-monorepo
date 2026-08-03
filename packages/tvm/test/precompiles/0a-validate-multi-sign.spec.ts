@@ -1,6 +1,6 @@
 import { sha256 } from '@noble/hashes/sha2.js'
 import { Common, Mainnet } from '@tvmjs/common'
-import { createTVM, getActivePrecompiles } from '@tvmjs/tvm'
+import { type TVMInterface, createTVM, getActivePrecompiles } from '@tvmjs/tvm'
 import {
   PermissionType,
   type PrefixedHexString,
@@ -12,7 +12,6 @@ import {
   setLengthLeft,
   utf8ToBytes,
 } from '@tvmjs/util'
-import { type VM, createVM } from '@tvmjs/vm'
 import { utils } from 'tronweb'
 import { assert, describe, it } from 'vitest'
 
@@ -40,17 +39,17 @@ describe('Precompiles: VALIDATE-MULTI_SIGN', () => {
 
   it('weight not enough', async () => {
     const common = new Common({ chain: Mainnet })
-    const vm = await createVM({ common })
+    const tvm = await createTVM({ common })
 
     const FUNC = getActivePrecompiles(common).get(precompileContractAddr)!
 
-    const data = hexToBytes(await prepareAccount(vm, 1))
+    const data = hexToBytes(await prepareAccount(tvm, 1))
 
     const result = await FUNC({
       data,
       gasLimit: 0xffffn,
       common,
-      _TVM: vm.tvm,
+      _TVM: tvm,
     })
 
     assert.deepEqual(result.executionGasUsed, 1500n, 'should use petersburg gas costs')
@@ -59,17 +58,17 @@ describe('Precompiles: VALIDATE-MULTI_SIGN', () => {
 
   it('wrong sign', async () => {
     const common = new Common({ chain: Mainnet })
-    const vm = await createVM({ common })
+    const tvm = await createTVM({ common })
 
     const FUNC = getActivePrecompiles(common).get(precompileContractAddr)!
 
-    const data = hexToBytes(await prepareAccount(vm, 2))
+    const data = hexToBytes(await prepareAccount(tvm, 2))
 
     const result = await FUNC({
       data,
       gasLimit: 0xffffn,
       common,
-      _TVM: vm.tvm,
+      _TVM: tvm,
     })
     // console.log(result)
 
@@ -79,9 +78,9 @@ describe('Precompiles: VALIDATE-MULTI_SIGN', () => {
 
   it('valid success', async () => {
     const common = new Common({ chain: Mainnet })
-    const vm = await createVM({ common })
+    const tvm = await createTVM({ common })
 
-    const input = await prepareAccount(vm, 3)
+    const input = await prepareAccount(tvm, 3)
 
     const FUNC = getActivePrecompiles(common).get(precompileContractAddr)!
 
@@ -91,7 +90,7 @@ describe('Precompiles: VALIDATE-MULTI_SIGN', () => {
       data,
       gasLimit: 0xffffn,
       common,
-      _TVM: vm.tvm,
+      _TVM: tvm,
     })
 
     assert.deepEqual(result.executionGasUsed, 4500n, 'should use petersburg gas costs')
@@ -114,7 +113,7 @@ function sign(hash: Uint8Array, privateKey: PrefixedHexString) {
   return hexToBytes(utils.ethersUtils.joinSignature(signKey.sign(hash)) as `0x${string}`)
 }
 
-async function prepareAccount(vm: VM, index: number): Promise<`0x${string}`> {
+async function prepareAccount(tvm: TVMInterface, index: number): Promise<`0x${string}`> {
   const account0 = utils.accounts.generateAccount()
   const account1 = utils.accounts.generateAccount()
   const account2 = utils.accounts.generateAccount()
@@ -144,7 +143,7 @@ async function prepareAccount(vm: VM, index: number): Promise<`0x${string}`> {
       },
     ],
   })
-  await vm.stateManager.putAccount(address, account)
+  await tvm.stateManager.putAccount(address, account)
 
   const dataToSign = sha256(utf8ToBytes('test'))
   const merged = concatBytes(
