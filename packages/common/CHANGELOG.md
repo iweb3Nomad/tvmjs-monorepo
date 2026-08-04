@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Features
 
 - **TRON chainId presets**: Add `createTronChainIdCommon(network, opts?)` factory function for execution-only chainId presets; supports `'mainnet'` (728126428), `'nile'` (3448148188), and `'shasta'` (2494104990); inherits Mainnet hardfork sequence and customHardforks for CHAINID opcode execution without providing full TRON chain configs
+- **TRON hardfork wiring**: Wire `tronHardforksDict` into `Mainnet.customHardforks`; `Common` resolves per-hardfork config as `customHardforks[name] ?? hardforksDict[name]`, keeping current behavior byte-identical while enabling future TRON-specific overrides
+- **TRON Proposal gating**: Add `activatedProposals` option to `BaseOpts`; expose `Common.activatedProposals()` and `Common.isActivatedProposal(id)` for Proposal 95 (`ALLOW_TVM_PRAGUE`) and 96 (`ALLOW_TVM_OSAKA`); IDs are validated, deduplicated, and stored in ascending order; does not alter EIPs, params, or execution behavior at this stage
+- **Constructor forwarding**: `createCommonFromGethGenesis` now forwards `activatedProposals` to the underlying `Common` instance
 
 ## 1.0.0
 

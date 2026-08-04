@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Features
 
 - Add `generateTronCreateAddress(rootTransactionId, nonce)` for java-tron-compatible internal CREATE address derivation while preserving Ethereum `generateAddress()` behavior
+- Add TRON address format conversion utilities: `toTronHexAddress`, `fromTronHexAddress` (0x41-prefixed hex), `toTronBase58Address`, `fromTronBase58Address`, `isValidTronBase58Address` (Base58Check with checksum); vectors cross-validated against TronWeb 6.3.0
+- Add `bs58` dependency for Base58Check encoding
 
 ## 1.0.0
 
