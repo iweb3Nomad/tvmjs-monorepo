@@ -1,6 +1,6 @@
 {
   "name": "@tvmjs/tvm",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "JavaScript TRON Virtual Machine (TVM) implementation.",
   "keywords": ["ethereum", "TVM", "JavaScript", "TypeScript", "tron", "tvm"],
   "homepage": "https://github.com/tronweb3/tvmjs-monorepo/tree/master/packages/tvm#readme",
@@ -55,16 +55,16 @@
   "dependencies": {
     "@noble/curves": "2.0.1",
     "@noble/hashes": "2.0.1",
-    "@tvmjs/binarytree": "1.0.0",
-    "@tvmjs/common": "1.0.0",
-    "@tvmjs/statemanager": "1.0.0",
-    "@tvmjs/util": "1.0.0",
+    "@tvmjs/binarytree": "1.0.1",
+    "@tvmjs/common": "1.1.0",
+    "@tvmjs/statemanager": "1.0.1",
+    "@tvmjs/util": "1.1.0",
     "debug": "4.4.0",
     "eventemitter3": "5.0.1"
   },
   "devDependencies": {
     "@paulmillr/trusted-setups": "0.2.0",
-    "@tvmjs/blockchain": "1.0.0",
+    "@tvmjs/blockchain": "1.0.1",
     "@tvmjs/testdata": "1.0.0",
     "@types/debug": "4.1.12",
     "@types/node-dir": "0.0.37",

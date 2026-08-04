@@ -1,6 +1,6 @@
 {
   "name": "@tvmjs/util",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A collection of utility functions for the TRON Virtual Machine (TVM).",
   "keywords": ["ethereum", "utilities", "utils", "tron", "tvm"],
   "homepage": "https://github.com/tronweb3/tvmjs-monorepo/tree/master/packages/util#readme",

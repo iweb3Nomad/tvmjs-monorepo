@@ -1,6 +1,6 @@
 {
   "name": "@tvmjs/tx",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Implementation of TRON transaction types for the TVM.",
   "keywords": ["ethereum", "transactions", "tron", "tvm"],
   "homepage": "https://github.com/tronweb3/tvmjs-monorepo/tree/master/packages/tx#readme",
@@ -62,9 +62,9 @@
     "tsc": "../../config/cli/ts-compile.sh"
   },
   "dependencies": {
-    "@tvmjs/common": "1.0.0",
+    "@tvmjs/common": "1.1.0",
     "@tvmjs/rlp": "1.0.0",
-    "@tvmjs/util": "1.0.0",
+    "@tvmjs/util": "1.1.0",
     "@noble/curves": "2.0.1",
     "@noble/hashes": "2.0.1"
   },

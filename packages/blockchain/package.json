@@ -1,6 +1,6 @@
 {
   "name": "@tvmjs/blockchain",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A module to store and interact with TRON blocks and the TVM blockchain.",
   "keywords": ["ethereum", "blockchain", "tron", "tvm"],
   "homepage": "https://github.com/tronweb3/tvmjs-monorepo/tree/master/packages/blockchain#readme",
@@ -50,11 +50,11 @@
     "tsc": "../../config/cli/ts-compile.sh"
   },
   "dependencies": {
-    "@tvmjs/block": "1.0.0",
-    "@tvmjs/common": "1.0.0",
-    "@tvmjs/mpt": "1.0.0",
+    "@tvmjs/block": "1.0.1",
+    "@tvmjs/common": "1.1.0",
+    "@tvmjs/mpt": "1.0.1",
     "@tvmjs/rlp": "1.0.0",
-    "@tvmjs/util": "1.0.0",
+    "@tvmjs/util": "1.1.0",
     "debug": "4.4.0",
     "eventemitter3": "5.0.1",
     "lru-cache": "11.0.2"

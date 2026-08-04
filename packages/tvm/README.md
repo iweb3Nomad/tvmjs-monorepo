@@ -1,4 +1,4 @@
-# @tvmjs/tvm `1.0.0`
+# @tvmjs/tvm `1.1.0`
 
 | TypeScript implementation of the TRON Virtual Machine (TVM). Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |

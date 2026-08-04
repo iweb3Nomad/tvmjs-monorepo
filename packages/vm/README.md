@@ -1,4 +1,4 @@
-# @tvmjs/vm `1.0.0`
+# @tvmjs/vm `1.1.0`
 
 | Execution context for the TVM (TRON Virtual Machine) implementation. Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |

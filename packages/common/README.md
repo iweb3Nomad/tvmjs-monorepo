@@ -1,4 +1,4 @@
-# @tvmjs/common `1.0.0`
+# @tvmjs/common `1.1.0`
 
 | Resources common to all TVMJS implementations. Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |

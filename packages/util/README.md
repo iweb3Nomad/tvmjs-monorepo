@@ -1,4 +1,4 @@
-# @tvmjs/util `1.0.0`
+# @tvmjs/util `1.1.0`
 
 | A collection of utility functions for TRON/TVM. Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |

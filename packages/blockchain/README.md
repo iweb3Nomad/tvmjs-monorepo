@@ -1,4 +1,4 @@
-# @tvmjs/blockchain `1.0.0`
+# @tvmjs/blockchain `1.0.1`
 
 | A module to store and interact with TRON-compatible blocks. Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |
