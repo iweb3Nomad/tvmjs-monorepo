@@ -927,3 +927,46 @@ describe('EIP 4844 transaction tests', () => {
     Blockchain.prototype.getBlock = oldGetBlockFunction
   })
 }, 20000)
+
+describe('TRON rootTransactionId propagation', () => {
+  it('propagates rootTransactionId from runTx to internal CREATE', async () => {
+    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Tron })
+    const vm = await createVM({ common })
+
+    const deployer = createAddressFromString('0x0000000000000000000000000000000000000100')
+    await vm.stateManager.putAccount(deployer, createAccount({ balance: 10n ** 18n }))
+
+    // Simple CREATE: deploy empty contract and return its address
+    const deployCode = hexToBytes('0x600060006000f060005260206000f3')
+    await vm.stateManager.putCode(deployer, deployCode)
+
+    const rootTxId = hexToBytes(
+      '0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0',
+    )
+
+    const tx = createLegacyTx(
+      {
+        to: deployer,
+        gasLimit: 100000,
+        gasPrice: 10,
+        nonce: 0,
+      },
+      { common },
+    ).sign(SIGNER_A.privateKey)
+
+    const result = await runTx(vm, { tx, rootTransactionId: rootTxId, skipBalance: true })
+
+    // Extract the created address from return value (last 20 bytes)
+    const createdAddress = result.execResult.returnValue.subarray(-20)
+
+    // Import generateTronCreateAddress for precise assertion
+    const { generateTronCreateAddress } = await import('@tvmjs/util')
+
+    // Verify it matches TRON CREATE derivation with the exact rootTransactionId and nonce=0
+    assert.strictEqual(
+      bytesToHex(createdAddress),
+      bytesToHex(generateTronCreateAddress(rootTxId, 0n)),
+      'runTx should propagate rootTransactionId to internal CREATE with correct derivation',
+    )
+  })
+})

@@ -19,10 +19,10 @@ import type { PrefixedHexString } from '../src/types.ts'
  *     - The 0x41 prefix participates in the hash preimage, NOT just result encoding.
  *     - TRON uses 0x41 where Ethereum uses 0xff (EIP-1014).
  *
- *   CREATE (NOT COVERED HERE):
+ *   CREATE (ALIGNED):
  *     - java-tron uses keccak256(rootTransactionId || nonce), not Ethereum's RLP.
- *     - TVMJS currently uses Ethereum's RLP-based derivation (MISALIGNED).
- *     - CREATE alignment is tracked separately and requires TVM context changes.
+ *     - TVMJS uses the same keccak256(rootTransactionId || nonce) derivation.
+ *     - CREATE alignment is complete with TVM context propagation.
  *
  * Vector provenance:
  *   - Base58Check encodings cross-validated with TronWeb 6.3.0 (TronWeb.address.fromHex).

@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Bug Fixes
+
+- Reject non-`Uint8Array` inputs in TRON address output helpers instead of silently coercing them into valid-looking incorrect addresses, and validate Base58 input type and length before decoding
+
 ### Features
 
 - Add `generateTronCreateAddress(rootTransactionId, nonce)` for java-tron-compatible internal CREATE address derivation while preserving Ethereum `generateAddress()` behavior
@@ -37,4 +41,3 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Rename package namespace from `@ethereumjs/util` to `@tvmjs/util`
 - Bump package version to `1.0.0`
 - Lock all dependency versions by removing `^` and `~` prefixes
-

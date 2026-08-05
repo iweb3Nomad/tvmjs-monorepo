@@ -95,7 +95,18 @@ describe('TRON Address Utilities', () => {
     })
 
     it('should throw on invalid Base58 encoding', () => {
-      assert.throws(() => fromTronBase58Address('Invalid0OIl'), /Invalid Base58 encoding/)
+      assert.throws(() => fromTronBase58Address('0'.repeat(34)), /Invalid Base58 encoding/)
+    })
+
+    it('should reject invalid length before Base58 decoding', () => {
+      assert.throws(
+        () => fromTronBase58Address('T'.repeat(10000)),
+        /Invalid TRON Base58 address length: expected 34 characters, got 10000/,
+      )
+    })
+
+    it('should throw on non-string input', () => {
+      assert.throws(() => fromTronBase58Address(new Uint8Array(34) as any), /only supports string/)
     })
 
     it('should throw on invalid checksum', () => {
@@ -147,6 +158,31 @@ describe('TRON Address Utilities', () => {
         const bytes20fromBase58 = fromTronBase58Address(addr.base58)
         assert.deepEqual(bytes20fromHex, bytes20fromBase58, `Failed for ${addr.name}`)
       }
+    })
+  })
+
+  describe('Input validation (type safety)', () => {
+    it('toTronHexAddress should throw on string input instead of silently converting', () => {
+      // This would produce 0x41 + 20 zeros (wrong!) without assertIsBytes
+      assert.throws(() => toTronHexAddress('a'.repeat(20) as any), /only supports Uint8Array/)
+    })
+
+    it('toTronBase58Address should throw on string input instead of silently converting', () => {
+      assert.throws(() => toTronBase58Address('a'.repeat(20) as any), /only supports Uint8Array/)
+    })
+
+    it('toTronHexAddress should throw on plain array', () => {
+      assert.throws(
+        () => toTronHexAddress(new Array(20).fill(0) as any),
+        /only supports Uint8Array/,
+      )
+    })
+
+    it('toTronBase58Address should throw on plain array', () => {
+      assert.throws(
+        () => toTronBase58Address(new Array(20).fill(0) as any),
+        /only supports Uint8Array/,
+      )
     })
   })
 })

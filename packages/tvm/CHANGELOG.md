@@ -10,8 +10,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
-- Charge `SELFDESTRUCT` new-account gas when a contract with zero TRX transfers a non-zero TRC-10 balance to a nonexistent or empty beneficiary
+- Align TRON `SELFDESTRUCT` new-account gas with java-tron: charge when the beneficiary does not exist regardless of transferred value, do not charge for an existing empty account, and preserve Ethereum EIP-161 behavior on pre-TRON hardforks
 - Derive TRON internal CREATE addresses from the root transaction ID and transaction-wide internal nonce; preserve Ethereum CREATE behavior on Ethereum hardfork paths
+- Advance the shared TRON internal nonce after CREATE/CREATE2 collisions and on every nested `SELFDESTRUCT` invocation
+- Reject non-`Uint8Array` root transaction IDs instead of silently coercing them into invalid execution context
 
 ### Features
 

@@ -659,6 +659,14 @@ export class TVM implements TVMInterface {
       if (this.common.isActivatedEIP(7928)) {
         this.blockLevelAccessList!.addAddress(message.to.toString())
       }
+      // TRON: advance internal nonce even on collision, so the next CREATE uses nonce+1
+      if (
+        message.depth > 0 &&
+        this.common.gteHardfork(Hardfork.Tron) &&
+        message.tronTransactionContext !== undefined
+      ) {
+        message.tronTransactionContext.nonce += BIGINT_1
+      }
       return {
         createdAddress: message.to,
         execResult: {

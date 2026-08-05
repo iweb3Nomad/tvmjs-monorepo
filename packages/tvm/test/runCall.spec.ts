@@ -323,7 +323,7 @@ describe('RunCall tests', () => {
       )
       const beneficiary = beneficiaryState === 'self' ? address : externalBeneficiary
       const tokenId = MIN_TOKEN_ID + 1n
-      const common = new Common({ chain: Mainnet, hardfork: Hardfork.SpuriousDragon })
+      const common = new Common({ chain: Mainnet, hardfork: Hardfork.Tron })
       const tvm = await createTVM({ common })
       const code = `0x73${beneficiary.toString().slice(2)}ff` as `0x${string}`
       let initialBeneficiaryBalance = 0n
@@ -347,11 +347,17 @@ describe('RunCall tests', () => {
         gasLimit: BigInt(0xffffffffff),
       })
 
-      const transfersValue = trxBalance > 0n || tokenBalance > 0n
-      const beneficiaryIsNew = beneficiaryState === 'missing' || beneficiaryState === 'empty'
-      const expectedGas = 5003n + (transfersValue && beneficiaryIsNew ? 25000n : 0n)
+      // TRON: java-tron getSuicideCost2/3 + isDeadAccount logic:
+      // - Charges newAccountGas ONLY when beneficiary does NOT exist (account === undefined)
+      // - Does NOT check isEmpty() (existing empty accounts don't charge)
+      // - Does NOT check transfer amount (charges even if TRX=0 and Token=0)
+      // This differs from EIP-161 which requires both transfersValue AND isEmpty().
+      const beneficiaryDoesNotExist = beneficiaryState === 'missing'
+      // The current tron profile still activates EIP-2929, so the beneficiary
+      // access adds 2600 gas independently of the java-tron new-account decision.
+      const expectedGas = 5003n + 2600n + (beneficiaryDoesNotExist ? 25000n : 0n)
       assert.strictEqual(result.execResult.executionGasUsed, expectedGas, 'gas used correct')
-      assert.strictEqual(result.execResult.gasRefund, 24000n, 'selfdestruct refund correct')
+      assert.strictEqual(result.execResult.gasRefund, 0n, 'EIP-3529 removes selfdestruct refund')
 
       if (beneficiaryState !== 'self') {
         const beneficiaryAccount = await tvm.stateManager.getAccount(beneficiary)
@@ -374,13 +380,14 @@ describe('RunCall tests', () => {
           'source token balance cleared',
         )
       } else {
-        // Self-destruct to self: account still marked for deletion, balance cleared
+        // The current tron profile activates EIP-6780. A pre-existing contract
+        // that selfdestructs to itself retains its balance and token state.
         const selfAccount = await tvm.stateManager.getAccount(address)
-        assert.strictEqual(selfAccount?.balance, 0n, 'self TRX balance cleared after selfdestruct')
+        assert.strictEqual(selfAccount?.balance, trxBalance, 'self TRX balance preserved')
         assert.strictEqual(
           selfAccount?.getTokenBalance(tokenId),
-          0n,
-          'self token balance cleared after selfdestruct',
+          tokenBalance,
+          'self token balance preserved',
         )
       }
     },
@@ -429,7 +436,7 @@ describe('RunCall tests', () => {
     const beneficiary = new Address(hexToBytes('0x00000000000000000000000000000000000000fe'))
     const tokenId = MIN_TOKEN_ID + 1n
     const tokenBalance = 100n
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.SpuriousDragon })
+    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Tron })
     const tvm = await createTVM({ common })
 
     await tvm.stateManager.putCode(address, hexToBytes('0x60FEFF'))
@@ -437,9 +444,10 @@ describe('RunCall tests', () => {
     contractAccount!.asset = { [Number(tokenId)]: tokenBalance }
     await tvm.stateManager.putAccount(address, contractAccount!)
 
-    const result = await tvm.runCall({ caller, to: address, gasLimit: 30002n })
+    // 5003 base + 2600 EIP-2929 cold access + 25000 new-account gas = 32603.
+    const result = await tvm.runCall({ caller, to: address, gasLimit: 32602n })
 
-    assert.strictEqual(result.execResult.executionGasUsed, 30002n, 'all available gas consumed')
+    assert.strictEqual(result.execResult.executionGasUsed, 32602n, 'all available gas consumed')
     assert.strictEqual(result.execResult.exceptionError?.error, TVMError.errorMessages.OUT_OF_GAS)
     assert.isUndefined(await tvm.stateManager.getAccount(beneficiary), 'beneficiary not created')
     assert.strictEqual(

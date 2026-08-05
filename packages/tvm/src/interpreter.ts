@@ -1360,6 +1360,16 @@ export class Interpreter {
       this.refundGas(this.common.param('selfdestructRefundGas'))
     }
 
+    // TRON: advance internal nonce for SELFDESTRUCT (java-tron increaseNonce behavior)
+    // This happens on EVERY suicide() call, not just the first one
+    if (
+      this._env.depth > 0 &&
+      this.common.gteHardfork(Hardfork.Tron) &&
+      this._env.tronTransactionContext !== undefined
+    ) {
+      this._env.tronTransactionContext.nonce += BIGINT_1
+    }
+
     this._result.selfdestruct.set(selfdestructAddressHex, toAddress.toString())
 
     const toSelf = equalsBytes(toAddress.bytes, this._env.address.bytes)
@@ -1415,7 +1425,7 @@ export class Interpreter {
       // If 6780 is active, check if current address is being created. If so
       // old behavior of SELFDESTRUCT exists and balance should be set to 0 of this account
       // (i.e. burn the ETH in current account)
-      doModify = this._env.createdAddresses!.has(this._env.address.toString())
+      doModify = this._env.createdAddresses?.has(this._env.address.toString()) ?? false
       // If contract is not being created in this tx...
       if (!doModify) {
         // Check if ETH being sent to another account (thus set balance to 0)

@@ -2,6 +2,7 @@ import { sha256 } from '@noble/hashes/sha2.js'
 import bs58 from 'bs58'
 import { bytesToHex, concatBytes, hexToBytes } from './bytes.ts'
 import { EthereumJSErrorWithoutCode } from './errors.ts'
+import { assertIsBytes, assertIsString } from './helpers.ts'
 import { isHexString } from './internal.ts'
 import type { PrefixedHexString } from './types.ts'
 
@@ -16,6 +17,7 @@ const TRON_ADDRESS_PREFIX = 0x41
  * @returns Hex string with 0x41 prefix (42 hex chars)
  */
 export function toTronHexAddress(address: Uint8Array): PrefixedHexString {
+  assertIsBytes(address)
   if (address.length !== 20) {
     throw EthereumJSErrorWithoutCode('Address must be 20 bytes')
   }
@@ -29,6 +31,7 @@ export function toTronHexAddress(address: Uint8Array): PrefixedHexString {
  * @returns Base58Check encoded address (typically 34 chars starting with 'T')
  */
 export function toTronBase58Address(address: Uint8Array): string {
+  assertIsBytes(address)
   if (address.length !== 20) {
     throw EthereumJSErrorWithoutCode('Address must be 20 bytes')
   }
@@ -77,6 +80,13 @@ export function fromTronHexAddress(hexAddress: string): Uint8Array {
  * @returns 20-byte address
  */
 export function fromTronBase58Address(base58Address: string): Uint8Array {
+  assertIsString(base58Address)
+  if (base58Address.length !== 34) {
+    throw EthereumJSErrorWithoutCode(
+      `Invalid TRON Base58 address length: expected 34 characters, got ${base58Address.length}`,
+    )
+  }
+
   let decoded: Uint8Array
   try {
     decoded = bs58.decode(base58Address)

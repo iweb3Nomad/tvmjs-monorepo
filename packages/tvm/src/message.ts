@@ -59,6 +59,11 @@ export interface TronTransactionContext {
 export function createTronTransactionContext(
   rootTransactionId: Uint8Array,
 ): TronTransactionContext {
+  if (!(rootTransactionId instanceof Uint8Array)) {
+    throw EthereumJSErrorWithoutCode(
+      `This method only supports Uint8Array but input was: ${rootTransactionId}`,
+    )
+  }
   if (rootTransactionId.length !== 32) {
     throw EthereumJSErrorWithoutCode('Expected rootTransactionId to be of length 32')
   }
