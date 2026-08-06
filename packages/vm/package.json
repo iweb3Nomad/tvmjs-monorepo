@@ -37,7 +37,7 @@
     "clean": "../../config/cli/clean-package.sh",
     "coverage": "DEBUG=tvmjs npx vitest run -c ./vitest.config.coverage.ts",
     "docs:build": "typedoc --options typedoc.mjs",
-    "examples": "tsx ../../scripts/examples-runner.ts -- vm",
+    "examples": "node --import tsx ../../scripts/examples-runner.ts -- vm",
     "examples:build": "npx embedme README.md",
     "formatTest": "node ./scripts/formatTest",
     "lint": "npm run biome && eslint  --config ./eslint.config.mjs .",
