@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Derive TRON internal CREATE addresses from the root transaction ID and transaction-wide internal nonce; preserve Ethereum CREATE behavior on Ethereum hardfork paths
 - Advance the shared TRON internal nonce after CREATE/CREATE2 collisions and on every nested `SELFDESTRUCT` invocation
 - Reject non-`Uint8Array` root transaction IDs instead of silently coercing them into invalid execution context
+- Return the java-tron-compatible 21-byte TRON address representation from CREATE/CREATE2 stack results while keeping internal account addresses 20 bytes
 
 ### Features
 

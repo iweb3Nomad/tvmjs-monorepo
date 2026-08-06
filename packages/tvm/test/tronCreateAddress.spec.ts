@@ -4,10 +4,12 @@ import {
   Address,
   bigIntToBytes,
   bytesToHex,
+  concatBytes,
   generateAddress,
   generateAddress2,
   generateTronCreateAddress,
   hexToBytes,
+  setLengthLeft,
 } from '@tvmjs/util'
 import { assert, describe, expect, it } from 'vitest'
 
@@ -22,6 +24,10 @@ function returnedAddress(returnValue: Uint8Array): string {
   return bytesToHex(returnValue.subarray(-20))
 }
 
+function tronStackAddress(address: Uint8Array): Uint8Array {
+  return setLengthLeft(concatBytes(Uint8Array.of(0x41), address), 32)
+}
+
 describe('TRON CREATE address derivation', () => {
   it('uses rootTransactionId and the transaction-wide internal nonce', async () => {
     const tvm = await createTVM()
@@ -33,10 +39,41 @@ describe('TRON CREATE address derivation', () => {
       rootTransactionId: ROOT_TRANSACTION_ID,
     })
 
-    assert.strictEqual(
-      returnedAddress(result.execResult.returnValue),
-      bytesToHex(generateTronCreateAddress(ROOT_TRANSACTION_ID, 0n)),
+    assert.deepEqual(
+      result.execResult.returnValue,
+      tronStackAddress(generateTronCreateAddress(ROOT_TRANSACTION_ID, 0n)),
     )
+  })
+
+  it('returns the 0x41-prefixed TRON address word from CREATE2', async () => {
+    const tvm = await createTVM()
+    const salt = new Uint8Array(32)
+    salt[31] = 1
+    const emptyCode = new Uint8Array(0)
+
+    await tvm.stateManager.putCode(CREATOR, hexToBytes('0x6001600060006000f560005260206000f3'))
+    const result = await tvm.runCall({
+      to: CREATOR,
+      rootTransactionId: ROOT_TRANSACTION_ID,
+    })
+
+    assert.deepEqual(
+      result.execResult.returnValue,
+      tronStackAddress(generateAddress2(CREATOR.bytes, salt, emptyCode)),
+    )
+  })
+
+  it('returns zero when CREATE fails', async () => {
+    const tvm = await createTVM()
+    // The creator has no balance, so CREATE with value=1 fails before address generation.
+    await tvm.stateManager.putCode(CREATOR, hexToBytes('0x600060006001f060005260206000f3'))
+
+    const result = await tvm.runCall({
+      to: CREATOR,
+      rootTransactionId: ROOT_TRANSACTION_ID,
+    })
+
+    assert.deepEqual(result.execResult.returnValue, new Uint8Array(32))
   })
 
   it('increments the shared internal nonce for consecutive CREATE operations', async () => {
@@ -122,9 +159,25 @@ describe('TRON CREATE address derivation', () => {
 
     const result = await tvm.runCall({ to: CREATOR })
 
-    assert.strictEqual(
-      returnedAddress(result.execResult.returnValue),
-      bytesToHex(generateAddress(CREATOR.bytes, bigIntToBytes(0n))),
+    assert.deepEqual(
+      result.execResult.returnValue,
+      setLengthLeft(generateAddress(CREATOR.bytes, bigIntToBytes(0n)), 32),
+    )
+  })
+
+  it('keeps the pre-TRON CREATE2 stack result unprefixed', async () => {
+    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Constantinople })
+    const tvm = await createTVM({ common })
+    const salt = new Uint8Array(32)
+    salt[31] = 1
+    const emptyCode = new Uint8Array(0)
+
+    await tvm.stateManager.putCode(CREATOR, hexToBytes('0x6001600060006000f560005260206000f3'))
+    const result = await tvm.runCall({ to: CREATOR })
+
+    assert.deepEqual(
+      result.execResult.returnValue,
+      setLengthLeft(generateAddress2(CREATOR.bytes, salt, emptyCode), 32),
     )
   })
 

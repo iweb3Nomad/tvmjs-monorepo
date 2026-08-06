@@ -50,6 +50,7 @@ import type {
 } from './types.ts'
 
 const debugGas = debugDefault('tvm:gas')
+const TRON_ADDRESS_PREFIX_WORD = 0x41n << 160n
 
 export interface InterpreterOpts {
   pc?: number
@@ -1308,8 +1309,11 @@ export class Interpreter {
       this._env.contract = account
       this._runState.gasRefund = results.execResult.gasRefund ?? BIGINT_0
       if (results.createdAddress) {
-        // push the created address to the stack
-        return bytesToBigInt(results.createdAddress.bytes)
+        const createdAddress = bytesToBigInt(results.createdAddress.bytes)
+        // java-tron right-aligns its 21-byte TRON address in the 32-byte stack word.
+        return this.common.gteHardfork(Hardfork.Tron)
+          ? TRON_ADDRESS_PREFIX_WORD | createdAddress
+          : createdAddress
       }
     }
 
