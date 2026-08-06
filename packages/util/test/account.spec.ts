@@ -245,7 +245,6 @@ describe('Utility Functions', () => {
     )
 
     assert.isFalse(
-      // @ts-expect-error -- This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
       isValidPrivate((<unknown>'WRONG_INPUT_TYPE') as Uint8Array),
       'should fail on wrong input type',
     )
@@ -579,7 +578,6 @@ describe('Utility Functions', () => {
     assert.throws(
       function () {
         generateAddress(
-          // @ts-expect-error -- This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
           (<unknown>'0x990ccf8a0de58091c028d6ff76bb235ee67c1c39') as Uint8Array,
           intToBytes(0),
         )
@@ -593,7 +591,6 @@ describe('Utility Functions', () => {
       function () {
         generateAddress(
           hexToBytes('0x990ccf8a0de58091c028d6ff76bb235ee67c1c39'),
-          // @ts-expect-error -- This syntax is not allowed when 'erasableSyntaxOnly' is enabled.
           (<unknown>0) as Uint8Array,
         )
       },
