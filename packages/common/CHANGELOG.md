@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - **TRON Proposal gating**: Add `activatedProposals` option to `BaseOpts`; expose `Common.activatedProposals()` and `Common.isActivatedProposal(id)` for Proposal 95 (`ALLOW_TVM_PRAGUE`) and 96 (`ALLOW_TVM_OSAKA`); IDs are validated, deduplicated, and stored in ascending order; does not alter EIPs, params, or execution behavior at this stage
 - **Constructor forwarding**: `createCommonFromGethGenesis` now forwards `activatedProposals` to the underlying `Common` instance
 
+### Bug Fixes
+
+- Add the missing EIP-7939 entry to `tipsDict` so the implemented CLZ opcode can be enabled explicitly with `eips: [7939]`; default hardfork and Proposal 96 activation behavior remain unchanged
+
 ## 1.0.0
 
 ### Features
@@ -42,4 +46,3 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Rename package namespace from `@ethereumjs/common` to `@tvmjs/common`; update all internal imports
 - Bump package version to `1.0.0`
 - Lock all dependency versions by removing `^` and `~` prefixes
-

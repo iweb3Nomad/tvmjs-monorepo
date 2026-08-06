@@ -215,6 +215,10 @@ describe('[Common]: TRON proposal gating state', () => {
       (base as any)['_paramsCache'],
       'params cache should not change when proposals are activated',
     )
+    assert.isFalse(
+      withProposals.isActivatedEIP(7939),
+      'Proposal 96 must not activate EIP-7939 until proposal behavior is wired',
+    )
   })
 
   it('should register proposals 95/96 in tronProposalsDict', () => {
