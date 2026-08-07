@@ -109,8 +109,8 @@ export interface VMOpts {
    *
    * Default setup if no `Common` instance is provided:
    *
-   * - `chain`: `mainnet`
-   * - `hardfork`: `paris`
+   * - `chain`: `tron-mainnet` (execution-only chain configuration)
+   * - `hardfork`: `tron`
    * - `eips`: `[]`
    */
   common?: Common
@@ -166,7 +166,9 @@ export interface VMOpts {
   params?: ParamsDict
 
   /**
-   * Use a custom TVM to run Messages on. If this is not present, use the default TVM.
+   * Use a custom TVM to run Messages on. If this is not present, use the default TVM. The custom
+   * TVM's `Common` instance takes precedence over `common` so VM validation and TVM execution use
+   * the same chain configuration.
    */
   tvm?: TVMInterface
 

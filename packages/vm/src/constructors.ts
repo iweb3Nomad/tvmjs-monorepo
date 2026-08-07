@@ -1,4 +1,4 @@
-import { Common, Mainnet } from '@tvmjs/common'
+import { Common, TronMainnet } from '@tvmjs/common'
 import { MerkleStateManager } from '@tvmjs/statemanager'
 import { TVMMockBlockchain, createTVM, getActivePrecompiles } from '@tvmjs/tvm'
 import {
@@ -22,10 +22,16 @@ export async function createVM(opts: VMOpts = {}): Promise<VM> {
   // Save if a `StateManager` was passed (for activatePrecompiles)
   const didPassStateManager = opts.stateManager !== undefined
 
-  // Add common, SM, blockchain, TVM here
-  if (opts.common === undefined) {
-    opts.common = new Common({ chain: Mainnet })
+  if (opts.tvm !== undefined && opts.tvmOpts !== undefined) {
+    throw EthereumJSErrorWithoutCode('the tvm and tvmOpts options cannot be used in conjunction')
   }
+
+  // Add common, SM, blockchain, TVM here
+  // A supplied TVM already owns the execution Common. Otherwise tvmOpts.common takes precedence
+  // when constructing the default TVM. Use the same instance at the VM layer so transaction
+  // validation and opcode execution cannot resolve different chain IDs or hardforks.
+  opts.common =
+    opts.tvm?.common ?? opts.tvmOpts?.common ?? opts.common ?? new Common({ chain: TronMainnet })
 
   if (opts.stateManager === undefined) {
     opts.stateManager = new MerkleStateManager({
@@ -44,10 +50,6 @@ export async function createVM(opts: VMOpts = {}): Promise<VM> {
         'Cannot have `reportProfilerAfterBlock` and `reportProfilerAfterTx` set to `true` at the same time',
       )
     }
-  }
-
-  if (opts.tvm !== undefined && opts.tvmOpts !== undefined) {
-    throw EthereumJSErrorWithoutCode('the tvm and tvmOpts options cannot be used in conjunction')
   }
 
   if (opts.tvm === undefined) {

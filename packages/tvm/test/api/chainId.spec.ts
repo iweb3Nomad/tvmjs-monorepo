@@ -5,6 +5,15 @@ import { assert, describe, it } from 'vitest'
 import { createTVM } from '../../src/index.ts'
 
 describe('CHAINID opcode (0x46)', () => {
+  it('should default to TRON Mainnet chainId (728126428)', async () => {
+    const tvm = await createTVM()
+    const result = await tvm.runCode({ code: hexToBytes('0x46') })
+
+    assert.strictEqual(tvm.common.chainId(), 728126428n)
+    assert.isUndefined(result.exceptionError, 'execution should succeed')
+    assert.strictEqual(result.runState!.stack.peek()[0], 728126428n)
+  })
+
   it('should return Ethereum Mainnet chainId (1) when using Mainnet config', async () => {
     const common = new Common({ chain: Mainnet, hardfork: 'istanbul' })
     const tvm = await createTVM({ common })

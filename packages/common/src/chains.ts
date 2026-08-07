@@ -120,6 +120,37 @@ export const Mainnet: ChainConfig = {
   ],
 }
 
+/**
+ * Creates an execution-only TRON chain config from the Ethereum Mainnet execution baseline.
+ *
+ * These configs intentionally do not claim to be complete TRON network definitions: genesis,
+ * consensus, and hardfork data still require a verified java-tron network configuration. Network
+ * discovery fields are cleared so they cannot accidentally be used to connect to a node.
+ */
+function createTronExecutionChainConfig(name: string, chainId: number): ChainConfig {
+  return {
+    ...Mainnet,
+    name,
+    chainId,
+    defaultHardfork: 'tron',
+    customHardforks: tronHardforksDict,
+    comment: `Execution-only ${name} chainId preset; not a complete TRON network configuration`,
+    url: undefined,
+    bootstrapNodes: [],
+    dnsNetworks: [],
+    depositContractAddress: undefined,
+  }
+}
+
+/** Execution-only TRON Mainnet chainId configuration. */
+export const TronMainnet: ChainConfig = createTronExecutionChainConfig('tron-mainnet', 728126428)
+
+/** Execution-only TRON Nile testnet chainId configuration. */
+export const TronNile: ChainConfig = createTronExecutionChainConfig('tron-nile', 3448148188)
+
+/** Execution-only TRON Shasta testnet chainId configuration. */
+export const TronShasta: ChainConfig = createTronExecutionChainConfig('tron-shasta', 2494104990)
+
 export const Sepolia: ChainConfig = {
   name: 'sepolia',
   chainId: 11155111,

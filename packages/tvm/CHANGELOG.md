@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Features
 
 - Add `rootTransactionId` execution context support and propagate the shared TRON internal nonce across nested CALL, CREATE, and CREATE2 operations
+- Default `createTVM()` to the execution-only `TronMainnet` chain configuration; callers can still pass an explicit Ethereum `Mainnet` Common
 
 ## 1.0.0
 

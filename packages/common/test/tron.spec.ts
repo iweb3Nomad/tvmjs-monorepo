@@ -5,6 +5,9 @@ import { tronHardforksDict } from '../src/hardforks.ts'
 import {
   Common,
   Mainnet,
+  TronMainnet,
+  TronNile,
+  TronShasta,
   createCommonFromGethGenesis,
   createCustomCommon,
   createTronChainIdCommon,
@@ -267,6 +270,26 @@ describe('[Common]: TRON proposal gating state', () => {
 describe('[Common]: TRON network chainId presets (execution-only)', () => {
   const mainnetBaseline = new Common({ chain: Mainnet })
 
+  it('should expose named execution-only chain configurations', () => {
+    const configs = [
+      [TronMainnet, 'tron-mainnet', 728126428n],
+      [TronNile, 'tron-nile', 3448148188n],
+      [TronShasta, 'tron-shasta', 2494104990n],
+    ] as const
+
+    for (const [chain, name, chainId] of configs) {
+      const common = new Common({ chain })
+      assert.strictEqual(common.chainName(), name)
+      assert.strictEqual(common.chainId(), chainId)
+      assert.strictEqual(chain.defaultHardfork, 'tron')
+      assert.strictEqual(chain.customHardforks, tronHardforksDict)
+      assert.deepEqual(chain.bootstrapNodes, [])
+      assert.deepEqual(chain.dnsNetworks, [])
+      assert.isUndefined(chain.url)
+      assert.isUndefined(chain.depositContractAddress)
+    }
+  })
+
   it('should return correct chainId for each TRON network', () => {
     const mainnet = createTronChainIdCommon('mainnet')
     assert.strictEqual(mainnet.chainId(), 728126428n, 'mainnet chainId should be 728126428')
@@ -323,7 +346,7 @@ describe('[Common]: TRON network chainId presets (execution-only)', () => {
     }
   })
 
-  it('should inherit configuration from Mainnet baseline', () => {
+  it('should inherit execution configuration but omit Mainnet network discovery data', () => {
     const tron = createTronChainIdCommon('mainnet')
     const baseline = mainnetBaseline.copy()
 
@@ -339,21 +362,18 @@ describe('[Common]: TRON network chainId presets (execution-only)', () => {
       'hardfork sequence should match',
     )
 
-    // Verify other config properties match (besides chainId and name)
+    // Execution-only fields still use the Mainnet baseline.
     assert.deepEqual(tron.genesis(), baseline.genesis(), 'genesis should match')
-    assert.deepEqual(
-      tron.bootstrapNodes(),
-      baseline.bootstrapNodes(),
-      'bootstrapNodes should match',
-    )
-    assert.deepEqual(tron.dnsNetworks(), baseline.dnsNetworks(), 'dnsNetworks should match')
     assert.deepEqual(
       tron.consensusConfig(),
       baseline.consensusConfig(),
       'consensusConfig should match',
     )
 
-    // Verify only chainId and name differ
+    // Ethereum network discovery data must not leak into a named TRON preset.
+    assert.deepEqual(tron.bootstrapNodes(), [])
+    assert.deepEqual(tron.dnsNetworks(), [])
+
     assert.notStrictEqual(tron.chainId(), baseline.chainId(), 'chainId should differ')
     assert.notStrictEqual(tron.chainName(), baseline.chainName(), 'chainName should differ')
   })

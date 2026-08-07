@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Features
 
 - Add an optional `rootTransactionId` to `RunTxOpts` and forward it to TVM for java-tron-compatible internal CREATE address derivation
+- Default `createVM()` to the execution-only `TronMainnet` chain configuration and keep the VM/TVM Common instance consistent when supplied through a custom TVM or `tvmOpts`
 
 ## 1.0.0
 
@@ -38,4 +39,3 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Upgrade `tronweb` to `6.3.0`
 - Bump package version to `1.0.0`
 - Lock all dependency versions by removing `^` and `~` prefixes
-

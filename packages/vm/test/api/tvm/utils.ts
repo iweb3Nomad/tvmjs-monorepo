@@ -68,20 +68,23 @@ export async function deployContract(vm: VM, contract: ContractData, opt?: any) 
 
   let tx
   if (opt?.pk) {
-    tx = createTx(txData).sign(hexToBytes(opt.pk))
+    tx = createTx(txData, { common: vm.common }).sign(hexToBytes(opt.pk))
   } else {
     if (!opt?.skipBalance) {
       await setBalance(vm, createAddressFromPrivateKey(hexToBytes(PK)), 100_000_000_000n)
     }
-    tx = createTx(txData).sign(hexToBytes(PK))
+    tx = createTx(txData, { common: vm.common }).sign(hexToBytes(PK))
   }
 
-  const block = createBlock({
-    header: {
-      gasLimit: 1_000_000_000_000n,
+  const block = createBlock(
+    {
+      header: {
+        gasLimit: 1_000_000_000_000n,
+      },
+      transactions: [tx],
     },
-    transactions: [tx],
-  })
+    { common: vm.common },
+  )
 
   await vm.stateManager.checkpoint()
   const result = await runBlock(vm, {
@@ -112,7 +115,7 @@ export async function trigger(vm: VM, triggerOption: TriggerOption) {
     contractAddress,
     abi,
     params,
-    block = createBlock({}),
+    block = createBlock({}, { common: vm.common }),
     value,
     tokenId,
     tokenValue,
@@ -138,14 +141,17 @@ export async function trigger(vm: VM, triggerOption: TriggerOption) {
     tokenValue,
   }
 
-  const tx = createTx(txData).sign(hexToBytes(PK))
+  const tx = createTx(txData, { common: vm.common }).sign(hexToBytes(PK))
 
-  const newBlock = createBlock({
-    header: {
-      gasLimit: 1_000_000_000_000n,
+  const newBlock = createBlock(
+    {
+      header: {
+        gasLimit: 1_000_000_000_000n,
+      },
+      transactions: [tx],
     },
-    transactions: [tx],
-  })
+    { common: vm.common },
+  )
 
   await vm.stateManager.checkpoint()
   const result = await runBlock(vm, {
@@ -160,7 +166,14 @@ export async function trigger(vm: VM, triggerOption: TriggerOption) {
 }
 
 export async function triggerConstant(vm: VM, triggerOption: TriggerConstantOption) {
-  const { caller, contractAddress, abi, params, block = createBlock({}), input } = triggerOption
+  const {
+    caller,
+    contractAddress,
+    abi,
+    params,
+    block = createBlock({}, { common: vm.common }),
+    input,
+  } = triggerOption
 
   const data = (() => {
     if (input) return input
