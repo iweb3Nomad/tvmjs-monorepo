@@ -1058,6 +1058,15 @@ export class TVM implements TVMInterface {
    * Executes an TVM message, determining whether it's a call or create
    * based on the `to` address. It checkpoints the state and reverts changes
    * if an exception happens during the message execution.
+   *
+   * When `opts.message` is supplied with `depth === 0`, the message is treated as a new top-level
+   * transaction and is mutated in place: `selfdestruct`, `createdAddresses`, `gasRefund`, and
+   * `tronTransactionContext` are reset so state from a previous run cannot leak into this one.
+   * To seed those transaction-level values, pass `opts.selfdestruct`, `opts.createdAddresses`,
+   * `opts.gasRefund`, and `opts.rootTransactionId` instead of pre-setting them on the message.
+   *
+   * `opts.skipBalance` applies to messages built by this method at any depth. When `opts.message`
+   * is supplied it is only honored for top-level (`depth === 0`) messages.
    */
   async runCall(opts: TVMRunCallOpts): Promise<TVMResult> {
     let timer: Timer | undefined
@@ -1077,35 +1086,19 @@ export class TVM implements TVMInterface {
         origin: opts.origin ?? caller,
       }
       if (message !== undefined) {
-        message.selfdestruct ??= new Map()
-        message.createdAddresses ??= new Set()
+        message.selfdestruct = opts.selfdestruct ?? new Map()
+        message.createdAddresses = opts.createdAddresses ?? new Set()
+        message.gasRefund = opts.gasRefund ?? BIGINT_0
+        message.tronTransactionContext =
+          opts.rootTransactionId === undefined
+            ? undefined
+            : createTronTransactionContext(opts.rootTransactionId)
       }
     }
     if (!message) {
       const caller = opts.caller ?? createZeroAddress()
 
       const value = opts.value ?? BIGINT_0
-      if (opts.skipBalance === true) {
-        callerAccount = await this.stateManager.getAccount(caller)
-        if (!callerAccount) {
-          callerAccount = new Account()
-        }
-        const originalBalance = callerAccount.balance
-        if (callerAccount.balance < value) {
-          // if skipBalance and balance less than value, set caller balance to `value` to ensure sufficient funds
-          callerAccount.balance = value
-          await this.journal.putAccount(caller, callerAccount)
-          if (this.common.isActivatedEIP(7928)) {
-            this.blockLevelAccessList!.addBalanceChange(
-              caller.toString(),
-              callerAccount.balance,
-              this.blockLevelAccessList!.blockAccessIndex,
-              originalBalance,
-            )
-          }
-        }
-      }
-
       message = new Message({
         caller,
         gasLimit: opts.gasLimit ?? BigInt(0xffffff),
@@ -1129,10 +1122,35 @@ export class TVM implements TVMInterface {
             : createTronTransactionContext(opts.rootTransactionId),
       })
     } else if (
+      message.depth > 0 &&
       opts.rootTransactionId !== undefined &&
-      (message.depth === 0 || message.tronTransactionContext === undefined)
+      message.tronTransactionContext === undefined
     ) {
       message.tronTransactionContext = createTronTransactionContext(opts.rootTransactionId)
+    }
+
+    // `skipBalance` is a caller-facing convenience for funding the sender, so it stays available to
+    // messages this method builds itself (any depth, as before). For a caller-supplied `Message` it
+    // is limited to top-level calls so it cannot relax balance checks for nested execution.
+    if (opts.skipBalance === true && (opts.message === undefined || message.depth === 0)) {
+      callerAccount = await this.stateManager.getAccount(message.caller)
+      if (!callerAccount) {
+        callerAccount = new Account()
+      }
+      const originalBalance = callerAccount.balance
+      if (callerAccount.balance < message.value) {
+        // Set the caller balance to `value` to ensure sufficient funds.
+        callerAccount.balance = message.value
+        await this.journal.putAccount(message.caller, callerAccount)
+        if (this.common.isActivatedEIP(7928)) {
+          this.blockLevelAccessList!.addBalanceChange(
+            message.caller.toString(),
+            callerAccount.balance,
+            this.blockLevelAccessList!.blockAccessIndex,
+            originalBalance,
+          )
+        }
+      }
     }
 
     if (message.depth === 0) {

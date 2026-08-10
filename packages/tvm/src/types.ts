@@ -135,6 +135,8 @@ export interface TVMRunCallOpts extends TVMRunOpts {
   /**
    * Skip balance checks if true. If caller balance is less than message value,
    * sets balance to message value to ensure execution doesn't fail.
+   * When `message` is also supplied, this is only honored for top-level
+   * (`depth === 0`) messages.
    */
   skipBalance?: boolean
   /**
@@ -184,7 +186,11 @@ export interface TVMInterface {
     startReportingPreimages?(): void
   }
   stateManager: StateManagerInterface
-  blockchain: TVMMockBlockchainInterface
+  /**
+   * Blockchain used by this TVM. Optional for compatibility with custom TVM implementations;
+   * built-in TVM instances expose it so VM and TVM can share the same instance.
+   */
+  blockchain?: TVMMockBlockchainInterface
   precompiles: Map<string, PrecompileFunc>
   getPrecompile?(address: Address | PrefixedHexString): PrecompileFunc | undefined
   runCall(opts: TVMRunCallOpts): Promise<TVMResult>

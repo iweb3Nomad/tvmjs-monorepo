@@ -16,7 +16,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Reject non-`Uint8Array` root transaction IDs instead of silently coercing them into invalid execution context
 - Return the java-tron-compatible 21-byte TRON address representation from CREATE/CREATE2 stack results while keeping internal account addresses 20 bytes
 - Revert the active message checkpoint when an unexpected execution error propagates, including a missing TRON `rootTransactionId`
-- Initialize transaction metadata and execution collections for top-level prebuilt `Message` calls, and reset their TRON transaction context when reused
+- Reinitialize transaction-scoped metadata and execution collections for every top-level prebuilt `Message` call, including reused messages
+- Honor `runCall({ message, skipBalance })` for top-level prebuilt messages; for caller-supplied messages `skipBalance` is scoped to `depth === 0` so it cannot relax balance checks for nested execution, while messages built by `runCall` keep the previous any-depth behavior
 
 ### Features
 

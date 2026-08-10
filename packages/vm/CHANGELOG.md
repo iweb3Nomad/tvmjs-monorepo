@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
-- Keep VM and TVM `Common`, `StateManager`, and blockchain instances consistent when supplied through a custom TVM or `tvmOpts`
+- Keep VM and TVM `Common`, `StateManager`, and exposed blockchain instances consistent when supplied through a custom TVM or `tvmOpts`
 
 ### Features
 
