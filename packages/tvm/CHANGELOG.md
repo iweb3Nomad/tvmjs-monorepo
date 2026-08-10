@@ -15,6 +15,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Advance the shared TRON internal nonce after CREATE/CREATE2 collisions and on every nested `SELFDESTRUCT` invocation
 - Reject non-`Uint8Array` root transaction IDs instead of silently coercing them into invalid execution context
 - Return the java-tron-compatible 21-byte TRON address representation from CREATE/CREATE2 stack results while keeping internal account addresses 20 bytes
+- Revert the active message checkpoint when an unexpected execution error propagates, including a missing TRON `rootTransactionId`
+- Initialize transaction metadata and execution collections for top-level prebuilt `Message` calls, and reset their TRON transaction context when reused
 
 ### Features
 

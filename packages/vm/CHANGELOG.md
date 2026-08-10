@@ -8,10 +8,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Bug Fixes
+
+- Keep VM and TVM `Common`, `StateManager`, and blockchain instances consistent when supplied through a custom TVM or `tvmOpts`
+
 ### Features
 
 - Add an optional `rootTransactionId` to `RunTxOpts` and forward it to TVM for java-tron-compatible internal CREATE address derivation
-- Default `createVM()` to the execution-only `TronMainnet` chain configuration and keep the VM/TVM Common instance consistent when supplied through a custom TVM or `tvmOpts`
+- Default `createVM()` to the execution-only `TronMainnet` chain configuration
 
 ## 1.0.0
 

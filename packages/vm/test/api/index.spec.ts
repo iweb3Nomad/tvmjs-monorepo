@@ -1,7 +1,13 @@
 import { Common, Hardfork, Mainnet, createCustomCommon } from '@tvmjs/common'
 import { testnetMergeChainConfig } from '@tvmjs/testdata'
 import { TVM, createTVM } from '@tvmjs/tvm'
-import { Account, KECCAK256_RLP, createAddressFromString, hexToBytes } from '@tvmjs/util'
+import {
+  Account,
+  KECCAK256_RLP,
+  bytesToBigInt,
+  createAddressFromString,
+  hexToBytes,
+} from '@tvmjs/util'
 import { assert, describe, it } from 'vitest'
 
 import { type VMOpts, createVM, paramsVM } from '../../src/index.ts'
@@ -77,6 +83,13 @@ describe('VM -> Default TVM / Custom TVM Opts', () => {
     assert.strictEqual(vm.tvm.common, vm.common)
     assert.strictEqual(vm.common.chainId(), 1n)
     assert.strictEqual(vm.common.hardfork(), Hardfork.Byzantium)
+    assert.strictEqual(vm.stateManager, tvm.stateManager)
+    assert.strictEqual(vm.blockchain, tvm.blockchain)
+
+    const contract = createAddressFromString('0x0000000000000000000000000000000000000100')
+    await vm.stateManager.putCode(contract, hexToBytes('0x602a60005260206000f3'))
+    const result = await vm.tvm.runCall({ to: contract })
+    assert.strictEqual(bytesToBigInt(result.execResult.returnValue), 42n)
   })
 
   it('Default TVM should use custom TVM opts', async () => {
@@ -110,7 +123,14 @@ describe('VM -> Default TVM / Custom TVM Opts', () => {
 
   it('Default TVM should prefer common from tvmOpts if provided (same logic for blockchain, statemanager)', async () => {
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Byzantium })
-    const vm = await createVM({ tvmOpts: { common } })
+    const resources = await createTVM({ common })
+    const vm = await createVM({
+      tvmOpts: {
+        common,
+        stateManager: resources.stateManager,
+        blockchain: resources.blockchain,
+      },
+    })
     assert.strictEqual(
       (vm.tvm as TVM).common.hardfork(),
       'byzantium',
@@ -118,6 +138,10 @@ describe('VM -> Default TVM / Custom TVM Opts', () => {
     )
     assert.strictEqual(vm.common, common, 'VM should use the Common selected by tvmOpts')
     assert.strictEqual(vm.tvm.common, vm.common, 'VM and TVM should not diverge')
+    assert.strictEqual(vm.stateManager, resources.stateManager)
+    assert.strictEqual(vm.tvm.stateManager, vm.stateManager)
+    assert.strictEqual(vm.blockchain, resources.blockchain)
+    assert.strictEqual(vm.tvm.blockchain, vm.blockchain)
 
     const copiedVM = await vm.shallowCopy()
     assert.strictEqual(

@@ -20,28 +20,30 @@ import type { VMOpts } from './types.ts'
  */
 export async function createVM(opts: VMOpts = {}): Promise<VM> {
   // Save if a `StateManager` was passed (for activatePrecompiles)
-  const didPassStateManager = opts.stateManager !== undefined
+  const didPassStateManager =
+    opts.tvm?.stateManager !== undefined ||
+    opts.tvmOpts?.stateManager !== undefined ||
+    opts.stateManager !== undefined
 
   if (opts.tvm !== undefined && opts.tvmOpts !== undefined) {
     throw EthereumJSErrorWithoutCode('the tvm and tvmOpts options cannot be used in conjunction')
   }
 
-  // Add common, SM, blockchain, TVM here
-  // A supplied TVM already owns the execution Common. Otherwise tvmOpts.common takes precedence
-  // when constructing the default TVM. Use the same instance at the VM layer so transaction
-  // validation and opcode execution cannot resolve different chain IDs or hardforks.
+  // Add common, SM, blockchain, TVM here. A supplied TVM already owns all three execution
+  // resources. Otherwise the corresponding tvmOpts value takes precedence over the top-level
+  // option. Keep the exact same instances at the VM layer so transaction validation/state updates
+  // and TVM execution cannot diverge.
   opts.common =
     opts.tvm?.common ?? opts.tvmOpts?.common ?? opts.common ?? new Common({ chain: TronMainnet })
 
-  if (opts.stateManager === undefined) {
-    opts.stateManager = new MerkleStateManager({
-      common: opts.common,
-    })
-  }
+  opts.stateManager =
+    opts.tvm?.stateManager ??
+    opts.tvmOpts?.stateManager ??
+    opts.stateManager ??
+    new MerkleStateManager({ common: opts.common })
 
-  if (opts.blockchain === undefined) {
-    opts.blockchain = new TVMMockBlockchain()
-  }
+  opts.blockchain =
+    opts.tvm?.blockchain ?? opts.tvmOpts?.blockchain ?? opts.blockchain ?? new TVMMockBlockchain()
 
   if (opts.profilerOpts !== undefined) {
     const profilerOpts = opts.profilerOpts

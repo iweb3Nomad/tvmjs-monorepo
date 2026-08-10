@@ -167,14 +167,16 @@ export interface VMOpts {
 
   /**
    * Use a custom TVM to run Messages on. If this is not present, use the default TVM. The custom
-   * TVM's `Common` instance takes precedence over `common` so VM validation and TVM execution use
-   * the same chain configuration.
+   * TVM's `Common`, `StateManager`, and blockchain instances take precedence over their top-level
+   * counterparts so VM validation/state updates and TVM execution use the same resources.
    */
   tvm?: TVMInterface
 
   /**
    * Often there is no need to provide a full custom TVM but only a few options need to be
-   * adopted. This option allows to provide a custom set of TVM options to be passed.
+   * adopted. This option allows to provide a custom set of TVM options to be passed. Its `common`,
+   * `stateManager`, and `blockchain` values take precedence over the corresponding top-level VM
+   * options so both layers use the same instances.
    *
    * Note: This option will throw if used in conjunction with a full custom TVM passed.
    */

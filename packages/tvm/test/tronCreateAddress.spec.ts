@@ -139,8 +139,25 @@ describe('TRON CREATE address derivation', () => {
     const tvm = await createTVM()
     await tvm.stateManager.putCode(CREATOR, hexToBytes('0x600060006000f000'))
 
+    assert.strictEqual((tvm.journal as any).journalHeight, 0)
     await expect(tvm.runCall({ to: CREATOR })).rejects.toThrow(
       /rootTransactionId is required for TRON internal CREATE/,
+    )
+    assert.strictEqual(
+      (tvm.journal as any).journalHeight,
+      0,
+      'an unexpected execution error must revert the active message checkpoint',
+    )
+
+    const result = await tvm.runCall({
+      to: CREATOR,
+      rootTransactionId: ROOT_TRANSACTION_ID,
+    })
+    assert.isUndefined(result.execResult.exceptionError)
+    assert.strictEqual(
+      (tvm.journal as any).journalHeight,
+      0,
+      'a later successful call must still start and finish at journal height zero',
     )
   })
 

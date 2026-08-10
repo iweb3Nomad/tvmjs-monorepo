@@ -184,6 +184,7 @@ export interface TVMInterface {
     startReportingPreimages?(): void
   }
   stateManager: StateManagerInterface
+  blockchain: TVMMockBlockchainInterface
   precompiles: Map<string, PrecompileFunc>
   getPrecompile?(address: Address | PrefixedHexString): PrecompileFunc | undefined
   runCall(opts: TVMRunCallOpts): Promise<TVMResult>

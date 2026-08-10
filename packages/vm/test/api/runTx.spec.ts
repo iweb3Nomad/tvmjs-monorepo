@@ -969,4 +969,36 @@ describe('TRON rootTransactionId propagation', () => {
       'runTx should propagate rootTransactionId to internal CREATE with correct derivation',
     )
   })
+
+  it('cleans up all checkpoints when internal CREATE is missing rootTransactionId', async () => {
+    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Tron })
+    const vm = await createVM({ common })
+    const deployer = createAddressFromString('0x0000000000000000000000000000000000000100')
+    await vm.stateManager.putCode(deployer, hexToBytes('0x600060006000f000'))
+
+    const tx = createLegacyTx(
+      {
+        to: deployer,
+        gasLimit: 100000,
+        gasPrice: 10,
+        nonce: 0,
+      },
+      { common },
+    ).sign(SIGNER_A.privateKey)
+
+    let error: unknown
+    try {
+      await runTx(vm, { tx, skipBalance: true })
+    } catch (caught) {
+      error = caught
+    }
+
+    assert.match((error as Error).message, /rootTransactionId is required/)
+    assert.strictEqual(
+      (vm.tvm.journal as any).journalHeight,
+      0,
+      'runTx and runCall checkpoints must both be reverted',
+    )
+    assert.strictEqual(vm.stateManager, vm.tvm.stateManager)
+  })
 })

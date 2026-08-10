@@ -1069,13 +1069,20 @@ export class TVM implements TVMInterface {
     }
     let message = opts.message
     let callerAccount
-    if (!message) {
+    if (message === undefined || message.depth === 0) {
+      const caller = message?.caller ?? opts.caller ?? createZeroAddress()
       this._block = opts.block ?? defaultBlock()
-      const caller = opts.caller ?? createZeroAddress()
       this._tx = {
         gasPrice: opts.gasPrice ?? BIGINT_0,
         origin: opts.origin ?? caller,
       }
+      if (message !== undefined) {
+        message.selfdestruct ??= new Map()
+        message.createdAddresses ??= new Set()
+      }
+    }
+    if (!message) {
+      const caller = opts.caller ?? createZeroAddress()
 
       const value = opts.value ?? BIGINT_0
       if (opts.skipBalance === true) {
@@ -1123,7 +1130,7 @@ export class TVM implements TVMInterface {
       })
     } else if (
       opts.rootTransactionId !== undefined &&
-      message.tronTransactionContext === undefined
+      (message.depth === 0 || message.tronTransactionContext === undefined)
     ) {
       message.tronTransactionContext = createTronTransactionContext(opts.rootTransactionId)
     }
@@ -1175,16 +1182,25 @@ export class TVM implements TVMInterface {
         } value=${value} delegatecall=${delegatecall ? 'yes' : 'no'}`,
       )
     }
-    if (message.to) {
-      if (this.DEBUG) {
-        debug(`Message CALL execution (to: ${message.to})`)
+    try {
+      if (message.to) {
+        if (this.DEBUG) {
+          debug(`Message CALL execution (to: ${message.to})`)
+        }
+        result = await this._executeCall(message as MessageWithTo)
+      } else {
+        if (this.DEBUG) {
+          debug(`Message CREATE execution (to: undefined)`)
+        }
+        result = await this._executeCreate(message)
       }
-      result = await this._executeCall(message as MessageWithTo)
-    } else {
-      if (this.DEBUG) {
-        debug(`Message CREATE execution (to: undefined)`)
+    } catch (error) {
+      await this.journal.revert()
+      if (this.common.isActivatedEIP(1153)) this.transientStorage.revert()
+      if (this.common.isActivatedEIP(7928)) {
+        this.blockLevelAccessList?.revert()
       }
-      result = await this._executeCreate(message)
+      throw error
     }
     if (this.DEBUG) {
       const { executionGasUsed, exceptionError, returnValue } = result.execResult
