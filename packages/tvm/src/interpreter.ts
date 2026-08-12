@@ -1149,7 +1149,9 @@ export class Interpreter {
     // Check if account has enough ether and max depth not exceeded
     if (
       this._env.depth >= Number(this.common.param('stackLimit')) ||
-      (msg.delegatecall !== true && this._env.contract.balance < msg.value)
+      (msg.delegatecall !== true && this._env.contract.balance < msg.value) ||
+      (msg.tokenValue > BIGINT_0 &&
+        this._env.contract.getTokenBalance(msg.tokenId) < msg.tokenValue)
     ) {
       return BIGINT_0
     }

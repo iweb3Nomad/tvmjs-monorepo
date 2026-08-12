@@ -220,7 +220,12 @@ export class BlockBuilder {
     {
       skipHardForkValidation,
       allowNoBlobs,
-    }: { skipHardForkValidation?: boolean; allowNoBlobs?: boolean } = {},
+      rootTransactionId,
+    }: {
+      skipHardForkValidation?: boolean
+      allowNoBlobs?: boolean
+      rootTransactionId?: Uint8Array
+    } = {},
   ) {
     this.checkStatus()
 
@@ -286,7 +291,12 @@ export class BlockBuilder {
     const blockData = { header, transactions: this.transactions }
     const block = createBlock(blockData, this.blockOpts)
 
-    const result = await runTx(this.vm, { tx, block, skipHardForkValidation })
+    const result = await runTx(this.vm, {
+      tx,
+      block,
+      skipHardForkValidation,
+      rootTransactionId,
+    })
 
     // If tx is a blob transaction, remove blobs/kzg commitments before adding to block per EIP-4844
     if (tx instanceof Blob4844Tx) {

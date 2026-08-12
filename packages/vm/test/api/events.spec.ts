@@ -1,12 +1,16 @@
-import { Block } from '@tvmjs/block'
+import { createBlock } from '@tvmjs/block'
 import { createFeeMarket1559Tx } from '@tvmjs/tx'
-import { Account, bytesToHex } from '@tvmjs/util'
+import { Account, bytesToHex, hexToBytes } from '@tvmjs/util'
 import { assert, describe, it } from 'vitest'
 
 import { SIGNER_A } from '@tvmjs/testdata'
 import { createVM, runBlock, runTx } from '../../src/index.ts'
 
 describe('VM events', () => {
+  const rootTransactionId = hexToBytes(
+    '0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
+  )
+
   it('should emit the Block before running it', async () => {
     const vm = await createVM()
 
@@ -16,7 +20,7 @@ describe('VM events', () => {
     }
     vm.events.once('beforeBlock', handler)
 
-    const block = new Block()
+    const block = createBlock({}, { common: vm.common })
 
     await runBlock(vm, {
       block,
@@ -36,7 +40,7 @@ describe('VM events', () => {
     }
     vm.events.once('afterBlock', handler)
 
-    const block = new Block()
+    const block = createBlock({}, { common: vm.common })
 
     await runBlock(vm, {
       block,
@@ -57,13 +61,20 @@ describe('VM events', () => {
     }
     vm.events.once('beforeTx', handler)
 
-    const tx = createFeeMarket1559Tx({
-      gasLimit: 90000,
-      maxFeePerGas: 40000,
-      to: '0x1111111111111111111111111111111111111111',
-    }).sign(SIGNER_A.privateKey)
+    const tx = createFeeMarket1559Tx(
+      {
+        gasLimit: 90000,
+        maxFeePerGas: 40000,
+        to: '0x1111111111111111111111111111111111111111',
+      },
+      { common: vm.common },
+    ).sign(SIGNER_A.privateKey)
 
-    await runTx(vm, { tx, skipBalance: true, skipHardForkValidation: true })
+    await runTx(vm, {
+      tx,
+      skipBalance: true,
+      skipHardForkValidation: true,
+    })
 
     assert.strictEqual(emitted, tx)
   })
@@ -77,14 +88,21 @@ describe('VM events', () => {
     }
     vm.events.once('afterTx', handler)
 
-    const tx = createFeeMarket1559Tx({
-      gasLimit: 90000,
-      maxFeePerGas: 40000,
-      to: '0x1111111111111111111111111111111111111111',
-      value: 1,
-    }).sign(SIGNER_A.privateKey)
+    const tx = createFeeMarket1559Tx(
+      {
+        gasLimit: 90000,
+        maxFeePerGas: 40000,
+        to: '0x1111111111111111111111111111111111111111',
+        value: 1,
+      },
+      { common: vm.common },
+    ).sign(SIGNER_A.privateKey)
 
-    await runTx(vm, { tx, skipBalance: true, skipHardForkValidation: true })
+    await runTx(vm, {
+      tx,
+      skipBalance: true,
+      skipHardForkValidation: true,
+    })
 
     assert.strictEqual(bytesToHex(emitted.execResult.returnValue), '0x')
   })
@@ -99,14 +117,21 @@ describe('VM events', () => {
     }
     vm.tvm.events!.once('beforeMessage', handler)
 
-    const tx = createFeeMarket1559Tx({
-      gasLimit: 90000,
-      maxFeePerGas: 40000,
-      to: '0x1111111111111111111111111111111111111111',
-      value: 1,
-    }).sign(SIGNER_A.privateKey)
+    const tx = createFeeMarket1559Tx(
+      {
+        gasLimit: 90000,
+        maxFeePerGas: 40000,
+        to: '0x1111111111111111111111111111111111111111',
+        value: 1,
+      },
+      { common: vm.common },
+    ).sign(SIGNER_A.privateKey)
 
-    await runTx(vm, { tx, skipBalance: true, skipHardForkValidation: true })
+    await runTx(vm, {
+      tx,
+      skipBalance: true,
+      skipHardForkValidation: true,
+    })
 
     assert.strictEqual(emitted.to.toString(), '0x1111111111111111111111111111111111111111')
     assert.strictEqual(bytesToHex(emitted.code), '0x')
@@ -122,14 +147,21 @@ describe('VM events', () => {
     }
     vm.tvm.events!.once('afterMessage', handler)
 
-    const tx = createFeeMarket1559Tx({
-      gasLimit: 90000,
-      maxFeePerGas: 40000,
-      to: '0x1111111111111111111111111111111111111111',
-      value: 1,
-    }).sign(SIGNER_A.privateKey)
+    const tx = createFeeMarket1559Tx(
+      {
+        gasLimit: 90000,
+        maxFeePerGas: 40000,
+        to: '0x1111111111111111111111111111111111111111',
+        value: 1,
+      },
+      { common: vm.common },
+    ).sign(SIGNER_A.privateKey)
 
-    await runTx(vm, { tx, skipBalance: true, skipHardForkValidation: true })
+    await runTx(vm, {
+      tx,
+      skipBalance: true,
+      skipHardForkValidation: true,
+    })
 
     assert.strictEqual(bytesToHex(emitted.execResult.returnValue), '0x')
   })
@@ -146,13 +178,21 @@ describe('VM events', () => {
     // This is a deployment transaction that pushes 0x41 (i.e. ascii A) followed by 31 0s to
     // the stack, stores that in memory, and then returns the first byte from memory.
     // This deploys a contract which has a single byte of code, 0x41.
-    const tx = createFeeMarket1559Tx({
-      gasLimit: 90000,
-      maxFeePerGas: 40000,
-      data: '0x7f410000000000000000000000000000000000000000000000000000000000000060005260016000f3',
-    }).sign(SIGNER_A.privateKey)
+    const tx = createFeeMarket1559Tx(
+      {
+        gasLimit: 90000,
+        maxFeePerGas: 40000,
+        data: '0x7f410000000000000000000000000000000000000000000000000000000000000060005260016000f3',
+      },
+      { common: vm.common },
+    ).sign(SIGNER_A.privateKey)
 
-    await runTx(vm, { tx, skipBalance: true, skipHardForkValidation: true })
+    await runTx(vm, {
+      tx,
+      rootTransactionId,
+      skipBalance: true,
+      skipHardForkValidation: true,
+    })
 
     assert.strictEqual((lastEmitted as any).opcode.name, 'RETURN')
     vm.tvm.events!.removeListener('step', handler)
@@ -171,13 +211,21 @@ describe('VM events', () => {
     // This is a deployment transaction that pushes 0x41 (i.e. ascii A) followed by 31 0s to
     // the stack, stores that in memory, and then returns the first byte from memory.
     // This deploys a contract which has a single byte of code, 0x41.
-    const tx = createFeeMarket1559Tx({
-      gasLimit: 90000,
-      maxFeePerGas: 40000,
-      data: '0x7f410000000000000000000000000000000000000000000000000000000000000060005260016000f3',
-    }).sign(SIGNER_A.privateKey)
+    const tx = createFeeMarket1559Tx(
+      {
+        gasLimit: 90000,
+        maxFeePerGas: 40000,
+        data: '0x7f410000000000000000000000000000000000000000000000000000000000000060005260016000f3',
+      },
+      { common: vm.common },
+    ).sign(SIGNER_A.privateKey)
 
-    await runTx(vm, { tx, skipBalance: true, skipHardForkValidation: true })
+    await runTx(vm, {
+      tx,
+      rootTransactionId,
+      skipBalance: true,
+      skipHardForkValidation: true,
+    })
 
     assert.strictEqual(
       bytesToHex(emitted.code),

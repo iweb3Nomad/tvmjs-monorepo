@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
+- Derive depth-0 TRON contract deployment addresses from the transaction ID and owner address instead of Ethereum's RLP sender/nonce formula; TRON deployments now require `rootTransactionId`
+- Do not advance the shared TRON internal nonce when `CALLTOKEN` is rejected for insufficient token balance
 - Align TRON `SELFDESTRUCT` new-account gas with java-tron: charge when the beneficiary does not exist regardless of transferred value, do not charge for an existing empty account, and preserve Ethereum EIP-161 behavior on pre-TRON hardforks
 - Derive TRON internal CREATE addresses from the root transaction ID and transaction-wide internal nonce; preserve Ethereum CREATE behavior on Ethereum hardfork paths
 - Advance the shared TRON internal nonce after CREATE/CREATE2 collisions and on every nested `SELFDESTRUCT` invocation
@@ -18,6 +20,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Revert the active message checkpoint when an unexpected execution error propagates, including a missing TRON `rootTransactionId`
 - Reinitialize transaction-scoped metadata and execution collections for every top-level prebuilt `Message` call, including reused messages
 - Honor `runCall({ message, skipBalance })` for top-level prebuilt messages; for caller-supplied messages `skipBalance` is scoped to `depth === 0` so it cannot relax balance checks for nested execution, while messages built by `runCall` keep the previous any-depth behavior
+- Keep profiler timers balanced for top-level prebuilt messages and cancel partial profiling sessions when execution throws
+- Initialize an independent transaction context for standalone prebuilt messages at `depth > 0` while preserving the outer context for interpreter-driven nested calls
+- Reject overlapping top-level `runCall()` invocations on the same TVM instance instead of allowing shared execution context and journals to race
 
 ### Features
 

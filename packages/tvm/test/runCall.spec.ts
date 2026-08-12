@@ -1,5 +1,5 @@
 import { keccak_256 } from '@noble/hashes/sha3.js'
-import { Common, Hardfork, Mainnet, createCommonFromGethGenesis } from '@tvmjs/common'
+import { Common, Hardfork, Mainnet, TronMainnet, createCommonFromGethGenesis } from '@tvmjs/common'
 import { SIGNER_G, eip4844GethGenesis } from '@tvmjs/testdata'
 import {
   Account,
@@ -323,7 +323,7 @@ describe('RunCall tests', () => {
       )
       const beneficiary = beneficiaryState === 'self' ? address : externalBeneficiary
       const tokenId = MIN_TOKEN_ID + 1n
-      const common = new Common({ chain: Mainnet, hardfork: Hardfork.Tron })
+      const common = new Common({ chain: TronMainnet })
       const tvm = await createTVM({ common })
       const code = `0x73${beneficiary.toString().slice(2)}ff` as `0x${string}`
       let initialBeneficiaryBalance = 0n
@@ -402,7 +402,7 @@ describe('RunCall tests', () => {
     const beneficiary = new Address(hexToBytes('0x00000000000000000000000000000000000000fe'))
     const tokenId = MIN_TOKEN_ID + 1n
     const tokenBalance = 100n
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Tron })
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
     const code = `0x73${beneficiary.toString().slice(2)}ff` as `0x${string}`
 
@@ -436,7 +436,7 @@ describe('RunCall tests', () => {
     const beneficiary = new Address(hexToBytes('0x00000000000000000000000000000000000000fe'))
     const tokenId = MIN_TOKEN_ID + 1n
     const tokenBalance = 100n
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Tron })
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
 
     await tvm.stateManager.putCode(address, hexToBytes('0x60FEFF'))

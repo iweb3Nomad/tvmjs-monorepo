@@ -4,7 +4,13 @@ import { join } from 'path'
 import type { Block } from '@tvmjs/block'
 import { createBlock } from '@tvmjs/block'
 import { createTx } from '@tvmjs/tx'
-import { type Address, BIGINT_0, createAddressFromPrivateKey, hexToBytes } from '@tvmjs/util'
+import {
+  type Address,
+  BIGINT_0,
+  createAddressFromPrivateKey,
+  hexToBytes,
+  randomBytes,
+} from '@tvmjs/util'
 // @ts-expect-error missing types
 import wrapper from 'solc/wrapper'
 import { utils } from 'tronweb'
@@ -89,6 +95,7 @@ export async function deployContract(vm: VM, contract: ContractData, opt?: any) 
   await vm.stateManager.checkpoint()
   const result = await runBlock(vm, {
     block,
+    rootTransactionIds: [opt?.rootTransactionId ?? randomBytes(32)],
     generate: true,
     skipBlockValidation: true,
     skipBalance: false,

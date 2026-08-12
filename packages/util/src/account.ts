@@ -656,6 +656,33 @@ export const generateTronCreateAddress = function (
 }
 
 /**
+ * Generates the address for a contract deployed by a TRON transaction.
+ *
+ * java-tron hashes the 32-byte transaction ID followed by the owner's
+ * 21-byte TRON address (`0x41 || address`) and keeps the low 20 bytes.
+ * This differs from both Ethereum's RLP derivation and TRON internal CREATE.
+ *
+ * @param transactionId The 32-byte TRON transaction ID
+ * @param ownerAddress The owner's 20-byte EVM address
+ */
+export const generateTronContractAddress = function (
+  transactionId: Uint8Array,
+  ownerAddress: Uint8Array,
+): Uint8Array {
+  assertIsBytes(transactionId)
+  assertIsBytes(ownerAddress)
+  if (transactionId.length !== 32) {
+    throw EthereumJSErrorWithoutCode('Expected transactionId to be of length 32')
+  }
+  if (ownerAddress.length !== 20) {
+    throw EthereumJSErrorWithoutCode('Expected ownerAddress to be of length 20')
+  }
+
+  const tronOwnerAddress = concatBytes(Uint8Array.of(0x41), ownerAddress)
+  return keccak_256(concatBytes(transactionId, tronOwnerAddress)).subarray(-20)
+}
+
+/**
  * Generates an address for a contract created using CREATE2.
  * @param from The address which is creating this new address
  * @param salt A salt

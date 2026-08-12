@@ -386,6 +386,21 @@ export async function runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
     }
   }
 
+  // Chain-bound transactions use EIP-155 `v` or a typed transaction chainId. Unprotected legacy
+  // transactions intentionally remain valid across chains.
+  const isChainBound =
+    opts.tx.supports(Capability.EIP2718TypedTransaction) ||
+    opts.tx.supports(Capability.EIP155ReplayProtection)
+  if (isChainBound && opts.tx.common.chainId() !== vm.common.chainId()) {
+    const msg = _errorMsg(
+      `tx has a different chainId (${opts.tx.common.chainId()}) than the vm (${vm.common.chainId()})`,
+      vm,
+      opts.block,
+      opts.tx,
+    )
+    throw EthereumJSErrorWithoutCode(msg)
+  }
+
   const gasLimit = opts.block?.header.gasLimit ?? DEFAULT_HEADER.gasLimit
   if (opts.skipBlockGasLimitValidation !== true && gasLimit < opts.tx.gasLimit) {
     const msg = _errorMsg('tx has a higher gas limit than the block', vm, opts.block, opts.tx)

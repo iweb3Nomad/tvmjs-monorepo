@@ -21,6 +21,7 @@ import {
   equalsBytes,
   generateAddress,
   generateAddress2,
+  generateTronContractAddress,
   generateTronCreateAddress,
   hexToBytes,
   importPublic,
@@ -555,6 +556,32 @@ describe('Utility Functions', () => {
     assert.throws(
       () => generateTronCreateAddress(rootTransactionId, 0x10000000000000000n),
       /unsigned 64-bit integer/,
+    )
+  })
+
+  it('generateTronContractAddress matches java-tron top-level deployment derivation', () => {
+    const transactionId = hexToBytes(
+      '0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
+    )
+    const ownerAddress = hexToBytes('0x11223344556677889900aabbccddeeff00112233')
+
+    assert.strictEqual(
+      bytesToHex(generateTronContractAddress(transactionId, ownerAddress)),
+      '0x878f4dfdb3020231fa47ca6f950a711dd16465c6',
+    )
+  })
+
+  it('generateTronContractAddress validates transaction and owner address lengths', () => {
+    const transactionId = new Uint8Array(32)
+    const ownerAddress = new Uint8Array(20)
+
+    assert.throws(
+      () => generateTronContractAddress(new Uint8Array(31), ownerAddress),
+      /transactionId to be of length 32/,
+    )
+    assert.throws(
+      () => generateTronContractAddress(transactionId, new Uint8Array(21)),
+      /ownerAddress to be of length 20/,
     )
   })
 

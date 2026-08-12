@@ -83,7 +83,7 @@ const TRON_CHAIN_CONFIGS: Record<TronNetwork, ChainConfig> = {
  * Creates a {@link Common} instance with TRON network chainId preset for CHAINID opcode execution.
  *
  * This is an execution-only preset that provides the correct chainId value for TRON networks
- * while inheriting the hardfork sequence, EIP activations, and parameters from Ethereum Mainnet.
+ * while using the TRON execution hardfork sequence and parameter overlay.
  * It does NOT represent a complete TRON chain configuration: genesis and consensus details are
  * inherited from Mainnet, and network discovery data is intentionally omitted.
  *

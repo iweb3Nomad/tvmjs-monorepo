@@ -10,7 +10,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
+- Forward `rootTransactionId` for both java-tron-compatible top-level contract deployment and internal CREATE address derivation; `runBlock()` accepts transaction-indexed `rootTransactionIds`, and block builders accept an ID per added transaction
 - Keep VM and TVM `Common`, `StateManager`, and exposed blockchain instances consistent when supplied through a custom TVM or `tvmOpts`
+- Reject EIP-155 and typed transactions whose chainId does not match the VM while preserving support for unprotected legacy transactions. Transactions executed by the default TRON VM must be constructed with the same `Common`, for example `createLegacyTx(data, { common: vm.common })`
 
 ### Features
 

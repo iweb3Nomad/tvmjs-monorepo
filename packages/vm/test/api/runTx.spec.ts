@@ -1,7 +1,7 @@
 import { trustedSetup } from '@paulmillr/trusted-setups/fast-peerdas.js'
 import { createBlock, createBlockHeader } from '@tvmjs/block'
 import { Blockchain, createBlockchain } from '@tvmjs/blockchain'
-import { Common, Hardfork, Mainnet, createCommonFromGethGenesis } from '@tvmjs/common'
+import { Common, Hardfork, Mainnet, TronMainnet, createCommonFromGethGenesis } from '@tvmjs/common'
 import {
   Blob4844Tx,
   EOACode7702Tx,
@@ -25,7 +25,7 @@ import {
   hexToBytes,
 } from '@tvmjs/util'
 import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
-import { assert, describe, it } from 'vitest'
+import { assert, describe, expect, it } from 'vitest'
 
 import { createVM, runTx } from '../../src/index.ts'
 
@@ -140,6 +140,68 @@ describe('runTx() -> successful API parameter usage', async () => {
 
     await runTx(vm, { tx, block, skipHardForkValidation: true })
     assert.isTrue(true, 'runTx should not fail with mismatching hardforks if validation skipped')
+  })
+
+  it('default VM runs a tx bound to the same TRON chainId', async () => {
+    const vm = await createVM()
+    assert.strictEqual(vm.common.chainId(), 728126428n)
+
+    const tx = createLegacyTx(
+      { to: createZeroAddress(), gasLimit: 100000n, gasPrice: 100n },
+      { common: new Common({ chain: TronMainnet }) },
+    ).sign(hexToBytes(`0x${'42'.repeat(32)}`))
+
+    assert.strictEqual(tx.common.chainId(), vm.common.chainId(), 'tx and vm chainId must match')
+    await setBalance(vm, tx.getSenderAddress())
+
+    const res = await runTx(vm, { tx, skipBlockGasLimitValidation: true })
+    assert.strictEqual(res.totalGasSpent, 21000n)
+  })
+
+  it('rejects an EIP-155 legacy tx whose chainId does not match the vm', async () => {
+    const vm = await createVM()
+    // Explicit Ethereum Mainnet common => chainId 1, replay-protected for a different chain.
+    const tx = createLegacyTx(
+      { to: createZeroAddress(), gasLimit: 100000n, gasPrice: 100n },
+      { common: new Common({ chain: Mainnet }) },
+    ).sign(hexToBytes(`0x${'42'.repeat(32)}`))
+
+    assert.strictEqual(tx.common.chainId(), 1n)
+    await setBalance(vm, tx.getSenderAddress())
+
+    await expect(runTx(vm, { tx, skipBlockGasLimitValidation: true })).rejects.toThrow(
+      /tx has a different chainId \(1\) than the vm \(728126428\)/,
+    )
+  })
+
+  it('rejects a typed tx whose chainId does not match the vm', async () => {
+    const vm = await createVM()
+    const tx = createFeeMarket1559Tx(
+      {
+        to: createZeroAddress(),
+        gasLimit: 100000n,
+        maxFeePerGas: 100n,
+      },
+      { common: new Common({ chain: Mainnet, hardfork: Hardfork.London }) },
+    ).sign(hexToBytes(`0x${'42'.repeat(32)}`))
+
+    await expect(runTx(vm, { tx, skipBlockGasLimitValidation: true })).rejects.toThrow(
+      /tx has a different chainId \(1\) than the vm \(728126428\)/,
+    )
+  })
+
+  it('allows an unprotected legacy tx whose Common has a different chainId', async () => {
+    const vm = await createVM()
+    const tx = createLegacyTx(
+      { to: createZeroAddress(), gasLimit: 100000n, gasPrice: 100n },
+      { common: new Common({ chain: Mainnet, hardfork: Hardfork.Homestead }) },
+    ).sign(hexToBytes(`0x${'42'.repeat(32)}`))
+
+    assert.include([27n, 28n], tx.v, 'legacy signature should not contain an EIP-155 chainId')
+    await setBalance(vm, tx.getSenderAddress())
+
+    const res = await runTx(vm, { tx, skipBlockGasLimitValidation: true })
+    assert.strictEqual(res.totalGasSpent, 21000n)
   })
 
   it('should use passed in blockGasUsed to generate tx receipt', async () => {
@@ -930,7 +992,7 @@ describe('EIP 4844 transaction tests', () => {
 
 describe('TRON rootTransactionId propagation', () => {
   it('propagates rootTransactionId from runTx to internal CREATE', async () => {
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Tron })
+    const common = new Common({ chain: TronMainnet })
     const vm = await createVM({ common })
 
     const deployer = createAddressFromString('0x0000000000000000000000000000000000000100')
@@ -971,7 +1033,7 @@ describe('TRON rootTransactionId propagation', () => {
   })
 
   it('cleans up all checkpoints when internal CREATE is missing rootTransactionId', async () => {
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Tron })
+    const common = new Common({ chain: TronMainnet })
     const vm = await createVM({ common })
     const deployer = createAddressFromString('0x0000000000000000000000000000000000000100')
     await vm.stateManager.putCode(deployer, hexToBytes('0x600060006000f000'))

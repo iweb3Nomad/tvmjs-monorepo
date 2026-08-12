@@ -11,12 +11,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Features
 
 - **TRON chainId presets**: Add execution-only `TronMainnet`, `TronNile`, and `TronShasta` chain configs plus the `createTronChainIdCommon(network, opts?)` factory; provides the corresponding chainIds 728126428, 3448148188, and 2494104990 while explicitly omitting network discovery data and not claiming to be a complete TRON network configuration
-- **TRON hardfork wiring**: Wire `tronHardforksDict` into `Mainnet.customHardforks`; `Common` resolves per-hardfork config as `customHardforks[name] ?? hardforksDict[name]`, keeping current behavior byte-identical while enabling future TRON-specific overrides
+- **TRON hardfork wiring**: Wire `tronHardforksDict` into the TRON execution presets; `Common` resolves per-hardfork config as `customHardforks[name] ?? hardforksDict[name]`
 - **TRON Proposal gating**: Add `activatedProposals` option to `BaseOpts`; expose `Common.activatedProposals()` and `Common.isActivatedProposal(id)` for Proposal 95 (`ALLOW_TVM_PRAGUE`) and 96 (`ALLOW_TVM_OSAKA`); IDs are validated, deduplicated, and stored in ascending order; does not alter EIPs, params, or execution behavior at this stage
 - **Constructor forwarding**: `createCommonFromGethGenesis` now forwards `activatedProposals` to the underlying `Common` instance
 
 ### Bug Fixes
 
+- Restore the Ethereum `Mainnet` preset to the Prague hardfork and keep the TRON hardfork and parameter overlay isolated to the `TronMainnet`, `TronNile`, and `TronShasta` presets
 - Add the missing EIP-7939 entry to `tipsDict` so the implemented CLZ opcode can be enabled explicitly with `eips: [7939]`; default hardfork and Proposal 96 activation behavior remain unchanged
 
 ## 1.0.0

@@ -16,6 +16,7 @@ import {
   equalsBytes,
   generateAddress,
   generateAddress2,
+  generateTronContractAddress,
   generateTronCreateAddress,
   isDebugEnabled,
   short,
@@ -199,6 +200,7 @@ export class TVM implements TVMInterface {
     origin: Address
   }
   protected _block?: Block
+  protected _activeRunCalls = 0
 
   public readonly common: Common
   public readonly events: EventEmitter<TVMEvent>
@@ -1067,33 +1069,58 @@ export class TVM implements TVMInterface {
    *
    * `opts.skipBalance` applies to messages built by this method at any depth. When `opts.message`
    * is supplied it is only honored for top-level (`depth === 0`) messages.
+   *
+   * A TVM instance does not support concurrent standalone `runCall()` invocations because execution
+   * context and journals are shared. Recursive calls made by the interpreter are supported. An
+   * overlapping top-level call is rejected explicitly.
    */
   async runCall(opts: TVMRunCallOpts): Promise<TVMResult> {
+    const messageDepth = opts.message?.depth ?? opts.depth ?? 0
+    if (this._activeRunCalls > 0 && messageDepth === 0) {
+      throw EthereumJSErrorWithoutCode(
+        'Concurrent top-level runCall() invocations on the same TVM instance are not supported',
+      )
+    }
+    const isStandaloneCall = this._activeRunCalls === 0
+    this._activeRunCalls++
+    try {
+      return await this._runCall(opts, isStandaloneCall, messageDepth)
+    } finally {
+      this._activeRunCalls--
+    }
+  }
+
+  private async _runCall(
+    opts: TVMRunCallOpts,
+    isStandaloneCall: boolean,
+    messageDepth: number,
+  ): Promise<TVMResult> {
+    // The effective depth must be resolved the same way here and at the stop site below, otherwise
+    // the profiler starts a timer it never stops (or stops one it never started).
+    const isTopLevelCall = messageDepth === 0
+    const profilerEnabled = this._optsCached.profiler?.enabled === true
     let timer: Timer | undefined
-    if (
-      (opts.depth === 0 || opts.message === undefined) &&
-      this._optsCached.profiler?.enabled === true
-    ) {
+    if (isTopLevelCall && profilerEnabled) {
       timer = this.performanceLogger.startTimer('Initialization')
     }
     let message = opts.message
     let callerAccount
-    if (message === undefined || message.depth === 0) {
+    if (isStandaloneCall || isTopLevelCall) {
       const caller = message?.caller ?? opts.caller ?? createZeroAddress()
       this._block = opts.block ?? defaultBlock()
       this._tx = {
         gasPrice: opts.gasPrice ?? BIGINT_0,
         origin: opts.origin ?? caller,
       }
-      if (message !== undefined) {
-        message.selfdestruct = opts.selfdestruct ?? new Map()
-        message.createdAddresses = opts.createdAddresses ?? new Set()
-        message.gasRefund = opts.gasRefund ?? BIGINT_0
-        message.tronTransactionContext =
-          opts.rootTransactionId === undefined
-            ? undefined
-            : createTronTransactionContext(opts.rootTransactionId)
-      }
+    }
+    if (message !== undefined && isTopLevelCall) {
+      message.selfdestruct = opts.selfdestruct ?? new Map()
+      message.createdAddresses = opts.createdAddresses ?? new Set()
+      message.gasRefund = opts.gasRefund ?? BIGINT_0
+      message.tronTransactionContext =
+        opts.rootTransactionId === undefined
+          ? undefined
+          : createTronTransactionContext(opts.rootTransactionId)
     }
     if (!message) {
       const caller = opts.caller ?? createZeroAddress()
@@ -1213,10 +1240,18 @@ export class TVM implements TVMInterface {
         result = await this._executeCreate(message)
       }
     } catch (error) {
-      await this.journal.revert()
-      if (this.common.isActivatedEIP(1153)) this.transientStorage.revert()
-      if (this.common.isActivatedEIP(7928)) {
-        this.blockLevelAccessList?.revert()
+      try {
+        await this.journal.revert()
+        if (this.common.isActivatedEIP(1153)) this.transientStorage.revert()
+        if (this.common.isActivatedEIP(7928)) {
+          this.blockLevelAccessList?.revert()
+        }
+      } finally {
+        // An interpreter or precompile timer can be active here instead of the outer call timer.
+        // Only the standalone invocation owns the full profiling session.
+        if (isStandaloneCall && profilerEnabled) {
+          this.performanceLogger.cancelTimer()
+        }
       }
       throw error
     }
@@ -1267,8 +1302,9 @@ export class TVM implements TVMInterface {
     }
     await this._emit('afterMessage', result)
 
-    if (message.depth === 0 && this._optsCached.profiler?.enabled === true) {
-      this.performanceLogger.stopTimer(timer!, 0)
+    // Mirror the start condition exactly: only stop a timer this invocation actually started.
+    if (timer !== undefined) {
+      this.performanceLogger.stopTimer(timer, 0)
     }
 
     message.accessWitness?.commit()
@@ -1277,7 +1313,10 @@ export class TVM implements TVMInterface {
 
   /**
    * Bound to the global VM and therefore
-   * shouldn't be used directly from the tvm class
+   * shouldn't be used directly from the tvm class.
+   *
+   * `runCode()` shares transaction and block context with `runCall()`; do not overlap either method
+   * on the same TVM instance.
    */
   async runCode(opts: TVMRunCodeOpts): Promise<ExecResult> {
     this._block = opts.block ?? defaultBlock()
@@ -1388,14 +1427,19 @@ export class TVM implements TVMInterface {
     let addr
     if (message.salt) {
       addr = generateAddress2(message.caller.bytes, message.salt, message.code as Uint8Array)
-    } else if (message.depth > 0 && this.common.gteHardfork(Hardfork.Tron)) {
+    } else if (this.common.gteHardfork(Hardfork.Tron)) {
       const context = message.tronTransactionContext
       if (context === undefined) {
         throw EthereumJSErrorWithoutCode(
-          'rootTransactionId is required for TRON internal CREATE address derivation',
+          `rootTransactionId is required for TRON ${
+            message.depth === 0 ? 'contract deployment' : 'internal CREATE'
+          } address derivation`,
         )
       }
-      addr = generateTronCreateAddress(context.rootTransactionId, context.nonce)
+      addr =
+        message.depth === 0
+          ? generateTronContractAddress(context.rootTransactionId, message.caller.bytes)
+          : generateTronCreateAddress(context.rootTransactionId, context.nonce)
     } else {
       let acc = await this.stateManager.getAccount(message.caller)
       if (!acc) {

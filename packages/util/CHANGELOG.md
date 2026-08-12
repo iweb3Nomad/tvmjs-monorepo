@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Bug Fixes
 
 - Reject non-`Uint8Array` inputs in TRON address output helpers instead of silently coercing them into valid-looking incorrect addresses, and validate Base58 input type and length before decoding
+- Add java-tron-compatible top-level contract address derivation from the transaction ID and 21-byte TRON owner address
 
 ### Features
 

@@ -7,7 +7,7 @@ import {
   createSealedCliqueBlock,
 } from '@tvmjs/block'
 import { createBlockchain } from '@tvmjs/blockchain'
-import { Common, Hardfork, Mainnet, createCustomCommon } from '@tvmjs/common'
+import { Common, Hardfork, Mainnet, TronMainnet, createCustomCommon } from '@tvmjs/common'
 import { RLP } from '@tvmjs/rlp'
 import { type MerkleStateManager } from '@tvmjs/statemanager'
 import { SIGNER_A, SIGNER_B, customChainConfig, goerliChainConfig } from '@tvmjs/testdata'
@@ -25,16 +25,18 @@ import {
   BIGINT_1,
   KECCAK256_RLP,
   bigIntToUnpaddedBytes,
+  bytesToHex,
   concatBytes,
   createAddressFromString,
   createZeroAddress,
   equalsBytes,
+  generateTronContractAddress,
   hexToBytes,
   privateToAddress,
   unpadBytes,
   utf8ToBytes,
 } from '@tvmjs/util'
-import { assert, describe, it } from 'vitest'
+import { assert, describe, expect, it } from 'vitest'
 
 import { createVM, runBlock } from '../../src/index.ts'
 import { getDAOCommon, setupPreConditions } from '../util.ts'
@@ -59,6 +61,35 @@ import type {
 
 const common = new Common({ chain: Mainnet, hardfork: Hardfork.Berlin })
 describe('runBlock() -> successful API parameter usage', async () => {
+  it('forwards transaction-indexed root IDs for TRON contract deployment', async () => {
+    const tronCommon = new Common({ chain: TronMainnet })
+    const vm = await createVM({ common: tronCommon })
+    const rootTransactionId = hexToBytes(
+      '0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
+    )
+    const tx = createLegacyTx(
+      { gasLimit: 100000n, gasPrice: 10n, data: '0x00' },
+      { common: tronCommon },
+    ).sign(SIGNER_A.privateKey)
+    const block = createBlock(
+      { header: { gasLimit: 1000000n }, transactions: [tx] },
+      { common: tronCommon },
+    )
+
+    const result = await runBlock(vm, {
+      block,
+      rootTransactionIds: [rootTransactionId],
+      generate: true,
+      skipBalance: true,
+      skipBlockValidation: true,
+    })
+
+    assert.strictEqual(
+      result.results[0].createdAddress?.toString(),
+      bytesToHex(generateTronContractAddress(rootTransactionId, SIGNER_A.address.bytes)),
+    )
+  })
+
   async function simpleRun(vm: VM) {
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     // const genesisRlp = hexToBytes(blockchainData.genesisRLP as PrefixedHexString)
@@ -220,6 +251,31 @@ describe('runBlock() -> successful API parameter usage', async () => {
       BigInt(21000) + BigInt(32000) + BigInt(16) * BigInt(3) + BigInt(3) + BigInt(800),
       'tx charged right gas on muir glacier hard fork',
     )
+  })
+
+  it('rejects a block containing a transaction for a different chainId', async () => {
+    const vm = await createVM()
+    const ethereumCommon = new Common({ chain: Mainnet, hardfork: Hardfork.London })
+    const tx = createLegacyTx(
+      { to: createZeroAddress(), gasLimit: 100000n, gasPrice: 100n },
+      { common: ethereumCommon },
+    ).sign(SIGNER_A.privateKey)
+    const block = createBlock(
+      {
+        header: { gasLimit: 1000000n },
+        transactions: [tx],
+      },
+      { common: ethereumCommon, skipConsensusFormatValidation: true },
+    )
+
+    await expect(
+      runBlock(vm, {
+        block,
+        generate: true,
+        skipBlockValidation: true,
+        skipHardForkValidation: true,
+      }),
+    ).rejects.toThrow(/tx has a different chainId \(1\) than the vm \(728126428\)/)
   })
 })
 
@@ -435,13 +491,16 @@ it('should correctly reflect generated fields', async () => {
   // get a receipt trie root of for the empty receipts set,
   // which is a well known constant.
   const bytes32Zeros = new Uint8Array(32)
-  const block = createBlock({
-    header: {
-      receiptTrie: bytes32Zeros,
-      transactionsTrie: bytes32Zeros,
-      gasUsed: BigInt(1),
+  const block = createBlock(
+    {
+      header: {
+        receiptTrie: bytes32Zeros,
+        transactionsTrie: bytes32Zeros,
+        gasUsed: BigInt(1),
+      },
     },
-  })
+    { common: vm.common },
+  )
 
   const results = await runBlockAndGetAfterBlockEvent(vm, {
     block,

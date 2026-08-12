@@ -256,6 +256,11 @@ export interface RunBlockOpts {
    */
   block: Block
   /**
+   * TRON root transaction IDs indexed to `block.transactions`. An entry is required for each
+   * TRON transaction that deploys a contract or reaches an internal CREATE operation.
+   */
+  rootTransactionIds?: readonly (Uint8Array | undefined)[]
+  /**
    * Root of the state trie
    */
   root?: Uint8Array
@@ -400,7 +405,8 @@ export interface RunTxOpts {
    */
   tx: TypedTransaction
   /**
-   * The 32-byte TRON root transaction ID used for internal CREATE address derivation.
+   * The 32-byte TRON root transaction ID used for top-level deployment and internal CREATE
+   * address derivation.
    */
   rootTransactionId?: Uint8Array
   /**

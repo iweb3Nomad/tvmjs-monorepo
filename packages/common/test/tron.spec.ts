@@ -4,6 +4,7 @@ import { assert, describe, it } from 'vitest'
 import { tronHardforksDict } from '../src/hardforks.ts'
 import {
   Common,
+  Hardfork,
   Mainnet,
   TronMainnet,
   TronNile,
@@ -18,9 +19,8 @@ import { paramsTest } from './data/paramsTest.ts'
 
 import type { ChainConfig } from '../src/index.ts'
 
-describe('[Common]: TRON custom hardforks wiring (tronHardforksDict via customHardforks)', () => {
-  // Control config: Mainnet without customHardforks, so every hardfork
-  // resolves from the Ethereum hardforksDict only
+describe('[Common]: custom hardfork overlay resolution', () => {
+  // Ethereum Mainnet has no TRON overlay and resolves from hardforksDict.
   const controlChain: ChainConfig = { ...Mainnet }
   delete controlChain.customHardforks
 
@@ -31,7 +31,7 @@ describe('[Common]: TRON custom hardforks wiring (tronHardforksDict via customHa
     assert.deepEqual(
       withDict.hardforks().map((hf) => hf.name),
       control.hardforks().map((hf) => hf.name),
-      'hardfork sequence should not change when tronHardforksDict is attached',
+      'hardfork sequence should match the Ethereum control',
     )
     assert.strictEqual(withDict.hardfork(), control.hardfork(), 'default hardfork should match')
   })
@@ -61,12 +61,12 @@ describe('[Common]: TRON custom hardforks wiring (tronHardforksDict via customHa
     assert.deepEqual(
       (withDict as any)['_paramsCache'],
       (control as any)['_paramsCache'],
-      'params cache should not change when tronHardforksDict is attached',
+      'params cache should match the Ethereum control',
     )
     assert.deepEqual(
       (withDict as any)['_activatedEIPsCache'],
       (control as any)['_activatedEIPsCache'],
-      'activated EIPs cache should not change when tronHardforksDict is attached',
+      'activated EIPs cache should match the Ethereum control',
     )
   })
 
@@ -268,8 +268,7 @@ describe('[Common]: TRON proposal gating state', () => {
 })
 
 describe('[Common]: TRON network chainId presets (execution-only)', () => {
-  const mainnetBaseline = new Common({ chain: Mainnet })
-
+  const mainnetBaseline = new Common({ chain: Mainnet, hardfork: Hardfork.Cancun })
   it('should expose named execution-only chain configurations', () => {
     const configs = [
       [TronMainnet, 'tron-mainnet', 728126428n],
@@ -310,14 +309,40 @@ describe('[Common]: TRON network chainId presets (execution-only)', () => {
     assert.strictEqual(ethMainnet.chainName(), 'mainnet')
   })
 
-  it('should inherit hardfork sequence and default from Mainnet baseline', () => {
+  it('should extend the Ethereum hardfork sequence with the TRON execution hardfork', () => {
     const tron = createTronChainIdCommon('mainnet')
-    assert.strictEqual(tron.hardfork(), mainnetBaseline.hardfork(), 'default hardfork should match')
+    const ethereum = new Common({ chain: Mainnet })
+    assert.strictEqual(ethereum.hardfork(), Hardfork.Prague)
+    assert.isFalse(ethereum.hardforks().some((hf) => hf.name === Hardfork.Tron))
+    assert.isUndefined(Mainnet.customHardforks)
+    assert.strictEqual(tron.hardfork(), Hardfork.Tron)
     assert.deepEqual(
-      tron.hardforks().map((hf) => hf.name),
-      mainnetBaseline.hardforks().map((hf) => hf.name),
-      'hardfork sequence should match Mainnet',
+      tron.hardforks().slice(0, -1),
+      ethereum
+        .hardforks()
+        .filter((hardfork) =>
+          (
+            [
+              Hardfork.Chainstart,
+              Hardfork.Homestead,
+              Hardfork.Dao,
+              Hardfork.TangerineWhistle,
+              Hardfork.SpuriousDragon,
+              Hardfork.Byzantium,
+              Hardfork.Constantinople,
+              Hardfork.Petersburg,
+              Hardfork.Istanbul,
+              Hardfork.Berlin,
+              Hardfork.London,
+              Hardfork.Paris,
+              Hardfork.Shanghai,
+              Hardfork.Cancun,
+            ] as Hardfork[]
+          ).includes(hardfork.name as Hardfork),
+        ),
     )
+    assert.strictEqual(tron.hardforks().at(-1)?.name, Hardfork.Tron)
+    assert.isFalse(tron.hardforks().some((hardfork) => hardfork.name === Hardfork.Prague))
   })
 
   it('should inherit consensus type and algorithm from Mainnet baseline', () => {
@@ -349,18 +374,6 @@ describe('[Common]: TRON network chainId presets (execution-only)', () => {
   it('should inherit execution configuration but omit Mainnet network discovery data', () => {
     const tron = createTronChainIdCommon('mainnet')
     const baseline = mainnetBaseline.copy()
-
-    // Verify hardfork structure matches
-    assert.strictEqual(
-      tron.hardforks().length,
-      baseline.hardforks().length,
-      'hardfork count should match',
-    )
-    assert.deepEqual(
-      tron.hardforks().map((hf) => hf.name),
-      baseline.hardforks().map((hf) => hf.name),
-      'hardfork sequence should match',
-    )
 
     // Execution-only fields still use the Mainnet baseline.
     assert.deepEqual(tron.genesis(), baseline.genesis(), 'genesis should match')

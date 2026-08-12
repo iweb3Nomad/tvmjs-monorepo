@@ -1,12 +1,12 @@
 // cspell:ignore deaddeaddeaddeaddeaddeaddeaddeaddeaddead
-import { Common, Hardfork, Mainnet } from '@tvmjs/common'
+import { Common, Hardfork, Mainnet, TronMainnet } from '@tvmjs/common'
 import { Account, MIN_TOKEN_ID, createAddressFromString, hexToBytes } from '@tvmjs/util'
 import { assert, describe, it } from 'vitest'
 
 import { createTVM } from '../../../src/index.ts'
 
 describe('TRON SELFDESTRUCT new account gas (java-tron alignment)', () => {
-  const common = new Common({ chain: Mainnet, hardfork: Hardfork.Tron })
+  const common = new Common({ chain: TronMainnet })
 
   it('should charge new account gas when beneficiary does NOT exist (TRX=0, Token=0)', async () => {
     // java-tron: charges newAccountGas when account === undefined, regardless of transfer amount

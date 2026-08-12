@@ -103,8 +103,8 @@ interface TVMRunOpts {
    */
   blobVersionedHashes?: PrefixedHexString[]
   /**
-   * The 32-byte root transaction ID used by java-tron to derive addresses for
-   * internal CREATE operations. Required when TRON execution reaches CREATE.
+   * The 32-byte root transaction ID used by java-tron to derive top-level
+   * deployment and internal CREATE addresses. Required for TRON contract creation.
    */
   rootTransactionId?: Uint8Array
 }

@@ -22,7 +22,7 @@ describe('[Common/Chains]: Initialization / Chain params', () => {
     assert.strictEqual(c.chainId(), BigInt(1), 'should return correct chain Id')
     assert.strictEqual(
       c.hardfork(),
-      Hardfork.Tron,
+      Hardfork.Prague,
       'should set hardfork to current default hardfork',
     )
     assert.strictEqual(

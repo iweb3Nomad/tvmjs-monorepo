@@ -7,6 +7,7 @@ import {
   concatBytes,
   generateAddress,
   generateAddress2,
+  generateTronContractAddress,
   generateTronCreateAddress,
   hexToBytes,
   setLengthLeft,
@@ -29,6 +30,29 @@ function tronStackAddress(address: Uint8Array): Uint8Array {
 }
 
 describe('TRON CREATE address derivation', () => {
+  it('derives a top-level deployment address from the transaction ID and owner address', async () => {
+    const tvm = await createTVM()
+
+    const result = await tvm.runCall({
+      caller: CREATOR,
+      data: hexToBytes('0x00'),
+      rootTransactionId: ROOT_TRANSACTION_ID,
+    })
+
+    assert.strictEqual(
+      result.createdAddress?.toString(),
+      bytesToHex(generateTronContractAddress(ROOT_TRANSACTION_ID, CREATOR.bytes)),
+    )
+  })
+
+  it('requires rootTransactionId for a top-level TRON deployment', async () => {
+    const tvm = await createTVM()
+
+    await expect(tvm.runCall({ caller: CREATOR, data: hexToBytes('0x00') })).rejects.toThrow(
+      /rootTransactionId is required for TRON contract deployment/,
+    )
+  })
+
   it('uses rootTransactionId and the transaction-wide internal nonce', async () => {
     const tvm = await createTVM()
     // CREATE with empty initcode, then return the created address.
@@ -113,6 +137,28 @@ describe('TRON CREATE address derivation', () => {
     assert.strictEqual(
       returnedAddress(result.execResult.returnValue),
       bytesToHex(generateTronCreateAddress(ROOT_TRANSACTION_ID, 1n)),
+    )
+  })
+
+  it('does not increment the shared nonce when CALLTOKEN has insufficient balance', async () => {
+    const tvm = await createTVM()
+    const callee = new Address(hexToBytes('0x0000000000000000000000000000000000000200'))
+    const tokenId = 1000001n
+    ;(tvm.stateManager as any).tokenIdExists = async () => true
+
+    const callTokenThenCreate =
+      (`0x600060006000600062${tokenId.toString(16).padStart(6, '0')}600173${bytesToHex(callee.bytes).slice(2)}` +
+        '61ffffd050600060006000f060005260206000f3') as `0x${string}`
+    await tvm.stateManager.putCode(CREATOR, hexToBytes(callTokenThenCreate))
+
+    const result = await tvm.runCall({
+      to: CREATOR,
+      rootTransactionId: ROOT_TRANSACTION_ID,
+    })
+
+    assert.strictEqual(
+      returnedAddress(result.execResult.returnValue),
+      bytesToHex(generateTronCreateAddress(ROOT_TRANSACTION_ID, 0n)),
     )
   })
 

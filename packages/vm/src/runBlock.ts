@@ -649,6 +649,7 @@ async function applyTransactions(vm: VM, block: Block, opts: RunBlockOpts) {
     const txRes = await runTx(vm, {
       tx,
       block,
+      rootTransactionId: opts.rootTransactionIds?.[txIdx],
       skipBalance,
       skipNonce,
       skipHardForkValidation,
