@@ -175,10 +175,12 @@ export class Interpreter {
 
   private profilerOpts?: TVMProfilerOpts
   private performanceLogger: TVMPerformanceLogger
+  private readonly _runCall: (message: Message) => Promise<TVMResult>
 
   // TODO remove gasLeft as constructor argument
   constructor(
     tvm: TVM,
+    runCall: (message: Message) => Promise<TVMResult>,
     stateManager: StateManagerInterface,
     blockchain: TVMMockBlockchainInterface,
     env: Env,
@@ -188,6 +190,7 @@ export class Interpreter {
     profilerOpts?: TVMProfilerOpts,
   ) {
     this._tvm = tvm
+    this._runCall = runCall
     this._stateManager = stateManager
     this.common = this._tvm.common
 
@@ -1160,7 +1163,7 @@ export class Interpreter {
       this._env.tronTransactionContext.nonce += BIGINT_1
     }
 
-    const results = await this._tvm.runCall({ message: msg })
+    const results = await this._runCall(msg)
 
     if (results.execResult.logs) {
       this._result.logs = this._result.logs.concat(results.execResult.logs)
@@ -1273,7 +1276,7 @@ export class Interpreter {
       message.createdAddresses = createdAddresses
     }
 
-    const results = await this._tvm.runCall({ message })
+    const results = await this._runCall(message)
 
     if (results.execResult.logs) {
       this._result.logs = this._result.logs.concat(results.execResult.logs)
@@ -1368,11 +1371,7 @@ export class Interpreter {
 
     // TRON: advance internal nonce for SELFDESTRUCT (java-tron increaseNonce behavior)
     // This happens on EVERY suicide() call, not just the first one
-    if (
-      this._env.depth > 0 &&
-      this.common.gteHardfork(Hardfork.Tron) &&
-      this._env.tronTransactionContext !== undefined
-    ) {
+    if (this.common.gteHardfork(Hardfork.Tron) && this._env.tronTransactionContext !== undefined) {
       this._env.tronTransactionContext.nonce += BIGINT_1
     }
 

@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
+- Restore `generateAddress2()` to Ethereum EIP-1014's `0xff` derivation and add a separate `generateTronAddress2()` helper using TRON's `0x41` hash preimage. Code upgrading from 1.0.0 that called `generateAddress2()` directly for TRON addresses must migrate to `generateTronAddress2()`
 - Reject non-`Uint8Array` inputs in TRON address output helpers instead of silently coercing them into valid-looking incorrect addresses, and validate Base58 input type and length before decoding
 - Add java-tron-compatible top-level contract address derivation from the transaction ID and 21-byte TRON owner address
 

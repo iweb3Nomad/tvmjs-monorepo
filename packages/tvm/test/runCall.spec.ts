@@ -25,7 +25,7 @@ import type { TVMRunCallOpts } from '../src/types.ts'
 
 // Non-protected Create2Address generator. Does not check if Uint8Arrays have the right padding.
 function create2address(sourceAddress: Address, codeHash: Uint8Array, salt: Uint8Array): Address {
-  const rlp_proc_bytes = hexToBytes('0x41')
+  const rlp_proc_bytes = hexToBytes('0xff')
   const hashBytes = concatBytes(rlp_proc_bytes, sourceAddress.bytes, salt, codeHash)
   return new Address(keccak_256(hashBytes).slice(12))
 }

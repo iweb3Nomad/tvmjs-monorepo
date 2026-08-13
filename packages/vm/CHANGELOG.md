@@ -17,7 +17,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Features
 
 - Add an optional `rootTransactionId` to `RunTxOpts` and forward it to TVM for java-tron-compatible internal CREATE address derivation
-- Default `createVM()` to the execution-only `TronMainnet` chain configuration
+- **Compatibility notice:** Without an explicit `Common`, `createVM()` now uses the execution-only `TronMainnet` configuration (chainId 728126428, hardfork `tron`). Pass `new Common({ chain: Mainnet })` for Ethereum Mainnet rules (chainId 1, currently hardfork `prague`). The 1.0.0 default combination of chainId 1 with the `tron` hardfork is no longer a default configuration. Chain-bound transactions must use the VM's `Common`; unprotected legacy transactions remain accepted because they do not encode a chainId
 
 ## 1.0.0
 

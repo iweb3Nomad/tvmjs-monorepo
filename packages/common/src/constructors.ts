@@ -109,7 +109,7 @@ export function createTronChainIdCommon(network: TronNetwork, opts: BaseOpts = {
     )
   }
   return new Common({
-    chain: TRON_CHAIN_CONFIGS[network],
     ...opts,
+    chain: TRON_CHAIN_CONFIGS[network],
   })
 }

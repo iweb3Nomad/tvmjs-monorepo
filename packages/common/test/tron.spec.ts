@@ -303,6 +303,12 @@ describe('[Common]: TRON network chainId presets (execution-only)', () => {
     assert.strictEqual(shasta.chainName(), 'tron-shasta')
   })
 
+  it('should not allow an untyped chain option to replace the selected TRON preset', () => {
+    const common = createTronChainIdCommon('mainnet', { chain: Mainnet } as any)
+    assert.strictEqual(common.chainId(), 728126428n)
+    assert.strictEqual(common.chainName(), 'tron-mainnet')
+  })
+
   it('should keep Ethereum Mainnet chainId unchanged', () => {
     const ethMainnet = new Common({ chain: Mainnet })
     assert.strictEqual(ethMainnet.chainId(), 1n, 'Mainnet chainId should stay 1 (Ethereum)')

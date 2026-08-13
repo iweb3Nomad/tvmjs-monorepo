@@ -315,15 +315,17 @@ describe('Review Findings - Precompile Utilities', () => {
 })
 
 describe('Review Findings - CREATE2 Address Generation', () => {
-  it('generateAddress2 uses 0x41 prefix instead of 0xff', async () => {
-    const { generateAddress2 } = await import('@tvmjs/util')
+  it('keeps Ethereum and TRON CREATE2 derivation separate', async () => {
+    const { generateAddress2, generateTronAddress2 } = await import('@tvmjs/util')
     const from = new Uint8Array(20).fill(1)
     const salt = new Uint8Array(32).fill(2)
     const initCode = new Uint8Array([0x60, 0x00]) // minimal bytecode
 
-    const addr = generateAddress2(from, salt, initCode)
-    assert.equal(addr.length, 20)
-    // Just verify it returns a valid 20-byte address (actual value depends on keccak)
+    const ethereumAddress = generateAddress2(from, salt, initCode)
+    const tronAddress = generateTronAddress2(from, salt, initCode)
+    assert.equal(ethereumAddress.length, 20)
+    assert.equal(tronAddress.length, 20)
+    assert.notDeepEqual(ethereumAddress, tronAddress)
   })
 
   it('generateAddress2 throws for invalid from length', async () => {

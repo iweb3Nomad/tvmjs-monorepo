@@ -9,7 +9,6 @@ import {
   bytesToInt,
   concatBytes,
   equalsBytes,
-  hexToBytes,
   intToUnpaddedBytes,
   toBytes,
   utf8ToBytes,
@@ -682,13 +681,8 @@ export const generateTronContractAddress = function (
   return keccak_256(concatBytes(transactionId, tronOwnerAddress)).subarray(-20)
 }
 
-/**
- * Generates an address for a contract created using CREATE2.
- * @param from The address which is creating this new address
- * @param salt A salt
- * @param initCode The init code of the contract being created
- */
-export const generateAddress2 = function (
+function generateAddress2WithPrefix(
+  prefix: number,
   from: Uint8Array,
   salt: Uint8Array,
   initCode: Uint8Array,
@@ -704,11 +698,35 @@ export const generateAddress2 = function (
     throw EthereumJSErrorWithoutCode('Expected salt to be of length 32')
   }
 
-  // const address = keccak_256(concatBytes(hexToBytes('0xff'), from, salt, keccak_256(initCode)))
-  // TRON create2 prefix is 0x41
-  const address = keccak_256(concatBytes(hexToBytes('0x41'), from, salt, keccak_256(initCode)))
+  const address = keccak_256(concatBytes(Uint8Array.of(prefix), from, salt, keccak_256(initCode)))
 
   return address.subarray(-20)
+}
+
+/**
+ * Generates an Ethereum EIP-1014 address for a contract created using CREATE2.
+ * @param from The address which is creating this new address
+ * @param salt A salt
+ * @param initCode The init code of the contract being created
+ */
+export const generateAddress2 = function (
+  from: Uint8Array,
+  salt: Uint8Array,
+  initCode: Uint8Array,
+): Uint8Array {
+  return generateAddress2WithPrefix(0xff, from, salt, initCode)
+}
+
+/**
+ * Generates a java-tron-compatible address for a contract created using CREATE2.
+ * TRON uses its `0x41` address prefix in the hash preimage instead of EIP-1014's `0xff` marker.
+ */
+export const generateTronAddress2 = function (
+  from: Uint8Array,
+  salt: Uint8Array,
+  initCode: Uint8Array,
+): Uint8Array {
+  return generateAddress2WithPrefix(0x41, from, salt, initCode)
 }
 
 /**

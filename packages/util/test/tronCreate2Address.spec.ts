@@ -1,7 +1,7 @@
 // cspell:ignore osok
 import { keccak_256 } from '@noble/hashes/sha3.js'
 import { assert, describe, it } from 'vitest'
-import { generateAddress2 } from '../src/account.ts'
+import { generateAddress2, generateTronAddress2 } from '../src/account.ts'
 import { bytesToHex, concatBytes, hexToBytes } from '../src/bytes.ts'
 import { toTronBase58Address, toTronHexAddress } from '../src/tronAddress.ts'
 
@@ -43,7 +43,7 @@ describe('TRON CREATE2 contract address derivation', () => {
   )
 
   it('should match the fixed TRON vector', () => {
-    const actual = generateAddress2(DEPLOYER, SALT_ONE, INIT_CODE)
+    const actual = generateTronAddress2(DEPLOYER, SALT_ONE, INIT_CODE)
     assert.strictEqual(bytesToHex(actual), '0x9c4aafe1c2bddf8aa6fa601ea57e0d5dc0132cd5')
     assert.strictEqual(toTronBase58Address(actual), 'TQDbtL9c9HcFce5hpHTNnqFHnQcZ5osokK')
     assert.strictEqual(toTronHexAddress(actual), '0x419c4aafe1c2bddf8aa6fa601ea57e0d5dc0132cd5')
@@ -59,7 +59,7 @@ describe('TRON CREATE2 contract address derivation', () => {
       concatBytes(Uint8Array.from([0xff]), DEPLOYER, SALT_ONE, keccak_256(INIT_CODE)),
     ).subarray(-20)
 
-    const actual = generateAddress2(DEPLOYER, SALT_ONE, INIT_CODE)
+    const actual = generateTronAddress2(DEPLOYER, SALT_ONE, INIT_CODE)
     assert.deepEqual(actual, withTronPrefix, 'must equal the 0x41 (TRON) derivation')
     assert.notDeepEqual(actual, withEthPrefix, 'must NOT equal the 0xff (Ethereum) derivation')
     // Pin the Ethereum result too, so the two are provably distinct.
@@ -67,8 +67,8 @@ describe('TRON CREATE2 contract address derivation', () => {
   })
 
   it('should be deterministic for identical inputs', () => {
-    const a = generateAddress2(DEPLOYER, SALT_ONE, INIT_CODE)
-    const b = generateAddress2(DEPLOYER, SALT_ONE, INIT_CODE)
+    const a = generateTronAddress2(DEPLOYER, SALT_ONE, INIT_CODE)
+    const b = generateTronAddress2(DEPLOYER, SALT_ONE, INIT_CODE)
     assert.deepEqual(a, b)
   })
 
@@ -76,8 +76,15 @@ describe('TRON CREATE2 contract address derivation', () => {
     const salt1 = new Uint8Array(32).fill(1)
     const salt2 = new Uint8Array(32).fill(2)
     assert.notDeepEqual(
-      generateAddress2(DEPLOYER, salt1, INIT_CODE),
-      generateAddress2(DEPLOYER, salt2, INIT_CODE),
+      generateTronAddress2(DEPLOYER, salt1, INIT_CODE),
+      generateTronAddress2(DEPLOYER, salt2, INIT_CODE),
+    )
+  })
+
+  it('is distinct from Ethereum EIP-1014 derivation', () => {
+    assert.notDeepEqual(
+      generateTronAddress2(DEPLOYER, SALT_ONE, INIT_CODE),
+      generateAddress2(DEPLOYER, SALT_ONE, INIT_CODE),
     )
   })
 })

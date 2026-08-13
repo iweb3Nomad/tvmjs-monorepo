@@ -16,6 +16,7 @@ import {
   equalsBytes,
   generateAddress,
   generateAddress2,
+  generateTronAddress2,
   generateTronContractAddress,
   generateTronCreateAddress,
   isDebugEnabled,
@@ -1004,6 +1005,7 @@ export class TVM implements TVMInterface {
 
     const interpreter = new Interpreter(
       this,
+      (nestedMessage) => this._runCallFromInterpreter(nestedMessage),
       this.stateManager,
       this.blockchain,
       env,
@@ -1071,23 +1073,31 @@ export class TVM implements TVMInterface {
    * is supplied it is only honored for top-level (`depth === 0`) messages.
    *
    * A TVM instance does not support concurrent standalone `runCall()` invocations because execution
-   * context and journals are shared. Recursive calls made by the interpreter are supported. An
-   * overlapping top-level call is rejected explicitly.
+   * context and journals are shared. Recursive calls made by the interpreter use a private entry
+   * point; every overlapping public invocation is rejected regardless of its supplied depth.
    */
   async runCall(opts: TVMRunCallOpts): Promise<TVMResult> {
     const messageDepth = opts.message?.depth ?? opts.depth ?? 0
-    if (this._activeRunCalls > 0 && messageDepth === 0) {
+    if (this._activeRunCalls > 0) {
       throw EthereumJSErrorWithoutCode(
-        'Concurrent top-level runCall() invocations on the same TVM instance are not supported',
+        'Concurrent runCall() invocations on the same TVM instance are not supported',
       )
     }
-    const isStandaloneCall = this._activeRunCalls === 0
     this._activeRunCalls++
     try {
-      return await this._runCall(opts, isStandaloneCall, messageDepth)
+      return await this._runCall(opts, true, messageDepth)
+    } catch (error) {
+      if (this._optsCached.profiler?.enabled === true) {
+        this.performanceLogger.cancelTimer()
+      }
+      throw error
     } finally {
       this._activeRunCalls--
     }
+  }
+
+  private async _runCallFromInterpreter(message: Message): Promise<TVMResult> {
+    return this._runCall({ message }, false, message.depth)
   }
 
   private async _runCall(
@@ -1154,6 +1164,20 @@ export class TVM implements TVMInterface {
       message.tronTransactionContext === undefined
     ) {
       message.tronTransactionContext = createTronTransactionContext(opts.rootTransactionId)
+    }
+
+    // Validate transaction-level TRON deployment context before skipBalance or the top-level nonce
+    // can write the caller account. Internal CREATE is validated later inside its own checkpoint.
+    if (
+      message.depth === 0 &&
+      message.to === undefined &&
+      message.salt === undefined &&
+      this.common.gteHardfork(Hardfork.Tron) &&
+      message.tronTransactionContext === undefined
+    ) {
+      throw EthereumJSErrorWithoutCode(
+        'rootTransactionId is required for TRON contract deployment address derivation',
+      )
     }
 
     // `skipBalance` is a caller-facing convenience for funding the sender, so it stays available to
@@ -1426,7 +1450,10 @@ export class TVM implements TVMInterface {
   protected async _generateAddress(message: Message): Promise<Address> {
     let addr
     if (message.salt) {
-      addr = generateAddress2(message.caller.bytes, message.salt, message.code as Uint8Array)
+      const generateCreate2Address = this.common.gteHardfork(Hardfork.Tron)
+        ? generateTronAddress2
+        : generateAddress2
+      addr = generateCreate2Address(message.caller.bytes, message.salt, message.code as Uint8Array)
     } else if (this.common.gteHardfork(Hardfork.Tron)) {
       const context = message.tronTransactionContext
       if (context === undefined) {

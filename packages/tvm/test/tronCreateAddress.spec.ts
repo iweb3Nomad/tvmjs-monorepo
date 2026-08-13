@@ -7,6 +7,7 @@ import {
   concatBytes,
   generateAddress,
   generateAddress2,
+  generateTronAddress2,
   generateTronContractAddress,
   generateTronCreateAddress,
   hexToBytes,
@@ -46,11 +47,30 @@ describe('TRON CREATE address derivation', () => {
   })
 
   it('requires rootTransactionId for a top-level TRON deployment', async () => {
-    const tvm = await createTVM()
+    const tvm = await createTVM({ profiler: { enabled: true } })
 
-    await expect(tvm.runCall({ caller: CREATOR, data: hexToBytes('0x00') })).rejects.toThrow(
-      /rootTransactionId is required for TRON contract deployment/,
+    for (let i = 0; i < 3; i++) {
+      await expect(tvm.runCall({ caller: CREATOR, data: hexToBytes('0x00') })).rejects.toThrow(
+        /rootTransactionId is required for TRON contract deployment/,
+      )
+      assert.isFalse((tvm as any).performanceLogger.hasTimer())
+    }
+
+    assert.isUndefined(
+      await tvm.stateManager.getAccount(CREATOR),
+      'invalid deployment must not create or increment the caller account',
     )
+
+    const result = await tvm.runCall({
+      caller: CREATOR,
+      data: hexToBytes('0x00'),
+      rootTransactionId: ROOT_TRANSACTION_ID,
+    })
+    assert.strictEqual(
+      result.createdAddress?.toString(),
+      bytesToHex(generateTronContractAddress(ROOT_TRANSACTION_ID, CREATOR.bytes)),
+    )
+    assert.strictEqual((await tvm.stateManager.getAccount(CREATOR))?.nonce, 1n)
   })
 
   it('uses rootTransactionId and the transaction-wide internal nonce', async () => {
@@ -83,7 +103,7 @@ describe('TRON CREATE address derivation', () => {
 
     assert.deepEqual(
       result.execResult.returnValue,
-      tronStackAddress(generateAddress2(CREATOR.bytes, salt, emptyCode)),
+      tronStackAddress(generateTronAddress2(CREATOR.bytes, salt, emptyCode)),
     )
   })
 
@@ -275,7 +295,7 @@ describe('TRON CREATE address derivation', () => {
     const salt = new Uint8Array(32)
     salt[31] = 1
     const emptyCode = new Uint8Array(0)
-    const create2Addr = generateAddress2(CREATOR.bytes, salt, emptyCode)
+    const create2Addr = generateTronAddress2(CREATOR.bytes, salt, emptyCode)
 
     // Pre-occupy the address CREATE2 will attempt to use
     await tvm.stateManager.putCode(new Address(create2Addr), hexToBytes('0x00'))
@@ -345,5 +365,24 @@ describe('TRON CREATE address derivation', () => {
       returnedAddress(result.execResult.returnValue),
       bytesToHex(generateTronCreateAddress(ROOT_TRANSACTION_ID, 4n)),
     )
+  })
+
+  it('advances nonce when SELFDESTRUCT executes at transaction depth zero', async () => {
+    const tvm = await createTVM()
+    const selfdestructor = new Address(hexToBytes('0x0000000000000000000000000000000000000200'))
+    await tvm.stateManager.putCode(selfdestructor, hexToBytes('0x33ff'))
+
+    let transactionContext: { nonce: bigint } | undefined
+    tvm.events.once('beforeMessage', (message) => {
+      transactionContext = message.tronTransactionContext
+    })
+
+    const result = await tvm.runCall({
+      to: selfdestructor,
+      rootTransactionId: ROOT_TRANSACTION_ID,
+    })
+
+    assert.isUndefined(result.execResult.exceptionError)
+    assert.strictEqual(transactionContext?.nonce, 1n)
   })
 })

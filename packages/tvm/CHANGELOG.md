@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
+- Validate a depth-0 TRON deployment's `rootTransactionId` before mutating the caller account, so invalid standalone calls cannot leak nonce changes
+- Select Ethereum EIP-1014 or TRON CREATE2 address derivation by hardfork instead of applying TRON's `0x41` preimage globally
+- Reject every overlapping public `runCall()` invocation, including calls that supply a non-zero depth, while preserving interpreter-driven recursive execution through an internal entry point
+- Advance the shared TRON internal nonce for depth-0 `SELFDESTRUCT`, matching java-tron's unconditional `increaseNonce()` behavior
 - Derive depth-0 TRON contract deployment addresses from the transaction ID and owner address instead of Ethereum's RLP sender/nonce formula; TRON deployments now require `rootTransactionId`
 - Do not advance the shared TRON internal nonce when `CALLTOKEN` is rejected for insufficient token balance
 - Align TRON `SELFDESTRUCT` new-account gas with java-tron: charge when the beneficiary does not exist regardless of transferred value, do not charge for an existing empty account, and preserve Ethereum EIP-161 behavior on pre-TRON hardforks
@@ -17,17 +21,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Advance the shared TRON internal nonce after CREATE/CREATE2 collisions and on every nested `SELFDESTRUCT` invocation
 - Reject non-`Uint8Array` root transaction IDs instead of silently coercing them into invalid execution context
 - Return the java-tron-compatible 21-byte TRON address representation from CREATE/CREATE2 stack results while keeping internal account addresses 20 bytes
-- Revert the active message checkpoint when an unexpected execution error propagates, including a missing TRON `rootTransactionId`
+- Revert the active message checkpoint when an unexpected execution error propagates after checkpoint creation, including a missing TRON `rootTransactionId` reached by internal CREATE; a depth-0 deployment missing the ID is rejected before any state mutation or checkpoint
 - Reinitialize transaction-scoped metadata and execution collections for every top-level prebuilt `Message` call, including reused messages
 - Honor `runCall({ message, skipBalance })` for top-level prebuilt messages; for caller-supplied messages `skipBalance` is scoped to `depth === 0` so it cannot relax balance checks for nested execution, while messages built by `runCall` keep the previous any-depth behavior
 - Keep profiler timers balanced for top-level prebuilt messages and cancel partial profiling sessions when execution throws
 - Initialize an independent transaction context for standalone prebuilt messages at `depth > 0` while preserving the outer context for interpreter-driven nested calls
-- Reject overlapping top-level `runCall()` invocations on the same TVM instance instead of allowing shared execution context and journals to race
 
 ### Features
 
 - Add `rootTransactionId` execution context support and propagate the shared TRON internal nonce across nested CALL, CREATE, and CREATE2 operations
-- Default `createTVM()` to the execution-only `TronMainnet` chain configuration; callers can still pass an explicit Ethereum `Mainnet` Common
+- **Compatibility notice:** Without an explicit `Common`, `createTVM()` now uses the execution-only `TronMainnet` configuration (chainId 728126428, hardfork `tron`). Pass `new Common({ chain: Mainnet })` for Ethereum Mainnet rules (chainId 1, currently hardfork `prague`). The 1.0.0 default combination of chainId 1 with the `tron` hardfork is no longer a default configuration
 
 ## 1.0.0
 

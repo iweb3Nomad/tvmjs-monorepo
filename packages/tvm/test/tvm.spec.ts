@@ -320,7 +320,7 @@ describe('standalone nested Message context', () => {
 })
 
 describe('runCall concurrency', () => {
-  it('rejects an overlapping top-level call on the same TVM instance', async () => {
+  it('rejects an overlapping public call even when it claims to be nested', async () => {
     const tvm = await createTVM()
     let releaseFirstCall!: () => void
     let markFirstCallEntered!: () => void
@@ -340,8 +340,8 @@ describe('runCall concurrency', () => {
     await firstCallEntered
     try {
       await expect(
-        tvm.runCall({ to: target, code: hexToBytes('0x00'), gasLimit: 100000n }),
-      ).rejects.toThrow(/Concurrent top-level runCall/)
+        tvm.runCall({ to: target, code: hexToBytes('0x00'), gasLimit: 100000n, depth: 1 }),
+      ).rejects.toThrow(/Concurrent runCall/)
     } finally {
       releaseFirstCall()
     }
