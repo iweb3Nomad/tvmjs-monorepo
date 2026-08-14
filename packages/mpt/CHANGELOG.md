@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Documentation
+
+- Clarify that `verifyMerkleProof()` checks proof self-consistency against the proof-derived root and that callers authenticating against a trusted root must use `verifyMPTWithMerkleProof()`
+
 ### Chores
 
 - Update internal `@tvmjs/*` dependencies for the coordinated TVMJS release
@@ -24,5 +28,4 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Rename package namespace from `@ethereumjs/mpt` to `@tvmjs/mpt`; update all internal imports to `@tvmjs/*`
 - Bump package version to `1.0.0`
 - Lock all dependency versions by removing `^` and `~` prefixes
-
 

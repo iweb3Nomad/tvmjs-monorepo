@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Fixes
+
+- Require Clique epoch checkpoint signer lists to exactly match the active signer list, rejecting empty, truncated, extended, duplicated, and reordered checkpoints
+
 ### Chores
 
 - Update internal `@tvmjs/*` dependencies for the coordinated TVMJS release
@@ -26,4 +30,3 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Rename package namespace from `@ethereumjs/blockchain` to `@tvmjs/blockchain`; update all internal imports to `@tvmjs/*`
 - Bump package version to `1.0.0`
 - Lock all dependency versions by removing `^` and `~` prefixes
-
