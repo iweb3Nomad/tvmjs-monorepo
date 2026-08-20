@@ -77,8 +77,13 @@ export class VM {
     this.events = new EventEmitter<VMEvent>()
 
     this._emit = async (topic: string, data: any): Promise<void> => {
-      const listeners = this.events.listeners(topic as keyof VMEvent)
+      const event = topic as keyof VMEvent
+      const listeners = this.events.listeners(event)
       for (const listener of listeners) {
+        // `_emit` invokes listeners directly so callback-style listeners can be awaited in series.
+        // Mirror EventEmitter.emit() by removing one-time listeners before invoking them, including
+        // when they throw.
+        this.events.removeListener(event, listener, undefined, true)
         if (listener.length === 2) {
           await new Promise<void>((resolve) => {
             listener(data, resolve)

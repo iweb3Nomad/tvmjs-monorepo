@@ -496,6 +496,26 @@ export async function runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
 
 async function _runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
   const state = vm.stateManager
+  const { tx, block } = opts
+
+  // Validate execution options before emitting events or mutating state/BAL. This runtime guard is
+  // needed for JavaScript callers even though TypeScript narrows the public option to the union.
+  const tronTransactionIdPolicy = opts.tronTransactionIdPolicy ?? 'fallback-to-tx-hash'
+  if (
+    tronTransactionIdPolicy !== 'fallback-to-tx-hash' &&
+    tronTransactionIdPolicy !== 'require-explicit'
+  ) {
+    throw EthereumJSErrorWithoutCode(
+      `Invalid TRON transaction ID policy: ${tronTransactionIdPolicy}`,
+    )
+  }
+  const rootTransactionId =
+    opts.rootTransactionId ??
+    (tronTransactionIdPolicy === 'fallback-to-tx-hash' &&
+    vm.common.gteHardfork(Hardfork.Tron) &&
+    tx.isSigned()
+      ? tx.hash()
+      : undefined)
 
   // ===========================
   // SETUP: Binary Tree Witness
@@ -523,8 +543,6 @@ async function _runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
   // ===========================
   // SETUP: Transaction and Events
   // ===========================
-  const { tx, block } = opts
-
   /** The `beforeTx` event - emits the Transaction that is about to be processed */
   await vm._emit('beforeTx', tx)
 
@@ -880,23 +898,6 @@ async function _runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
       } value=${value} data=${short(data)}`,
     )
   }
-
-  const tronTransactionIdPolicy = opts.tronTransactionIdPolicy ?? 'fallback-to-tx-hash'
-  if (
-    tronTransactionIdPolicy !== 'fallback-to-tx-hash' &&
-    tronTransactionIdPolicy !== 'require-explicit'
-  ) {
-    throw EthereumJSErrorWithoutCode(
-      `Invalid TRON transaction ID policy: ${tronTransactionIdPolicy}`,
-    )
-  }
-  const rootTransactionId =
-    opts.rootTransactionId ??
-    (tronTransactionIdPolicy === 'fallback-to-tx-hash' &&
-    vm.common.gteHardfork(Hardfork.Tron) &&
-    opts.tx.isSigned()
-      ? opts.tx.hash()
-      : undefined)
 
   const results = (await vm.tvm.runCall({
     block,

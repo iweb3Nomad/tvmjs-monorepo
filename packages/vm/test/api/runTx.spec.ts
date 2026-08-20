@@ -995,6 +995,29 @@ describe('EIP 4844 transaction tests', () => {
 }, 20000)
 
 describe('TRON rootTransactionId propagation', () => {
+  it('rejects an invalid transaction ID policy before events or BAL mutations', async () => {
+    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Amsterdam })
+    const vm = await createVM({ common })
+    const tx = createLegacyTx({ gasLimit: 100000n, gasPrice: 10n, data: '0x00' }, { common }).sign(
+      SIGNER_A.privateKey,
+    )
+    let beforeTxCalls = 0
+    vm.events.on('beforeTx', () => {
+      beforeTxCalls++
+    })
+
+    await expect(
+      runTx(vm, {
+        tx,
+        skipBalance: true,
+        tronTransactionIdPolicy: 'invalid' as any,
+      }),
+    ).rejects.toThrow('Invalid TRON transaction ID policy')
+
+    assert.strictEqual(beforeTxCalls, 0)
+    assert.deepEqual(vm.tvm.blockLevelAccessList?.raw(), [])
+  })
+
   it('uses the signed TVMJS transaction hash for a top-level TRON deployment by default', async () => {
     const common = new Common({ chain: TronMainnet })
     const vm = await createVM({ common })

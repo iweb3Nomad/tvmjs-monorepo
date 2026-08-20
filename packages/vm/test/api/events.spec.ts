@@ -1,7 +1,7 @@
 import { createBlock } from '@tvmjs/block'
 import { createFeeMarket1559Tx } from '@tvmjs/tx'
 import { Account, bytesToHex, hexToBytes } from '@tvmjs/util'
-import { assert, describe, it } from 'vitest'
+import { assert, describe, expect, it } from 'vitest'
 
 import { SIGNER_A } from '@tvmjs/testdata'
 import { createVM, runBlock, runTx } from '../../src/index.ts'
@@ -10,6 +10,22 @@ describe('VM events', () => {
   const rootTransactionId = hexToBytes(
     '0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
   )
+
+  it('should invoke a once listener once and remove it before an error is thrown', async () => {
+    const vm = await createVM()
+    const block = createBlock({}, { common: vm.common })
+    let calls = 0
+    vm.events.once('beforeBlock', () => {
+      calls++
+      throw new Error('beforeBlock listener failed')
+    })
+
+    await expect(vm._emit('beforeBlock', block)).rejects.toThrow('beforeBlock listener failed')
+    await vm._emit('beforeBlock', block)
+
+    assert.strictEqual(calls, 1)
+    assert.strictEqual(vm.events.listenerCount('beforeBlock'), 0)
+  })
 
   it('should emit the Block before running it', async () => {
     const vm = await createVM()
