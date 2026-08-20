@@ -1408,10 +1408,18 @@ export class TVM implements TVMInterface {
       } catch (innerError) {
         revertError = innerError
       }
-      try {
-        await revert(outerCheckpoint)
-      } catch (outerError) {
-        revertError ??= outerError
+      const executionCheckpointActive =
+        executionCheckpoint.journal ||
+        executionCheckpoint.transientStorage ||
+        executionCheckpoint.blockLevelAccessList
+      // Reverting an outer layer while an inner layer is still active would pair it with the wrong
+      // StateManager checkpoint. Preserve the aligned stack and surface the inner revert failure.
+      if (!executionCheckpointActive) {
+        try {
+          await revert(outerCheckpoint)
+        } catch (outerError) {
+          revertError ??= outerError
+        }
       }
 
       // An interpreter or precompile timer can be active here instead of the outer call timer.
