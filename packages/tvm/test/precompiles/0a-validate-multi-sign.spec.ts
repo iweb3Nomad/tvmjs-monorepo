@@ -1,5 +1,5 @@
 import { sha256 } from '@noble/hashes/sha2.js'
-import { Common, Mainnet } from '@tvmjs/common'
+import { Common, Mainnet, TronNile } from '@tvmjs/common'
 import { type TVMInterface, createTVM, getActivePrecompiles } from '@tvmjs/tvm'
 import {
   PermissionType,
@@ -95,6 +95,24 @@ describe('Precompiles: VALIDATE-MULTI_SIGN', () => {
 
     assert.deepEqual(result.executionGasUsed, 4500n, 'should use petersburg gas costs')
     assert.deepEqual(result.returnValue, getOk())
+  })
+
+  it('Osaka rejects invalid ABI shape and consumes the forwarded gas', async () => {
+    const common = new Common({ chain: TronNile, activatedProposals: [96] })
+    const FUNC = getActivePrecompiles(common).get(precompileContractAddr)!
+    const gasLimit = 12345n
+
+    // H=5 and I=5 for validateMultiSign. Six words leave one incomplete item.
+    const result = await FUNC({
+      data: new Uint8Array(6 * 32),
+      gasLimit,
+      common,
+      _TVM: await createTVM({ common }),
+    })
+
+    assert.strictEqual(result.executionGasUsed, gasLimit)
+    assert.deepEqual(result.returnValue, new Uint8Array())
+    assert.isDefined(result.exceptionError)
   })
 })
 

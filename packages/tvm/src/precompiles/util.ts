@@ -1,7 +1,33 @@
+import { Hardfork } from '@tvmjs/common'
 import { ecrecover, publicToAddress, short } from '@tvmjs/util'
 
 import { DataWord } from './dataWord.ts'
 import type { PrecompileInput } from './index.ts'
+
+const TRON_OSAKA_PROPOSAL = 96
+const SIGNATURE_CALLDATA_HEADER_WORDS = 5
+
+/**
+ * Returns whether TRON's Osaka proposal is active for this execution profile.
+ * Ethereum hardforks and proposal metadata must not enable TIP-854.
+ */
+export function isTronOsakaEnabled(opts: Pick<PrecompileInput, 'common'>): boolean {
+  return (
+    opts.common.gteHardfork(Hardfork.Tron) && opts.common.isActivatedProposal(TRON_OSAKA_PROPOSAL)
+  )
+}
+
+/**
+ * TIP-854 ABI shape check shared by the TRON signature precompiles.
+ */
+export function isValidTronSignatureCalldata(data: Uint8Array, itemWords: number): boolean {
+  const headerBytes = SIGNATURE_CALLDATA_HEADER_WORDS * DataWord.WORD_SIZE
+  return (
+    data.length % DataWord.WORD_SIZE === 0 &&
+    data.length > headerBytes &&
+    (data.length - headerBytes) % (itemWords * DataWord.WORD_SIZE) === 0
+  )
+}
 
 /**
  * Checks that the gas used remain under the gas limit.

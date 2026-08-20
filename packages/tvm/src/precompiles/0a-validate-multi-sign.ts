@@ -7,7 +7,13 @@ import { OOGResult } from '../tvm.ts'
 import type { ExecResult } from '../types.ts'
 import { DataWord } from './dataWord.ts'
 import type { PrecompileInput } from './types.ts'
-import { convertToTronAddress, extractBytesArray, recoverAddrBySign } from './util.ts'
+import {
+  convertToTronAddress,
+  extractBytesArray,
+  isTronOsakaEnabled,
+  isValidTronSignatureCalldata,
+  recoverAddrBySign,
+} from './util.ts'
 
 export async function precompile0a(opts: PrecompileInput): Promise<ExecResult> {
   const rawData = opts.data
@@ -17,6 +23,10 @@ export async function precompile0a(opts: PrecompileInput): Promise<ExecResult> {
   const MAX_SIZE = 5
   const cnt = Math.max(Math.floor((Math.floor(rawData.length / DataWord.WORD_SIZE) - 5) / 5), 0)
   const gasUsed = BigInt(cnt) * ENGERYPERSIGN
+
+  if (isTronOsakaEnabled(opts) && !isValidTronSignatureCalldata(rawData, 5)) {
+    return OOGResult(opts.gasLimit)
+  }
 
   if (opts.gasLimit < gasUsed) {
     return OOGResult(opts.gasLimit)
