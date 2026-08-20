@@ -201,7 +201,8 @@ export class TVM implements TVMInterface {
     origin: Address
   }
   protected _block?: Block
-  protected _activeRunCalls = 0
+  /** Number of active public execution entry points on this shared TVM instance. */
+  protected _activeExecutions = 0
 
   public readonly common: Common
   public readonly events: EventEmitter<TVMEvent>
@@ -1072,18 +1073,13 @@ export class TVM implements TVMInterface {
    * `opts.skipBalance` applies to messages built by this method at any depth. When `opts.message`
    * is supplied it is only honored for top-level (`depth === 0`) messages.
    *
-   * A TVM instance does not support concurrent standalone `runCall()` invocations because execution
+   * A TVM instance does not support concurrent standalone execution invocations because execution
    * context and journals are shared. Recursive calls made by the interpreter use a private entry
    * point; every overlapping public invocation is rejected regardless of its supplied depth.
    */
   async runCall(opts: TVMRunCallOpts): Promise<TVMResult> {
     const messageDepth = opts.message?.depth ?? opts.depth ?? 0
-    if (this._activeRunCalls > 0) {
-      throw EthereumJSErrorWithoutCode(
-        'Concurrent runCall() invocations on the same TVM instance are not supported',
-      )
-    }
-    this._activeRunCalls++
+    this._acquireExecutionLock()
     try {
       return await this._runCall(opts, true, messageDepth)
     } catch (error) {
@@ -1092,8 +1088,17 @@ export class TVM implements TVMInterface {
       }
       throw error
     } finally {
-      this._activeRunCalls--
+      this._activeExecutions--
     }
+  }
+
+  private _acquireExecutionLock(): void {
+    if (this._activeExecutions > 0) {
+      throw EthereumJSErrorWithoutCode(
+        'Concurrent public TVM execution invocations on the same TVM instance are not supported',
+      )
+    }
+    this._activeExecutions++
   }
 
   private async _runCallFromInterpreter(message: Message): Promise<TVMResult> {
@@ -1180,63 +1185,116 @@ export class TVM implements TVMInterface {
       )
     }
 
-    // `skipBalance` is a caller-facing convenience for funding the sender, so it stays available to
-    // messages this method builds itself (any depth, as before). For a caller-supplied `Message` it
-    // is limited to top-level calls so it cannot relax balance checks for nested execution.
-    if (opts.skipBalance === true && (opts.message === undefined || message.depth === 0)) {
-      callerAccount = await this.stateManager.getAccount(message.caller)
-      if (!callerAccount) {
-        callerAccount = new Account()
-      }
-      const originalBalance = callerAccount.balance
-      if (callerAccount.balance < message.value) {
-        // Set the caller balance to `value` to ensure sufficient funds.
-        callerAccount.balance = message.value
-        await this.journal.putAccount(message.caller, callerAccount)
-        if (this.common.isActivatedEIP(7928)) {
-          this.blockLevelAccessList!.addBalanceChange(
-            message.caller.toString(),
-            callerAccount.balance,
-            this.blockLevelAccessList!.blockAccessIndex,
-            originalBalance,
-          )
-        }
-      }
-    }
+    let journalCheckpointed = false
+    let transientStorageCheckpointed = false
+    let blockLevelAccessListCheckpointed = false
 
-    if (message.depth === 0) {
-      if (!callerAccount) {
-        callerAccount = await this.stateManager.getAccount(message.caller)
-      }
-      if (!callerAccount) {
-        callerAccount = new Account()
-      }
-      callerAccount.nonce++
-      await this.journal.putAccount(message.caller, callerAccount)
+    try {
+      // Establish all message-level checkpoints before any balance/nonce writes or event hooks.
       if (this.common.isActivatedEIP(7928)) {
-        this.blockLevelAccessList!.addNonceChange(
-          message.caller.toString(),
-          callerAccount.nonce,
-          this.blockLevelAccessList!.blockAccessIndex,
-        )
+        this.blockLevelAccessList?.checkpoint()
+        blockLevelAccessListCheckpointed = true
+      }
+      journalCheckpointed = true
+      await this.journal.checkpoint()
+      if (this.common.isActivatedEIP(1153)) {
+        transientStorageCheckpointed = true
+        this.transientStorage.checkpoint()
       }
       if (this.DEBUG) {
-        debug(`Update fromAccount (caller) nonce (-> ${callerAccount.nonce}))`)
+        debug('-'.repeat(100))
+        debug(`message checkpoint`)
       }
+
+      // `skipBalance` is a caller-facing convenience for funding the sender, so it stays available to
+      // messages this method builds itself (any depth, as before). For a caller-supplied `Message` it
+      // is limited to top-level calls so it cannot relax balance checks for nested execution.
+      if (opts.skipBalance === true && (opts.message === undefined || message.depth === 0)) {
+        callerAccount = await this.stateManager.getAccount(message.caller)
+        if (!callerAccount) {
+          callerAccount = new Account()
+        }
+        const originalBalance = callerAccount.balance
+        if (callerAccount.balance < message.value) {
+          // Set the caller balance to `value` to ensure sufficient funds.
+          callerAccount.balance = message.value
+          await this.journal.putAccount(message.caller, callerAccount)
+          if (this.common.isActivatedEIP(7928)) {
+            this.blockLevelAccessList!.addBalanceChange(
+              message.caller.toString(),
+              callerAccount.balance,
+              this.blockLevelAccessList!.blockAccessIndex,
+              originalBalance,
+            )
+          }
+        }
+      }
+
+      if (message.depth === 0) {
+        if (!callerAccount) {
+          callerAccount = await this.stateManager.getAccount(message.caller)
+        }
+        if (!callerAccount) {
+          callerAccount = new Account()
+        }
+        callerAccount.nonce++
+        await this.journal.putAccount(message.caller, callerAccount)
+        if (this.common.isActivatedEIP(7928)) {
+          this.blockLevelAccessList!.addNonceChange(
+            message.caller.toString(),
+            callerAccount.nonce,
+            this.blockLevelAccessList!.blockAccessIndex,
+          )
+        }
+        if (this.DEBUG) {
+          debug(`Update fromAccount (caller) nonce (-> ${callerAccount.nonce}))`)
+        }
+      }
+
+      await this._emit('beforeMessage', message)
+
+      if (!message.to && this.common.isActivatedEIP(2929)) {
+        message.code = message.data
+        this.journal.addWarmedAddress((await this._generateAddress(message)).bytes)
+      }
+    } catch (error) {
+      try {
+        if (journalCheckpointed) await this.journal.revert()
+        if (transientStorageCheckpointed) this.transientStorage.revert()
+        if (blockLevelAccessListCheckpointed) this.blockLevelAccessList?.revert()
+      } finally {
+        if (isStandaloneCall && profilerEnabled) {
+          this.performanceLogger.cancelTimer()
+        }
+      }
+      throw error
     }
 
-    await this._emit('beforeMessage', message)
-
-    if (!message.to && this.common.isActivatedEIP(2929)) {
-      message.code = message.data
-      this.journal.addWarmedAddress((await this._generateAddress(message)).bytes)
+    // Initialization succeeded. Preserve its transaction-level effects (notably the caller nonce)
+    // and start a fresh checkpoint for the call/create execution itself. This keeps normal EVM
+    // execution failures compatible with the previous nonce semantics while initialization errors
+    // above still roll back all pre-message writes.
+    await this.journal.commit()
+    journalCheckpointed = false
+    if (transientStorageCheckpointed) {
+      this.transientStorage.commit()
+      transientStorageCheckpointed = false
+    }
+    if (blockLevelAccessListCheckpointed) {
+      this.blockLevelAccessList?.commit()
+      blockLevelAccessListCheckpointed = false
     }
 
     if (this.common.isActivatedEIP(7928)) {
       this.blockLevelAccessList?.checkpoint()
+      blockLevelAccessListCheckpointed = true
     }
+    journalCheckpointed = true
     await this.journal.checkpoint()
-    if (this.common.isActivatedEIP(1153)) this.transientStorage.checkpoint()
+    if (this.common.isActivatedEIP(1153)) {
+      transientStorageCheckpointed = true
+      this.transientStorage.checkpoint()
+    }
     if (this.DEBUG) {
       debug('-'.repeat(100))
       debug(`message checkpoint`)
@@ -1340,36 +1398,42 @@ export class TVM implements TVMInterface {
    * shouldn't be used directly from the tvm class.
    *
    * `runCode()` shares transaction and block context with `runCall()`; do not overlap either method
-   * on the same TVM instance.
+   * on the same TVM instance. Interpreter-driven recursive calls use a private entry point and are
+   * not subject to this public execution lock.
    */
   async runCode(opts: TVMRunCodeOpts): Promise<ExecResult> {
-    this._block = opts.block ?? defaultBlock()
+    this._acquireExecutionLock()
+    try {
+      this._block = opts.block ?? defaultBlock()
 
-    this._tx = {
-      gasPrice: opts.gasPrice ?? BIGINT_0,
-      origin: opts.origin ?? opts.caller ?? createZeroAddress(),
+      this._tx = {
+        gasPrice: opts.gasPrice ?? BIGINT_0,
+        origin: opts.origin ?? opts.caller ?? createZeroAddress(),
+      }
+
+      const message = new Message({
+        code: opts.code,
+        data: opts.data,
+        gasLimit: opts.gasLimit ?? BigInt(0xffffff),
+        to: opts.to ?? createZeroAddress(),
+        caller: opts.caller,
+        value: opts.value,
+        tokenId: opts.tokenId,
+        tokenValue: opts.tokenValue,
+        depth: opts.depth,
+        selfdestruct: opts.selfdestruct ?? new Map(),
+        isStatic: opts.isStatic,
+        blobVersionedHashes: opts.blobVersionedHashes,
+        tronTransactionContext:
+          opts.rootTransactionId === undefined
+            ? undefined
+            : createTronTransactionContext(opts.rootTransactionId),
+      })
+
+      return await this.runInterpreter(message, { pc: opts.pc })
+    } finally {
+      this._activeExecutions--
     }
-
-    const message = new Message({
-      code: opts.code,
-      data: opts.data,
-      gasLimit: opts.gasLimit ?? BigInt(0xffffff),
-      to: opts.to ?? createZeroAddress(),
-      caller: opts.caller,
-      value: opts.value,
-      tokenId: opts.tokenId,
-      tokenValue: opts.tokenValue,
-      depth: opts.depth,
-      selfdestruct: opts.selfdestruct ?? new Map(),
-      isStatic: opts.isStatic,
-      blobVersionedHashes: opts.blobVersionedHashes,
-      tronTransactionContext:
-        opts.rootTransactionId === undefined
-          ? undefined
-          : createTronTransactionContext(opts.rootTransactionId),
-    })
-
-    return this.runInterpreter(message, { pc: opts.pc })
   }
 
   /**

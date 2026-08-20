@@ -266,14 +266,22 @@ describe('TRON CREATE address derivation', () => {
 
   it('advances nonce even when CREATE collides, so the next CREATE uses nonce+1', async () => {
     const tvm = await createTVM()
-    const firstAddr = generateTronCreateAddress(ROOT_TRANSACTION_ID, 0n)
+    const firstAddr = generateTronCreateAddress(ROOT_TRANSACTION_ID, 1n)
+    const collisionHelper = new Address(hexToBytes('0x0000000000000000000000000000000000000201'))
+    const createHelper = new Address(hexToBytes('0x0000000000000000000000000000000000000202'))
     // Pre-occupy the first address
     await tvm.stateManager.putCode(new Address(firstAddr), hexToBytes('0x00'))
 
-    // CREATE twice: first collides, second should use nonce=1
+    // Run the colliding CREATE in a bounded child call so TRON's full gas
+    // forwarding cannot consume the outer frame before the second CREATE.
+    await tvm.stateManager.putCode(collisionHelper, hexToBytes('0x600060006000f000'))
+    await tvm.stateManager.putCode(createHelper, hexToBytes('0x600060006000f060005260206000f3'))
     await tvm.stateManager.putCode(
       CREATOR,
-      hexToBytes('0x600060006000f050600060006000f060005260206000f3'),
+      hexToBytes(
+        (`0x6000600060006000600073${bytesToHex(collisionHelper.bytes).slice(2)}61fffff150` +
+          `6020600060006000600073${bytesToHex(createHelper.bytes).slice(2)}61fffff160206000f3`) as `0x${string}`,
+      ),
     )
 
     const result = await tvm.runCall({
@@ -281,10 +289,11 @@ describe('TRON CREATE address derivation', () => {
       rootTransactionId: ROOT_TRANSACTION_ID,
     })
 
-    // The second CREATE should use nonce=1
+    // The two helper CALLs consume nonces 0 and 1, then the colliding CREATE
+    // advances the shared nonce to 2 before the successful CREATE.
     assert.strictEqual(
       returnedAddress(result.execResult.returnValue),
-      bytesToHex(generateTronCreateAddress(ROOT_TRANSACTION_ID, 1n)),
+      bytesToHex(generateTronCreateAddress(ROOT_TRANSACTION_ID, 3n)),
     )
   })
 
@@ -295,16 +304,23 @@ describe('TRON CREATE address derivation', () => {
     const salt = new Uint8Array(32)
     salt[31] = 1
     const emptyCode = new Uint8Array(0)
-    const create2Addr = generateTronAddress2(CREATOR.bytes, salt, emptyCode)
+    const collisionHelper = new Address(hexToBytes('0x0000000000000000000000000000000000000201'))
+    const createHelper = new Address(hexToBytes('0x0000000000000000000000000000000000000202'))
+    const create2Addr = generateTronAddress2(collisionHelper.bytes, salt, emptyCode)
 
     // Pre-occupy the address CREATE2 will attempt to use
     await tvm.stateManager.putCode(new Address(create2Addr), hexToBytes('0x00'))
 
-    // CREATE2 (collides) then CREATE
-    // Bytecode: CREATE2 with value=0, offset=0, size=0, salt=1, POP, then CREATE and return address
+    // CREATE2 (collides) then CREATE. Keep the collision in a bounded child
+    // call because TRON version-0 forwards all requested child energy.
+    await tvm.stateManager.putCode(collisionHelper, hexToBytes('0x6001600060006000f55000'))
+    await tvm.stateManager.putCode(createHelper, hexToBytes('0x600060006000f060005260206000f3'))
     await tvm.stateManager.putCode(
       CREATOR,
-      hexToBytes('0x6001600060006000f550600060006000f060005260206000f3'),
+      hexToBytes(
+        (`0x6000600060006000600073${bytesToHex(collisionHelper.bytes).slice(2)}61fffff150` +
+          `6020600060006000600073${bytesToHex(createHelper.bytes).slice(2)}61fffff160206000f3`) as `0x${string}`,
+      ),
     )
 
     const result = await tvm.runCall({
@@ -312,10 +328,11 @@ describe('TRON CREATE address derivation', () => {
       rootTransactionId: ROOT_TRANSACTION_ID,
     })
 
-    // The CREATE should use nonce=1 (CREATE2 collision advanced nonce to 1)
+    // The two helper CALLs consume nonces 0 and 1, then the colliding CREATE2
+    // advances the shared nonce to 2 before the successful CREATE.
     assert.strictEqual(
       returnedAddress(result.execResult.returnValue),
-      bytesToHex(generateTronCreateAddress(ROOT_TRANSACTION_ID, 1n)),
+      bytesToHex(generateTronCreateAddress(ROOT_TRANSACTION_ID, 3n)),
     )
   })
 

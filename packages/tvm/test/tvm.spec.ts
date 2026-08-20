@@ -1,6 +1,7 @@
 import { assert, describe, expect, it } from 'vitest'
 
 import {
+  Account,
   Address,
   bytesToBigInt,
   bytesToHex,
@@ -112,6 +113,41 @@ describe('initialization', () => {
     )
   })
 
+  it('reverts balance, nonce, journal, and transient state when beforeMessage throws', async () => {
+    const tvm = await createTVM()
+    const caller = new Address(hexToBytes('0x0000000000000000000000000000000000000106'))
+    const recipient = new Address(hexToBytes('0x0000000000000000000000000000000000000107'))
+    await tvm.stateManager.putAccount(caller, new Account(0n, 0n))
+    await tvm.stateManager.putCode(recipient, hexToBytes('0x00'))
+
+    const before = await tvm.stateManager.getAccount(caller)
+    const journalHeight = (tvm.journal as any).journalHeight
+    const transientStorageDepth = (tvm.transientStorage as any)._indices.length
+    tvm.events.once('beforeMessage', () => {
+      throw new Error('beforeMessage listener failed')
+    })
+
+    await expect(
+      tvm.runCall({
+        caller,
+        to: recipient,
+        value: 100n,
+        gasLimit: 100000n,
+        skipBalance: true,
+      }),
+    ).rejects.toThrow('beforeMessage listener failed')
+
+    const after = await tvm.stateManager.getAccount(caller)
+    assert.strictEqual(after?.balance, before?.balance)
+    assert.strictEqual(after?.nonce, before?.nonce)
+    assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
+    assert.strictEqual((tvm.transientStorage as any)._indices.length, transientStorageDepth)
+
+    tvm.events.removeAllListeners('beforeMessage')
+    const retry = await tvm.runCall({ caller, to: recipient, gasLimit: 100000n })
+    assert.isUndefined(retry.execResult.exceptionError)
+  })
+
   it('resets TRON transaction context when a top-level Message is reused', async () => {
     const tvm = await createTVM()
     const contract = new Address(hexToBytes('0x0000000000000000000000000000000000000200'))
@@ -197,7 +233,7 @@ describe('profiler timer lifecycle', () => {
     )
 
     assert.isFalse((tvm as any).performanceLogger.hasTimer(), 'timer must not leak after a failure')
-    assert.strictEqual((tvm as any)._activeRunCalls, 0, 'active call count must be restored')
+    assert.strictEqual((tvm as any)._activeExecutions, 0, 'active execution count must be restored')
 
     // The next call must not fail with 'Cannot have two timers running at the same time'.
     const result = await tvm.runCall({ to: contract, code: hexToBytes('0x00'), gasLimit: 100000n })
@@ -223,7 +259,7 @@ describe('profiler timer lifecycle', () => {
     )
 
     assert.isFalse((tvm as any).performanceLogger.hasTimer(), 'precompile timer must be released')
-    assert.strictEqual((tvm as any)._activeRunCalls, 0)
+    assert.strictEqual((tvm as any)._activeExecutions, 0)
     const result = await tvm.runCall({
       to: precompile,
       code: hexToBytes('0x00'),
@@ -315,11 +351,11 @@ describe('standalone nested Message context', () => {
 
     assert.isUndefined(result.execResult.exceptionError)
     assertContext(result.execResult.returnValue, origin, 44n)
-    assert.strictEqual((tvm as any)._activeRunCalls, 0)
+    assert.strictEqual((tvm as any)._activeExecutions, 0)
   })
 })
 
-describe('runCall concurrency', () => {
+describe('public execution concurrency', () => {
   it('rejects an overlapping public call even when it claims to be nested', async () => {
     const tvm = await createTVM()
     let releaseFirstCall!: () => void
@@ -341,13 +377,85 @@ describe('runCall concurrency', () => {
     try {
       await expect(
         tvm.runCall({ to: target, code: hexToBytes('0x00'), gasLimit: 100000n, depth: 1 }),
-      ).rejects.toThrow(/Concurrent runCall/)
+      ).rejects.toThrow(/Concurrent public TVM execution/)
     } finally {
       releaseFirstCall()
     }
 
     const result = await firstCall
     assert.isUndefined(result.execResult.exceptionError)
-    assert.strictEqual((tvm as any)._activeRunCalls, 0)
+    assert.strictEqual((tvm as any)._activeExecutions, 0)
+  })
+
+  it('rejects overlapping runCode invocations', async () => {
+    const tvm = await createTVM()
+    let releaseFirstExecution!: () => void
+    let markFirstLookup!: () => void
+    const firstLookup = new Promise<void>((resolve) => {
+      markFirstLookup = resolve
+    })
+    const executionGate = new Promise<void>((resolve) => {
+      releaseFirstExecution = resolve
+    })
+    const stateManager = tvm.stateManager as any
+    const getAccount = stateManager.getAccount.bind(stateManager)
+    let isFirstLookup = true
+    stateManager.getAccount = async (...args: any[]) => {
+      if (isFirstLookup) {
+        isFirstLookup = false
+        markFirstLookup()
+        await executionGate
+      }
+      return getAccount(...args)
+    }
+
+    const firstRunCode = tvm.runCode({ code: hexToBytes('0x00'), gasLimit: 100000n })
+    await firstLookup
+    try {
+      await expect(tvm.runCode({ code: hexToBytes('0x00'), gasLimit: 100000n })).rejects.toThrow(
+        /Concurrent public TVM execution/,
+      )
+    } finally {
+      releaseFirstExecution()
+    }
+
+    await firstRunCode
+    assert.strictEqual((tvm as any)._activeExecutions, 0)
+  })
+
+  it('rejects overlapping runCode and runCall invocations', async () => {
+    const tvm = await createTVM()
+    let releaseFirstExecution!: () => void
+    let markFirstLookup!: () => void
+    const firstLookup = new Promise<void>((resolve) => {
+      markFirstLookup = resolve
+    })
+    const executionGate = new Promise<void>((resolve) => {
+      releaseFirstExecution = resolve
+    })
+    const stateManager = tvm.stateManager as any
+    const getAccount = stateManager.getAccount.bind(stateManager)
+    let isFirstLookup = true
+    stateManager.getAccount = async (...args: any[]) => {
+      if (isFirstLookup) {
+        isFirstLookup = false
+        markFirstLookup()
+        await executionGate
+      }
+      return getAccount(...args)
+    }
+
+    const firstRunCode = tvm.runCode({ code: hexToBytes('0x00'), gasLimit: 100000n })
+    await firstLookup
+    try {
+      await expect(tvm.runCall({ code: hexToBytes('0x00'), gasLimit: 100000n })).rejects.toThrow(
+        /Concurrent public TVM execution/,
+      )
+    } finally {
+      releaseFirstExecution()
+    }
+
+    await firstRunCode
+    assert.strictEqual((tvm as any)._activeExecutions, 0)
   })
 })
