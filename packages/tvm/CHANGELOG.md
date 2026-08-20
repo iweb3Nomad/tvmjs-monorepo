@@ -10,9 +10,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
+- Serialize all public `runCall()` and `runCode()` executions on a TVM instance so shared transaction, block, state-manager, and journal context cannot be overwritten by overlapping calls; interpreter-driven recursive calls continue through the private entry point
 - Validate a depth-0 TRON deployment's `rootTransactionId` before mutating the caller account, so invalid standalone calls cannot leak nonce changes
 - Select Ethereum EIP-1014 or TRON CREATE2 address derivation by hardfork instead of applying TRON's `0x41` preimage globally
-- Reject every overlapping public `runCall()` invocation, including calls that supply a non-zero depth, while preserving interpreter-driven recursive execution through an internal entry point
+- Reject every overlapping public `runCall()` or `runCode()` invocation, including calls that supply a non-zero depth, while preserving interpreter-driven recursive execution through an internal entry point
 - Advance the shared TRON internal nonce for depth-0 `SELFDESTRUCT`, matching java-tron's unconditional `increaseNonce()` behavior
 - Derive depth-0 TRON contract deployment addresses from the transaction ID and owner address instead of Ethereum's RLP sender/nonce formula; TRON deployments now require `rootTransactionId`
 - Do not advance the shared TRON internal nonce when `CALLTOKEN` is rejected for insufficient token balance
@@ -26,11 +27,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Honor `runCall({ message, skipBalance })` for top-level prebuilt messages; for caller-supplied messages `skipBalance` is scoped to `depth === 0` so it cannot relax balance checks for nested execution, while messages built by `runCall` keep the previous any-depth behavior
 - Keep profiler timers balanced for top-level prebuilt messages and cancel partial profiling sessions when execution throws
 - Initialize an independent transaction context for standalone prebuilt messages at `depth > 0` while preserving the outer context for interpreter-driven nested calls
+- Align TRON version-0 call and create energy forwarding with java-tron (full available-energy forwarding), while preserving Ethereum EIP-150 forwarding
+- Gate TIP-854 strict calldata-shape failures for `0x09` / `0x0a` on TRON Proposal 96 / Osaka and consume the complete forwarded gas on invalid input
 
 ### Features
 
 - Add `rootTransactionId` execution context support and propagate the shared TRON internal nonce across nested CALL, CREATE, and CREATE2 operations
-- **Compatibility notice:** Without an explicit `Common`, `createTVM()` now uses the execution-only `TronMainnet` configuration (chainId 728126428, hardfork `tron`). Pass `new Common({ chain: Mainnet })` for Ethereum Mainnet rules (chainId 1, currently hardfork `prague`). The 1.0.0 default combination of chainId 1 with the `tron` hardfork is no longer a default configuration
+- **Compatibility notice:** Without an explicit `Common`, `createTVM()` now uses the execution-only `TronMainnet` configuration (chainId 728126428, hardfork `tron`). Pass `new Common({ chain: Mainnet })` for Ethereum Mainnet rules (chainId 1, currently hardfork `prague`). The legacy explicit `new Common({ chain: Mainnet, hardfork: 'tron' })` form is accepted and normalized to `TronMainnet`; new code should use `TronMainnet` directly
 
 ## 1.0.0
 

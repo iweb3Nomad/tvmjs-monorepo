@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Bug Fixes
 
 - Restore the Ethereum `Mainnet` preset to the Prague hardfork and keep the TRON hardfork and parameter overlay isolated to the `TronMainnet`, `TronNile`, and `TronShasta` presets
+- Preserve the legacy `new Common({ chain: Mainnet, hardfork: 'tron' })` call form by normalizing that exact combination to `TronMainnet` (chainId 728126428); new code should use `TronMainnet` directly
 - Add the missing EIP-7939 entry to `tipsDict` so the implemented CLZ opcode can be enabled explicitly with `eips: [7939]`; default hardfork and Proposal 96 activation behavior remain unchanged
 
 ## 1.0.0
