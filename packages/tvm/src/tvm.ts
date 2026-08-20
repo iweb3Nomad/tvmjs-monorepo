@@ -1235,29 +1235,32 @@ export class TVM implements TVMInterface {
       }
     }
 
-    const revert = async (state: CheckpointState) => {
+    const revert = async (state: CheckpointState, preserveBlockAccessReads: boolean = true) => {
       let revertError: unknown
 
       if (state.journal) {
-        state.journal = false
         try {
           await this.journal.revert()
+          state.journal = false
         } catch (error) {
           revertError = error
         }
       }
       if (state.transientStorage) {
-        state.transientStorage = false
         try {
           this.transientStorage.revert()
+          state.transientStorage = false
         } catch (error) {
           revertError ??= error
         }
       }
       if (state.blockLevelAccessList) {
-        state.blockLevelAccessList = false
         try {
-          this.blockLevelAccessList?.revert()
+          const blockLevelAccessList = this.blockLevelAccessList as
+            | (BlockLevelAccessList & { revert(preserveReads?: boolean): void })
+            | undefined
+          blockLevelAccessList?.revert(preserveBlockAccessReads)
+          state.blockLevelAccessList = false
         } catch (error) {
           revertError ??= error
         }
@@ -1265,6 +1268,31 @@ export class TVM implements TVMInterface {
 
       if (revertError !== undefined) {
         throw revertError
+      }
+    }
+
+    const isCheckpointActive = (state: CheckpointState) =>
+      state.journal || state.transientStorage || state.blockLevelAccessList
+
+    const revertForCleanup = async (
+      state: CheckpointState,
+      preserveBlockAccessReads: boolean,
+    ): Promise<unknown> => {
+      try {
+        await revert(state, preserveBlockAccessReads)
+        return undefined
+      } catch (firstError) {
+        if (!isCheckpointActive(state)) {
+          return firstError
+        }
+        // Journal operations retain their bookkeeping when the StateManager rejects, so a
+        // transient backend failure can be retried without pairing against the wrong checkpoint.
+        try {
+          await revert(state, preserveBlockAccessReads)
+          return undefined
+        } catch (retryError) {
+          return retryError
+        }
       }
     }
 
@@ -1402,24 +1430,15 @@ export class TVM implements TVMInterface {
         debug(`outer message checkpoint committed`)
       }
     } catch (error) {
-      let revertError: unknown
-      try {
-        await revert(executionCheckpoint)
-      } catch (innerError) {
-        revertError = innerError
-      }
-      const executionCheckpointActive =
-        executionCheckpoint.journal ||
-        executionCheckpoint.transientStorage ||
-        executionCheckpoint.blockLevelAccessList
+      let revertError = await revertForCleanup(executionCheckpoint, true)
+      const executionCheckpointActive = isCheckpointActive(executionCheckpoint)
       // Reverting an outer layer while an inner layer is still active would pair it with the wrong
       // StateManager checkpoint. Preserve the aligned stack and surface the inner revert failure.
       if (!executionCheckpointActive) {
-        try {
-          await revert(outerCheckpoint)
-        } catch (outerError) {
-          revertError ??= outerError
-        }
+        // A host-level exception rejects the entire public invocation, so restore the exact BAL
+        // snapshot instead of preserving reads as an ordinary EVM frame revert would.
+        const outerError = await revertForCleanup(outerCheckpoint, false)
+        revertError ??= outerError
       }
 
       // An interpreter or precompile timer can be active here instead of the outer call timer.

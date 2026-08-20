@@ -1,5 +1,6 @@
 import { assert, describe, expect, it } from 'vitest'
 
+import { Common, Hardfork, Mainnet } from '@tvmjs/common'
 import {
   Account,
   Address,
@@ -353,6 +354,80 @@ describe('initialization', () => {
 
     await tvm.journal.revert()
     assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
+  })
+
+  it('fully restores an execution when the inner StateManager revert rejects once', async () => {
+    const tvm = await createTVM()
+    const caller = new Address(hexToBytes('0x000000000000000000000000000000000000010d'))
+    const recipient = new Address(hexToBytes('0x000000000000000000000000000000000000010e'))
+    await tvm.stateManager.putAccount(caller, new Account(0n, 100n))
+    await tvm.stateManager.putCode(recipient, hexToBytes('0xfe'))
+
+    const originalRevert = tvm.stateManager.revert.bind(tvm.stateManager)
+    const journalHeight = (tvm.journal as any).journalHeight
+    let failRevert = true
+    tvm.stateManager.revert = async () => {
+      if (failRevert) {
+        failRevert = false
+        throw new Error('inner StateManager revert failed once')
+      }
+      await originalRevert()
+    }
+
+    await expect(
+      tvm.runCall({ caller, to: recipient, value: 10n, gasLimit: 100000n }),
+    ).rejects.toThrow('inner StateManager revert failed once')
+
+    assert.strictEqual((await tvm.stateManager.getAccount(caller))?.nonce, 0n)
+    assert.strictEqual((await tvm.stateManager.getAccount(caller))?.balance, 100n)
+    assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
+  })
+
+  it('fully restores an execution when the outer StateManager revert rejects once', async () => {
+    const tvm = await createTVM()
+    const caller = new Address(hexToBytes('0x000000000000000000000000000000000000010f'))
+    const recipient = new Address(hexToBytes('0x0000000000000000000000000000000000000110'))
+    await tvm.stateManager.putAccount(caller, new Account(0n, 100n))
+    await tvm.stateManager.putCode(recipient, hexToBytes('0x00'))
+
+    const originalRevert = tvm.stateManager.revert.bind(tvm.stateManager)
+    const journalHeight = (tvm.journal as any).journalHeight
+    let failRevert = true
+    tvm.stateManager.revert = async () => {
+      if (failRevert) {
+        failRevert = false
+        throw new Error('outer StateManager revert failed once')
+      }
+      await originalRevert()
+    }
+    tvm.events.once('beforeMessage', () => {
+      throw new Error('beforeMessage listener failed')
+    })
+
+    await expect(
+      tvm.runCall({ caller, to: recipient, value: 10n, gasLimit: 100000n }),
+    ).rejects.toThrow('beforeMessage listener failed')
+
+    assert.strictEqual((await tvm.stateManager.getAccount(caller))?.nonce, 0n)
+    assert.strictEqual((await tvm.stateManager.getAccount(caller))?.balance, 100n)
+    assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
+  })
+
+  it('fully restores the block access list when a host hook rejects execution', async () => {
+    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Amsterdam })
+    const tvm = await createTVM({ common })
+    const recipient = new Address(hexToBytes('0x0000000000000000000000000000000000000111'))
+    // PUSH1 0; SLOAD; STOP
+    await tvm.stateManager.putCode(recipient, hexToBytes('0x60005400'))
+    tvm.events.once('afterMessage', () => {
+      throw new Error('afterMessage listener failed')
+    })
+
+    await expect(tvm.runCall({ to: recipient, gasLimit: 100000n })).rejects.toThrow(
+      'afterMessage listener failed',
+    )
+
+    assert.deepEqual(tvm.blockLevelAccessList?.raw(), [])
   })
 
   it('resets TRON transaction context when a top-level Message is reused', async () => {
