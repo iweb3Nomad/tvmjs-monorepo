@@ -144,7 +144,7 @@ describe('initialization', () => {
     assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
     assert.strictEqual((tvm.transientStorage as any)._indices.length, transientStorageDepth)
 
-    tvm.events.removeAllListeners('beforeMessage')
+    assert.strictEqual(tvm.events.listenerCount('beforeMessage'), 0)
     const retry = await tvm.runCall({ caller, to: recipient, gasLimit: 100000n })
     assert.isUndefined(retry.execResult.exceptionError)
   })
@@ -182,7 +182,7 @@ describe('initialization', () => {
     assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
     assert.strictEqual((tvm.transientStorage as any)._indices.length, transientStorageDepth)
 
-    tvm.events.removeAllListeners('afterMessage')
+    assert.strictEqual(tvm.events.listenerCount('afterMessage'), 0)
     const retry = await tvm.runCall({ caller, to: recipient, gasLimit: 100000n })
     assert.isUndefined(retry.execResult.exceptionError)
   })
@@ -222,7 +222,7 @@ describe('initialization', () => {
     assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
     assert.strictEqual((tvm.transientStorage as any)._indices.length, transientStorageDepth)
 
-    tvm.events.removeAllListeners('newContract')
+    assert.strictEqual(tvm.events.listenerCount('newContract'), 0)
     const retry = await tvm.runCall({
       caller,
       data: hexToBytes('0x00'),
@@ -230,6 +230,28 @@ describe('initialization', () => {
       rootTransactionId,
     })
     assert.isUndefined(retry.execResult.exceptionError)
+  })
+
+  it('invokes a once listener a single time and keeps ordinary listeners subscribed', async () => {
+    const tvm = await createTVM()
+    const recipient = new Address(hexToBytes('0x000000000000000000000000000000000000010a'))
+    await tvm.stateManager.putCode(recipient, hexToBytes('0x00'))
+
+    let onceCalls = 0
+    let onCalls = 0
+    tvm.events.once('beforeMessage', () => {
+      onceCalls++
+    })
+    tvm.events.on('beforeMessage', () => {
+      onCalls++
+    })
+
+    await tvm.runCall({ to: recipient, gasLimit: 100000n })
+    await tvm.runCall({ to: recipient, gasLimit: 100000n })
+
+    assert.strictEqual(onceCalls, 1)
+    assert.strictEqual(onCalls, 2)
+    assert.strictEqual(tvm.events.listenerCount('beforeMessage'), 1)
   })
 
   it('keeps the top-level nonce while reverting state for a VM execution error', async () => {

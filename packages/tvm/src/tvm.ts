@@ -343,8 +343,13 @@ export class TVM implements TVMInterface {
     this._bn254 = opts.bn254!
 
     this._emit = async (topic: string, data: any): Promise<void> => {
-      const listeners = this.events.listeners(topic as keyof TVMEvent)
+      const event = topic as keyof TVMEvent
+      const listeners = this.events.listeners(event)
       for (const listener of listeners) {
+        // `_emit` invokes listeners directly so callback-style listeners can be awaited in series.
+        // Mirror EventEmitter.emit() by removing one-time listeners before invoking them, including
+        // when they throw.
+        this.events.removeListener(event, listener, undefined, true)
         if (listener.length === 2) {
           await new Promise<void>((resolve) => {
             listener(data, resolve)
