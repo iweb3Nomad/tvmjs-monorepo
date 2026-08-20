@@ -73,7 +73,9 @@ must be created with the same `Common` instance as the VM, for example
 `createLegacyTx(data, { common: vm.common })`. Pass an explicit Ethereum `Mainnet` `Common` to
 use Ethereum rules, as shown below. This selects Ethereum Mainnet at its current Prague hardfork; it
 does not recreate the 1.0.0 default combination of chainId 1 with the TRON hardfork. Unprotected
-legacy transactions do not encode a chainId and remain accepted.
+legacy transactions do not encode a chainId and remain accepted. The legacy explicit form
+`new Common({ chain: Mainnet, hardfork: 'tron' })` is normalized to `TronMainnet` with chainId
+728126428; new TRON code should use `TronMainnet` directly.
 
 ```ts
 // ./examples/runTx.ts
@@ -102,6 +104,50 @@ const main = async () => {
 
 void main()
 ```
+
+#### TRON Transaction IDs
+
+TRON contract deployment and internal `CREATE` derive addresses from a 32-byte root transaction
+ID. `runTx()` accepts the real java-tron ID through `rootTransactionId`. An explicit ID always wins.
+
+For compatibility with 1.0.x applications and local simulators, 1.1.x defaults
+`tronTransactionIdPolicy` to `fallback-to-tx-hash`. When no explicit ID is available, a signed
+transaction's TVMJS hash is used as a deterministic simulation ID. This hash is the Keccak hash of
+the serialized signed TVMJS transaction; it is not java-tron's SHA-256 transaction ID and can
+therefore produce a different contract address from the real TRON chain.
+
+Existing simulation code can continue to omit the ID:
+
+```ts
+const result = await runTx(vm, {
+  tx,
+  // Default: tronTransactionIdPolicy: 'fallback-to-tx-hash'
+})
+```
+
+Real-chain replay and consistency tests should provide the java-tron ID and disable fallback:
+
+```ts
+const result = await runTx(vm, {
+  tx,
+  rootTransactionId: javaTronTransactionId,
+  tronTransactionIdPolicy: 'require-explicit',
+})
+```
+
+For block replay, IDs remain transaction-indexed and the policy is applied by `runTx()` when an
+entry is missing:
+
+```ts
+const result = await runBlock(vm, {
+  block,
+  rootTransactionIds: javaTronTransactionIds,
+  tronTransactionIdPolicy: 'require-explicit',
+})
+```
+
+Block builders accept the same `rootTransactionId` and `tronTransactionIdPolicy` options in each
+`addTransaction()` call.
 
 Additionally to the `VM.runTx()` method there is an API method `VM.runBlock()` which allows to run the whole block and execute all included transactions along.
 

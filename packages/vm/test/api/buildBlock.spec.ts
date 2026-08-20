@@ -10,6 +10,7 @@ import {
   type GethGenesis,
   Hardfork,
   Mainnet,
+  TronMainnet,
   createCommonFromGethGenesis,
 } from '@tvmjs/common'
 // import { Ethash } from '@tvmjs/ethash'
@@ -24,6 +25,27 @@ import { setBalance } from './utils.ts'
 import { SIGNER_A } from '@tvmjs/testdata'
 
 describe('BlockBuilder', () => {
+  it('forwards the TRON transaction ID policy to runTx', async () => {
+    const common = new Common({ chain: TronMainnet })
+    const parentBlock = createBlock({ header: { gasLimit: 1000000n } }, { common })
+    const vm = await createVM({ common })
+    await setBalance(vm, SIGNER_A.address)
+    const blockBuilder = await buildBlock(vm, { parentBlock })
+    const tx = createLegacyTx({ gasLimit: 100000n, gasPrice: 10n, data: '0x00' }, { common }).sign(
+      SIGNER_A.privateKey,
+    )
+
+    await expect(
+      blockBuilder.addTransaction(tx, {
+        tronTransactionIdPolicy: 'require-explicit',
+      }),
+    ).rejects.toThrow(/rootTransactionId is required/)
+
+    const result = await blockBuilder.addTransaction(tx)
+    assert.isDefined(result.createdAddress)
+    await blockBuilder.revert()
+  })
+
   it('should build a valid block', async () => {
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const genesisBlock = createBlock({ header: { gasLimit: 50000 } }, { common })

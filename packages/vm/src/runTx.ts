@@ -881,6 +881,23 @@ async function _runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
     )
   }
 
+  const tronTransactionIdPolicy = opts.tronTransactionIdPolicy ?? 'fallback-to-tx-hash'
+  if (
+    tronTransactionIdPolicy !== 'fallback-to-tx-hash' &&
+    tronTransactionIdPolicy !== 'require-explicit'
+  ) {
+    throw EthereumJSErrorWithoutCode(
+      `Invalid TRON transaction ID policy: ${tronTransactionIdPolicy}`,
+    )
+  }
+  const rootTransactionId =
+    opts.rootTransactionId ??
+    (tronTransactionIdPolicy === 'fallback-to-tx-hash' &&
+    vm.common.gteHardfork(Hardfork.Tron) &&
+    opts.tx.isSigned()
+      ? opts.tx.hash()
+      : undefined)
+
   const results = (await vm.tvm.runCall({
     block,
     gasPrice,
@@ -893,7 +910,7 @@ async function _runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
     data,
     blobVersionedHashes,
     accessWitness: txAccesses,
-    rootTransactionId: opts.rootTransactionId,
+    rootTransactionId,
   })) as RunTxResult
 
   if (vm.common.isActivatedEIP(7864)) {

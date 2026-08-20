@@ -14,6 +14,15 @@ import type { Bloom } from './bloom/index.ts'
 export type TxReceipt = PreByzantiumTxReceipt | PostByzantiumTxReceipt | EIP4844BlobTxReceipt
 
 /**
+ * Controls how TRON execution obtains the transaction ID used for contract address derivation.
+ *
+ * `fallback-to-tx-hash` preserves compatibility with callers that do not have a java-tron
+ * transaction ID by using the signed TVMJS transaction hash as a deterministic simulation ID.
+ * `require-explicit` disables that fallback for real-chain replay and consistency testing.
+ */
+export type TronTransactionIdPolicy = 'require-explicit' | 'fallback-to-tx-hash'
+
+/**
  * Abstract interface with common transaction receipt fields
  */
 export interface BaseTxReceipt {
@@ -256,10 +265,15 @@ export interface RunBlockOpts {
    */
   block: Block
   /**
-   * TRON root transaction IDs indexed to `block.transactions`. An entry is required for each
-   * TRON transaction that deploys a contract or reaches an internal CREATE operation.
+   * Explicit TRON root transaction IDs indexed to `block.transactions`. Missing entries follow
+   * `tronTransactionIdPolicy` when a transaction deploys a contract or reaches internal CREATE.
    */
   rootTransactionIds?: readonly (Uint8Array | undefined)[]
+  /**
+   * Policy forwarded to each `runTx()` call when a transaction-indexed ID is missing.
+   * Defaults to `fallback-to-tx-hash`.
+   */
+  tronTransactionIdPolicy?: TronTransactionIdPolicy
   /**
    * Root of the state trie
    */
@@ -406,9 +420,14 @@ export interface RunTxOpts {
   tx: TypedTransaction
   /**
    * The 32-byte TRON root transaction ID used for top-level deployment and internal CREATE
-   * address derivation.
+   * address derivation. An explicit ID always takes precedence over the compatibility fallback.
    */
   rootTransactionId?: Uint8Array
+  /**
+   * Controls whether a missing TRON transaction ID falls back to the signed TVMJS transaction
+   * hash. Defaults to `fallback-to-tx-hash`; use `require-explicit` for real-chain replay.
+   */
+  tronTransactionIdPolicy?: TronTransactionIdPolicy
   /**
    * If true, skips the nonce check
    */

@@ -64,9 +64,41 @@ describe('runBlock() -> successful API parameter usage', async () => {
   it('forwards transaction-indexed root IDs for TRON contract deployment', async () => {
     const tronCommon = new Common({ chain: TronMainnet })
     const vm = await createVM({ common: tronCommon })
-    const rootTransactionId = hexToBytes(
-      '0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f',
+    const rootTransactionIds = [
+      hexToBytes('0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f'),
+      hexToBytes('0x101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f'),
+    ]
+    const transactions = [0n, 1n].map((nonce) =>
+      createLegacyTx(
+        { nonce, gasLimit: 100000n, gasPrice: 10n, data: '0x00' },
+        { common: tronCommon },
+      ).sign(SIGNER_A.privateKey),
     )
+    const block = createBlock(
+      { header: { gasLimit: 1000000n }, transactions },
+      { common: tronCommon },
+    )
+
+    const result = await runBlock(vm, {
+      block,
+      rootTransactionIds,
+      tronTransactionIdPolicy: 'require-explicit',
+      generate: true,
+      skipBalance: true,
+      skipBlockValidation: true,
+    })
+
+    for (const [index, rootTransactionId] of rootTransactionIds.entries()) {
+      assert.strictEqual(
+        result.results[index].createdAddress?.toString(),
+        bytesToHex(generateTronContractAddress(rootTransactionId, SIGNER_A.address.bytes)),
+      )
+    }
+  })
+
+  it('uses the transaction hash fallback for a missing transaction-indexed root ID', async () => {
+    const tronCommon = new Common({ chain: TronMainnet })
+    const vm = await createVM({ common: tronCommon })
     const tx = createLegacyTx(
       { gasLimit: 100000n, gasPrice: 10n, data: '0x00' },
       { common: tronCommon },
@@ -78,7 +110,6 @@ describe('runBlock() -> successful API parameter usage', async () => {
 
     const result = await runBlock(vm, {
       block,
-      rootTransactionIds: [rootTransactionId],
       generate: true,
       skipBalance: true,
       skipBlockValidation: true,
@@ -86,8 +117,31 @@ describe('runBlock() -> successful API parameter usage', async () => {
 
     assert.strictEqual(
       result.results[0].createdAddress?.toString(),
-      bytesToHex(generateTronContractAddress(rootTransactionId, SIGNER_A.address.bytes)),
+      bytesToHex(generateTronContractAddress(tx.hash(), SIGNER_A.address.bytes)),
     )
+  })
+
+  it('forwards require-explicit when a transaction-indexed root ID is missing', async () => {
+    const tronCommon = new Common({ chain: TronMainnet })
+    const vm = await createVM({ common: tronCommon })
+    const tx = createLegacyTx(
+      { gasLimit: 100000n, gasPrice: 10n, data: '0x00' },
+      { common: tronCommon },
+    ).sign(SIGNER_A.privateKey)
+    const block = createBlock(
+      { header: { gasLimit: 1000000n }, transactions: [tx] },
+      { common: tronCommon },
+    )
+
+    await expect(
+      runBlock(vm, {
+        block,
+        tronTransactionIdPolicy: 'require-explicit',
+        generate: true,
+        skipBalance: true,
+        skipBlockValidation: true,
+      }),
+    ).rejects.toThrow(/rootTransactionId is required/)
   })
 
   async function simpleRun(vm: VM) {

@@ -39,7 +39,13 @@ import {
 import type { Block, HeaderData } from '@tvmjs/block'
 import type { TypedTransaction } from '@tvmjs/tx'
 import type { Withdrawal } from '@tvmjs/util'
-import type { BuildBlockOpts, BuilderOpts, RunTxResult, SealBlockOpts } from './types.ts'
+import type {
+  BuildBlockOpts,
+  BuilderOpts,
+  RunTxResult,
+  SealBlockOpts,
+  TronTransactionIdPolicy,
+} from './types.ts'
 import type { VM } from './vm.ts'
 
 export type BuildStatus = (typeof BuildStatus)[keyof typeof BuildStatus]
@@ -221,10 +227,12 @@ export class BlockBuilder {
       skipHardForkValidation,
       allowNoBlobs,
       rootTransactionId,
+      tronTransactionIdPolicy,
     }: {
       skipHardForkValidation?: boolean
       allowNoBlobs?: boolean
       rootTransactionId?: Uint8Array
+      tronTransactionIdPolicy?: TronTransactionIdPolicy
     } = {},
   ) {
     this.checkStatus()
@@ -296,6 +304,7 @@ export class BlockBuilder {
       block,
       skipHardForkValidation,
       rootTransactionId,
+      tronTransactionIdPolicy,
     })
 
     // If tx is a blob transaction, remove blobs/kzg commitments before adding to block per EIP-4844

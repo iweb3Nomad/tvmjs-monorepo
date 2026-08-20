@@ -16,12 +16,16 @@ import {
   Address,
   KECCAK256_NULL,
   MAX_INTEGER,
+  bigIntToBytes,
   bytesToHex,
   createAccount,
   createAddressFromPrivateKey,
   createAddressFromString,
   createZeroAddress,
   equalsBytes,
+  generateAddress,
+  generateTronContractAddress,
+  generateTronCreateAddress,
   hexToBytes,
 } from '@tvmjs/util'
 import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
@@ -991,6 +995,43 @@ describe('EIP 4844 transaction tests', () => {
 }, 20000)
 
 describe('TRON rootTransactionId propagation', () => {
+  it('uses the signed TVMJS transaction hash for a top-level TRON deployment by default', async () => {
+    const common = new Common({ chain: TronMainnet })
+    const vm = await createVM({ common })
+    const tx = createLegacyTx({ gasLimit: 100000n, gasPrice: 10n, data: '0x00' }, { common }).sign(
+      SIGNER_A.privateKey,
+    )
+
+    const result = await runTx(vm, { tx, skipBalance: true })
+
+    assert.strictEqual(
+      result.createdAddress?.toString(),
+      bytesToHex(generateTronContractAddress(tx.hash(), SIGNER_A.address.bytes)),
+    )
+  })
+
+  it('prefers an explicit rootTransactionId over the transaction hash fallback', async () => {
+    const common = new Common({ chain: TronMainnet })
+    const vm = await createVM({ common })
+    const rootTransactionId = hexToBytes(
+      '0x123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0',
+    )
+    const tx = createLegacyTx({ gasLimit: 100000n, gasPrice: 10n, data: '0x00' }, { common }).sign(
+      SIGNER_A.privateKey,
+    )
+
+    const result = await runTx(vm, { tx, rootTransactionId, skipBalance: true })
+
+    assert.strictEqual(
+      result.createdAddress?.toString(),
+      bytesToHex(generateTronContractAddress(rootTransactionId, SIGNER_A.address.bytes)),
+    )
+    assert.notStrictEqual(
+      result.createdAddress?.toString(),
+      bytesToHex(generateTronContractAddress(tx.hash(), SIGNER_A.address.bytes)),
+    )
+  })
+
   it('propagates rootTransactionId from runTx to internal CREATE', async () => {
     const common = new Common({ chain: TronMainnet })
     const vm = await createVM({ common })
@@ -1021,9 +1062,6 @@ describe('TRON rootTransactionId propagation', () => {
     // Extract the created address from return value (last 20 bytes)
     const createdAddress = result.execResult.returnValue.subarray(-20)
 
-    // Import generateTronCreateAddress for precise assertion
-    const { generateTronCreateAddress } = await import('@tvmjs/util')
-
     // Verify it matches TRON CREATE derivation with the exact rootTransactionId and nonce=0
     assert.strictEqual(
       bytesToHex(createdAddress),
@@ -1032,7 +1070,63 @@ describe('TRON rootTransactionId propagation', () => {
     )
   })
 
-  it('cleans up all checkpoints when internal CREATE is missing rootTransactionId', async () => {
+  it('uses the signed TVMJS transaction hash for internal CREATE by default', async () => {
+    const common = new Common({ chain: TronMainnet })
+    const vm = await createVM({ common })
+    const deployer = createAddressFromString('0x0000000000000000000000000000000000000100')
+    await vm.stateManager.putCode(deployer, hexToBytes('0x600060006000f060005260206000f3'))
+
+    const tx = createLegacyTx(
+      {
+        to: deployer,
+        gasLimit: 100000,
+        gasPrice: 10,
+        nonce: 0,
+      },
+      { common },
+    ).sign(SIGNER_A.privateKey)
+
+    const result = await runTx(vm, { tx, skipBalance: true })
+
+    assert.strictEqual(
+      bytesToHex(result.execResult.returnValue.subarray(-20)),
+      bytesToHex(generateTronCreateAddress(tx.hash(), 0n)),
+    )
+  })
+
+  it('keeps Ethereum top-level deployment address derivation unchanged', async () => {
+    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Constantinople })
+    const vm = await createVM({ common })
+    const tx = createLegacyTx({ gasLimit: 100000n, gasPrice: 10n, data: '0x00' }, { common }).sign(
+      SIGNER_A.privateKey,
+    )
+
+    const result = await runTx(vm, { tx, skipBalance: true })
+
+    assert.strictEqual(
+      result.createdAddress?.toString(),
+      bytesToHex(generateAddress(SIGNER_A.address.bytes, bigIntToBytes(0n))),
+    )
+  })
+
+  it('does not require an explicit ID for a TRON transaction that does not create a contract', async () => {
+    const common = new Common({ chain: TronMainnet })
+    const vm = await createVM({ common })
+    const tx = createLegacyTx(
+      { to: createZeroAddress(), gasLimit: 21000n, gasPrice: 10n },
+      { common },
+    ).sign(SIGNER_A.privateKey)
+
+    const result = await runTx(vm, {
+      tx,
+      skipBalance: true,
+      tronTransactionIdPolicy: 'require-explicit',
+    })
+
+    assert.isUndefined(result.execResult.exceptionError)
+  })
+
+  it('requires an explicit ID when the compatibility fallback is disabled', async () => {
     const common = new Common({ chain: TronMainnet })
     const vm = await createVM({ common })
     const deployer = createAddressFromString('0x0000000000000000000000000000000000000100')
@@ -1050,7 +1144,11 @@ describe('TRON rootTransactionId propagation', () => {
 
     let error: unknown
     try {
-      await runTx(vm, { tx, skipBalance: true })
+      await runTx(vm, {
+        tx,
+        skipBalance: true,
+        tronTransactionIdPolicy: 'require-explicit',
+      })
     } catch (caught) {
       error = caught
     }

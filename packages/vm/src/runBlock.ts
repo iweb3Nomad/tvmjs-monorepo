@@ -650,6 +650,7 @@ async function applyTransactions(vm: VM, block: Block, opts: RunBlockOpts) {
       tx,
       block,
       rootTransactionId: opts.rootTransactionIds?.[txIdx],
+      tronTransactionIdPolicy: opts.tronTransactionIdPolicy,
       skipBalance,
       skipNonce,
       skipHardForkValidation,
