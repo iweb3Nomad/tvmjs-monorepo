@@ -284,6 +284,55 @@ describe('initialization', () => {
     assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
   })
 
+  it('restores journal bookkeeping when the StateManager commit rejects', async () => {
+    const tvm = await createTVM()
+    const contract = new Address(hexToBytes('0x000000000000000000000000000000000000010b'))
+    const originalCommit = tvm.stateManager.commit.bind(tvm.stateManager)
+    const journalHeight = (tvm.journal as any).journalHeight
+    let failCommit = true
+
+    tvm.stateManager.commit = async () => {
+      if (failCommit) {
+        failCommit = false
+        throw new Error('StateManager commit failed')
+      }
+      await originalCommit()
+    }
+
+    await expect(
+      tvm.runCall({ to: contract, code: hexToBytes('0x00'), gasLimit: 100000n }),
+    ).rejects.toThrow('StateManager commit failed')
+    assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
+
+    const retry = await tvm.runCall({ to: contract, code: hexToBytes('0x00'), gasLimit: 100000n })
+    assert.isUndefined(retry.execResult.exceptionError)
+    assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
+  })
+
+  it('keeps journal and StateManager checkpoints retryable when StateManager revert rejects', async () => {
+    const tvm = await createTVM()
+    const originalRevert = tvm.stateManager.revert.bind(tvm.stateManager)
+    const journalHeight = (tvm.journal as any).journalHeight
+    let failRevert = true
+
+    await tvm.journal.checkpoint()
+    assert.strictEqual((tvm.journal as any).journalHeight, journalHeight + 1)
+
+    tvm.stateManager.revert = async () => {
+      if (failRevert) {
+        failRevert = false
+        throw new Error('StateManager revert failed')
+      }
+      await originalRevert()
+    }
+
+    await expect(tvm.journal.revert()).rejects.toThrow('StateManager revert failed')
+    assert.strictEqual((tvm.journal as any).journalHeight, journalHeight + 1)
+
+    await tvm.journal.revert()
+    assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
+  })
+
   it('resets TRON transaction context when a top-level Message is reused', async () => {
     const tvm = await createTVM()
     const contract = new Address(hexToBytes('0x0000000000000000000000000000000000000200'))

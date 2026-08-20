@@ -114,9 +114,9 @@ export class Journal {
     }
   }
   async commit() {
+    await this.stateManager.commit()
     this.journalHeight--
     this.journalDiff.push([this.journalHeight, [new Set(), new Map(), new Set()]])
-    await this.stateManager.commit()
   }
 
   async checkpoint() {
@@ -135,6 +135,10 @@ export class Journal {
   }
 
   async revert() {
+    // Do not mutate Journal bookkeeping until the StateManager has successfully reverted. This
+    // keeps both layers aligned and allows callers to retry a rejected revert.
+    await this.stateManager.revert()
+
     // Loop backwards over the journal diff and stop if we are at a lower height than current journal height
     // During this process, delete all items.
     // TODO check this logic, if there is this array: height [4,3,4] and we revert height 4, then the final
@@ -182,8 +186,6 @@ export class Journal {
     this.journalDiff = this.journalDiff.slice(0, finalI! + 1)
 
     this.journalHeight--
-
-    await this.stateManager.revert()
   }
 
   public cleanJournal() {

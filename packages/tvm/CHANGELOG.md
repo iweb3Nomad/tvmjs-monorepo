@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Bug Fixes
 
 - Make public `runCall()` failures exception-atomic across initialization, execution, and `afterMessage`: hook errors now revert caller nonce, balance, created accounts, journal, transient storage, and block-level access-list checkpoints, while ordinary TVM execution errors preserve the existing top-level nonce semantics
-- Restore Journal checkpoint bookkeeping when the underlying StateManager checkpoint rejects, preventing a failed call from poisoning subsequent commit/revert pairing
+- Keep Journal checkpoint, commit, and revert bookkeeping aligned when the underlying StateManager operation rejects, preventing a failed call from poisoning subsequent transaction pairing
 - Serialize all public `runCall()` and `runCode()` executions on a TVM instance so shared transaction, block, state-manager, and journal context cannot be overwritten by overlapping calls; interpreter-driven recursive calls continue through the private entry point
 - Validate a depth-0 TRON deployment's `rootTransactionId` before mutating the caller account, so invalid standalone calls cannot leak nonce changes
 - Select Ethereum EIP-1014 or TRON CREATE2 address derivation by hardfork instead of applying TRON's `0x41` preimage globally
