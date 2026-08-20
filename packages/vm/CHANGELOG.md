@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+## 1.1.0
+
 ### Bug Fixes
 
 - Preserve 1.0.x simulator compatibility without reverting TRON address derivation: `runTx()` now uses the signed TVMJS transaction hash as a deterministic simulation ID when a TRON deployment or internal CREATE has no explicit `rootTransactionId`
