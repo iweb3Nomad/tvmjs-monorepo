@@ -1185,25 +1185,92 @@ export class TVM implements TVMInterface {
       )
     }
 
-    let journalCheckpointed = false
-    let transientStorageCheckpointed = false
-    let blockLevelAccessListCheckpointed = false
+    type CheckpointState = {
+      journal: boolean
+      transientStorage: boolean
+      blockLevelAccessList: boolean
+    }
 
-    try {
-      // Establish all message-level checkpoints before any balance/nonce writes or event hooks.
+    const outerCheckpoint: CheckpointState = {
+      journal: false,
+      transientStorage: false,
+      blockLevelAccessList: false,
+    }
+    const executionCheckpoint: CheckpointState = {
+      journal: false,
+      transientStorage: false,
+      blockLevelAccessList: false,
+    }
+
+    const checkpoint = async (state: CheckpointState) => {
       if (this.common.isActivatedEIP(7928)) {
         this.blockLevelAccessList?.checkpoint()
-        blockLevelAccessListCheckpointed = true
+        state.blockLevelAccessList = true
       }
-      journalCheckpointed = true
       await this.journal.checkpoint()
+      state.journal = true
       if (this.common.isActivatedEIP(1153)) {
-        transientStorageCheckpointed = true
         this.transientStorage.checkpoint()
+        state.transientStorage = true
       }
+    }
+
+    const commit = async (state: CheckpointState) => {
+      if (state.journal) {
+        await this.journal.commit()
+        state.journal = false
+      }
+      if (state.transientStorage) {
+        this.transientStorage.commit()
+        state.transientStorage = false
+      }
+      if (state.blockLevelAccessList) {
+        this.blockLevelAccessList?.commit()
+        state.blockLevelAccessList = false
+      }
+    }
+
+    const revert = async (state: CheckpointState) => {
+      let revertError: unknown
+
+      if (state.journal) {
+        state.journal = false
+        try {
+          await this.journal.revert()
+        } catch (error) {
+          revertError = error
+        }
+      }
+      if (state.transientStorage) {
+        state.transientStorage = false
+        try {
+          this.transientStorage.revert()
+        } catch (error) {
+          revertError ??= error
+        }
+      }
+      if (state.blockLevelAccessList) {
+        state.blockLevelAccessList = false
+        try {
+          this.blockLevelAccessList?.revert()
+        } catch (error) {
+          revertError ??= error
+        }
+      }
+
+      if (revertError !== undefined) {
+        throw revertError
+      }
+    }
+
+    let result: TVMResult
+    try {
+      // The outer checkpoint owns initialization and execution so a thrown event listener cannot
+      // leave balance, nonce, access-list, or contract changes behind.
+      await checkpoint(outerCheckpoint)
       if (this.DEBUG) {
         debug('-'.repeat(100))
-        debug(`message checkpoint`)
+        debug(`outer message checkpoint`)
       }
 
       // `skipBalance` is a caller-facing convenience for funding the sender, so it stays available to
@@ -1257,59 +1324,21 @@ export class TVM implements TVMInterface {
         message.code = message.data
         this.journal.addWarmedAddress((await this._generateAddress(message)).bytes)
       }
-    } catch (error) {
-      try {
-        if (journalCheckpointed) await this.journal.revert()
-        if (transientStorageCheckpointed) this.transientStorage.revert()
-        if (blockLevelAccessListCheckpointed) this.blockLevelAccessList?.revert()
-      } finally {
-        if (isStandaloneCall && profilerEnabled) {
-          this.performanceLogger.cancelTimer()
-        }
+
+      // A nested execution checkpoint preserves the existing semantics for VM-level failures: the
+      // call/create changes are reverted while the top-level nonce remains in the outer checkpoint.
+      await checkpoint(executionCheckpoint)
+      if (this.DEBUG) {
+        debug('-'.repeat(100))
+        debug(`execution checkpoint`)
+        const { caller, gasLimit, to, value, delegatecall } = message
+        debug(
+          `New message caller=${caller} gasLimit=${gasLimit} to=${
+            to?.toString() ?? 'none'
+          } value=${value} delegatecall=${delegatecall ? 'yes' : 'no'}`,
+        )
       }
-      throw error
-    }
 
-    // Initialization succeeded. Preserve its transaction-level effects (notably the caller nonce)
-    // and start a fresh checkpoint for the call/create execution itself. This keeps normal EVM
-    // execution failures compatible with the previous nonce semantics while initialization errors
-    // above still roll back all pre-message writes.
-    await this.journal.commit()
-    journalCheckpointed = false
-    if (transientStorageCheckpointed) {
-      this.transientStorage.commit()
-      transientStorageCheckpointed = false
-    }
-    if (blockLevelAccessListCheckpointed) {
-      this.blockLevelAccessList?.commit()
-      blockLevelAccessListCheckpointed = false
-    }
-
-    if (this.common.isActivatedEIP(7928)) {
-      this.blockLevelAccessList?.checkpoint()
-      blockLevelAccessListCheckpointed = true
-    }
-    journalCheckpointed = true
-    await this.journal.checkpoint()
-    if (this.common.isActivatedEIP(1153)) {
-      transientStorageCheckpointed = true
-      this.transientStorage.checkpoint()
-    }
-    if (this.DEBUG) {
-      debug('-'.repeat(100))
-      debug(`message checkpoint`)
-    }
-
-    let result
-    if (this.DEBUG) {
-      const { caller, gasLimit, to, value, delegatecall } = message
-      debug(
-        `New message caller=${caller} gasLimit=${gasLimit} to=${
-          to?.toString() ?? 'none'
-        } value=${value} delegatecall=${delegatecall ? 'yes' : 'no'}`,
-      )
-    }
-    try {
       if (message.to) {
         if (this.DEBUG) {
           debug(`Message CALL execution (to: ${message.to})`)
@@ -1321,68 +1350,75 @@ export class TVM implements TVMInterface {
         }
         result = await this._executeCreate(message)
       }
+
+      if (this.DEBUG) {
+        const { executionGasUsed, exceptionError, returnValue } = result.execResult
+        debug(
+          `Received message execResult: [ gasUsed=${executionGasUsed} exceptionError=${
+            exceptionError ? `'${exceptionError.error}'` : 'none'
+          } returnValue=${short(returnValue)} gasRefund=${result.execResult.gasRefund ?? 0} ]`,
+        )
+      }
+      const err = result.execResult.exceptionError
+      // This clause captures any error which happened during execution
+      // If that is the case, then all refunds are forfeited
+      // There is one exception: if the CODESTORE_OUT_OF_GAS error is thrown
+      // (this only happens the Frontier/Chainstart fork)
+      // then the error is dismissed
+      if (err && err.error !== TVMError.errorMessages.CODESTORE_OUT_OF_GAS) {
+        result.execResult.selfdestruct = new Map()
+        result.execResult.createdAddresses = new Set()
+        result.execResult.gasRefund = BIGINT_0
+      }
+      if (
+        err &&
+        !(
+          this.common.hardfork() === Hardfork.Chainstart &&
+          err.error === TVMError.errorMessages.CODESTORE_OUT_OF_GAS
+        )
+      ) {
+        result.execResult.logs = []
+        await revert(executionCheckpoint)
+        if (this.DEBUG) {
+          debug(`execution checkpoint reverted`)
+        }
+      } else {
+        await commit(executionCheckpoint)
+        if (this.DEBUG) {
+          debug(`execution checkpoint committed`)
+        }
+      }
+
+      // Event hooks remain inside the outer checkpoint. If one throws, every state mutation made by
+      // this public call, including initialization and a successfully committed execution, reverts.
+      await this._emit('afterMessage', result)
+      await commit(outerCheckpoint)
+      if (this.DEBUG) {
+        debug(`outer message checkpoint committed`)
+      }
     } catch (error) {
+      let revertError: unknown
       try {
-        await this.journal.revert()
-        if (this.common.isActivatedEIP(1153)) this.transientStorage.revert()
-        if (this.common.isActivatedEIP(7928)) {
-          this.blockLevelAccessList?.revert()
-        }
-      } finally {
-        // An interpreter or precompile timer can be active here instead of the outer call timer.
-        // Only the standalone invocation owns the full profiling session.
-        if (isStandaloneCall && profilerEnabled) {
-          this.performanceLogger.cancelTimer()
-        }
+        await revert(executionCheckpoint)
+      } catch (innerError) {
+        revertError = innerError
+      }
+      try {
+        await revert(outerCheckpoint)
+      } catch (outerError) {
+        revertError ??= outerError
+      }
+
+      // An interpreter or precompile timer can be active here instead of the outer call timer.
+      // Only the standalone invocation owns the full profiling session.
+      if (isStandaloneCall && profilerEnabled) {
+        this.performanceLogger.cancelTimer()
+      }
+      if (revertError !== undefined) {
+        throw revertError
       }
       throw error
     }
-    if (this.DEBUG) {
-      const { executionGasUsed, exceptionError, returnValue } = result.execResult
-      debug(
-        `Received message execResult: [ gasUsed=${executionGasUsed} exceptionError=${
-          exceptionError ? `'${exceptionError.error}'` : 'none'
-        } returnValue=${short(returnValue)} gasRefund=${result.execResult.gasRefund ?? 0} ]`,
-      )
-    }
-    const err = result.execResult.exceptionError
-    // This clause captures any error which happened during execution
-    // If that is the case, then all refunds are forfeited
-    // There is one exception: if the CODESTORE_OUT_OF_GAS error is thrown
-    // (this only happens the Frontier/Chainstart fork)
-    // then the error is dismissed
-    if (err && err.error !== TVMError.errorMessages.CODESTORE_OUT_OF_GAS) {
-      result.execResult.selfdestruct = new Map()
-      result.execResult.createdAddresses = new Set()
-      result.execResult.gasRefund = BIGINT_0
-    }
-    if (
-      err &&
-      !(
-        this.common.hardfork() === Hardfork.Chainstart &&
-        err.error === TVMError.errorMessages.CODESTORE_OUT_OF_GAS
-      )
-    ) {
-      result.execResult.logs = []
-      await this.journal.revert()
-      if (this.common.isActivatedEIP(1153)) this.transientStorage.revert()
-      if (this.common.isActivatedEIP(7928)) {
-        this.blockLevelAccessList?.revert()
-      }
-      if (this.DEBUG) {
-        debug(`message checkpoint reverted`)
-      }
-    } else {
-      await this.journal.commit()
-      if (this.common.isActivatedEIP(1153)) this.transientStorage.commit()
-      if (this.common.isActivatedEIP(7928)) {
-        this.blockLevelAccessList?.commit()
-      }
-      if (this.DEBUG) {
-        debug(`message checkpoint committed`)
-      }
-    }
-    await this._emit('afterMessage', result)
 
     // Mirror the start condition exactly: only stop a timer this invocation actually started.
     if (timer !== undefined) {

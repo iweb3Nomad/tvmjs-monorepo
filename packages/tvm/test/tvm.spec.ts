@@ -5,6 +5,7 @@ import {
   Address,
   bytesToBigInt,
   bytesToHex,
+  generateTronContractAddress,
   generateTronCreateAddress,
   hexToBytes,
 } from '@tvmjs/util'
@@ -146,6 +147,116 @@ describe('initialization', () => {
     tvm.events.removeAllListeners('beforeMessage')
     const retry = await tvm.runCall({ caller, to: recipient, gasLimit: 100000n })
     assert.isUndefined(retry.execResult.exceptionError)
+  })
+
+  it('reverts balance, nonce, journal, and transient state when afterMessage throws', async () => {
+    const tvm = await createTVM()
+    const caller = new Address(hexToBytes('0x0000000000000000000000000000000000000106'))
+    const recipient = new Address(hexToBytes('0x0000000000000000000000000000000000000107'))
+    await tvm.stateManager.putAccount(caller, new Account(0n, 100n))
+    await tvm.stateManager.putCode(recipient, hexToBytes('0x00'))
+
+    const callerBefore = await tvm.stateManager.getAccount(caller)
+    const recipientBefore = await tvm.stateManager.getAccount(recipient)
+    const journalHeight = (tvm.journal as any).journalHeight
+    const transientStorageDepth = (tvm.transientStorage as any)._indices.length
+    tvm.events.once('afterMessage', () => {
+      throw new Error('afterMessage listener failed')
+    })
+
+    await expect(
+      tvm.runCall({
+        caller,
+        to: recipient,
+        value: 10n,
+        gasLimit: 100000n,
+      }),
+    ).rejects.toThrow('afterMessage listener failed')
+
+    const callerAfter = await tvm.stateManager.getAccount(caller)
+    const recipientAfter = await tvm.stateManager.getAccount(recipient)
+    assert.strictEqual(callerAfter?.balance, callerBefore?.balance)
+    assert.strictEqual(callerAfter?.nonce, callerBefore?.nonce)
+    assert.strictEqual(recipientAfter?.balance, recipientBefore?.balance)
+    assert.strictEqual(recipientAfter?.nonce, recipientBefore?.nonce)
+    assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
+    assert.strictEqual((tvm.transientStorage as any)._indices.length, transientStorageDepth)
+
+    tvm.events.removeAllListeners('afterMessage')
+    const retry = await tvm.runCall({ caller, to: recipient, gasLimit: 100000n })
+    assert.isUndefined(retry.execResult.exceptionError)
+  })
+
+  it('reverts balance, nonce, journal, and transient state when newContract throws with skipBalance', async () => {
+    const tvm = await createTVM()
+    const caller = new Address(hexToBytes('0x0000000000000000000000000000000000000106'))
+    const rootTransactionId = new Uint8Array(32)
+    const createdAddress = new Address(generateTronContractAddress(rootTransactionId, caller.bytes))
+    await tvm.stateManager.putAccount(caller, new Account(0n, 0n))
+
+    const before = await tvm.stateManager.getAccount(caller)
+    const journalHeight = (tvm.journal as any).journalHeight
+    const transientStorageDepth = (tvm.transientStorage as any)._indices.length
+    tvm.events.once('newContract', () => {
+      throw new Error('newContract listener failed')
+    })
+
+    await expect(
+      tvm.runCall({
+        caller,
+        gasLimit: 100000n,
+        data: hexToBytes('0x00'),
+        value: 100n,
+        skipBalance: true,
+        rootTransactionId,
+      }),
+    ).rejects.toThrow('newContract listener failed')
+
+    const after = await tvm.stateManager.getAccount(caller)
+    assert.strictEqual(after?.balance, before?.balance, 'balance should be rolled back')
+    assert.strictEqual(after?.nonce, before?.nonce, 'nonce should be rolled back')
+    assert.isUndefined(
+      await tvm.stateManager.getAccount(createdAddress),
+      'created account should be rolled back',
+    )
+    assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
+    assert.strictEqual((tvm.transientStorage as any)._indices.length, transientStorageDepth)
+
+    tvm.events.removeAllListeners('newContract')
+    const retry = await tvm.runCall({
+      caller,
+      data: hexToBytes('0x00'),
+      gasLimit: 100000n,
+      rootTransactionId,
+    })
+    assert.isUndefined(retry.execResult.exceptionError)
+  })
+
+  it('keeps the top-level nonce while reverting state for a VM execution error', async () => {
+    const tvm = await createTVM()
+    const caller = new Address(hexToBytes('0x0000000000000000000000000000000000000108'))
+    const recipient = new Address(hexToBytes('0x0000000000000000000000000000000000000109'))
+    await tvm.stateManager.putAccount(caller, new Account(0n, 100n))
+    await tvm.stateManager.putCode(recipient, hexToBytes('0xfe'))
+
+    const journalHeight = (tvm.journal as any).journalHeight
+    const transientStorageDepth = (tvm.transientStorage as any)._indices.length
+    const result = await tvm.runCall({
+      caller,
+      to: recipient,
+      value: 10n,
+      gasLimit: 100000n,
+    })
+
+    assert.strictEqual(
+      result.execResult.exceptionError?.error,
+      TVMError.errorMessages.INVALID_OPCODE,
+    )
+    assert.strictEqual((await tvm.stateManager.getAccount(caller))?.nonce, 1n)
+    assert.strictEqual((await tvm.stateManager.getAccount(caller))?.balance, 100n)
+    assert.strictEqual((await tvm.stateManager.getAccount(recipient))?.balance, 0n)
+    assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
+    assert.strictEqual((tvm.transientStorage as any)._indices.length, transientStorageDepth)
   })
 
   it('resets TRON transaction context when a top-level Message is reused', async () => {
