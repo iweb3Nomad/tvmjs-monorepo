@@ -140,11 +140,10 @@ export interface BaseOpts {
    * Activated TRON governance proposal IDs (e.g. `activatedProposals: [95, 96]`),
    * see the `tronProposalsDict` for supported proposals.
    *
-   * Pure gating state: activation is stored and queryable via
-   * `Common.isActivatedProposal()` / `Common.activatedProposals()` but does
-   * not alter EIPs, params or execution behavior at this stage. IDs are
-   * deduplicated and kept in ascending order; unknown IDs throw on
-   * instantiation. No proposal is activated by default.
+   * Common stores proposal state without mutating EIPs or params. Execution
+   * consumers can use `Common.isActivatedProposal()` to gate protocol
+   * behavior. IDs are deduplicated and kept in ascending order; unknown IDs
+   * throw on instantiation. No proposal is activated by default.
    */
   activatedProposals?: number[]
 }

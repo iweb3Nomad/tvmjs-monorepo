@@ -10,6 +10,7 @@ import {
 } from '@tvmjs/util'
 import { EventEmitter } from 'eventemitter3'
 
+import { Mainnet, TronMainnet } from './chains.ts'
 import { crc32 } from './crc.ts'
 import { tipsDict } from './eips.ts'
 import { Hardfork } from './enums.ts'
@@ -68,7 +69,12 @@ export class Common {
   constructor(opts: CommonOpts) {
     this.events = new EventEmitter<CommonEvent>()
 
-    this._chainParams = JSON.parse(JSON.stringify(opts.chain)) // copy
+    // 1.0.x documented TRON usage as Mainnet + the `tron` hardfork. Keep that
+    // source-compatible in 1.1.x, but normalize it to the correct TRON Mainnet
+    // execution preset instead of preserving the old chainId=1 hybrid.
+    const chain =
+      opts.chain === Mainnet && opts.hardfork === Hardfork.Tron ? TronMainnet : opts.chain
+    this._chainParams = JSON.parse(JSON.stringify(chain)) // copy
     this.DEFAULT_HARDFORK = this._chainParams.defaultHardfork ?? Hardfork.Tron
     // Assign hardfork changes in the sequence of the applied hardforks
     this.HARDFORK_CHANGES = this.hardforks().map((hf) => [
@@ -509,9 +515,9 @@ export class Common {
    * Checks if a TRON governance proposal is activated, i.e. was passed in
    * with the {@link CommonOpts.activatedProposals} constructor option.
    *
-   * Note: pure gating state — an activated proposal does not alter EIPs,
-   * params or execution behavior at this stage. Unknown proposal IDs
-   * return `false`.
+   * Common exposes proposal state without mutating EIPs or params. Execution
+   * consumers may use this state to gate protocol behavior. Unknown proposal
+   * IDs return `false`.
    * @param proposalId
    */
   isActivatedProposal(proposalId: number): boolean {

@@ -315,6 +315,35 @@ describe('[Common]: TRON network chainId presets (execution-only)', () => {
     assert.strictEqual(ethMainnet.chainName(), 'mainnet')
   })
 
+  it('should normalize the legacy Mainnet + tron call to TronMainnet', () => {
+    const legacy = new Common({ chain: Mainnet, hardfork: 'tron' })
+    const recommended = new Common({ chain: TronMainnet })
+
+    assert.strictEqual(legacy.chainId(), 728126428n)
+    assert.strictEqual(legacy.chainName(), 'tron-mainnet')
+    assert.strictEqual(legacy.hardfork(), Hardfork.Tron)
+    assert.deepEqual(legacy.hardforks(), recommended.hardforks())
+    assert.deepEqual(legacy.activatedProposals(), [])
+  })
+
+  it('should keep the legacy normalization scoped to the exported Mainnet preset', () => {
+    assert.throws(
+      () => new Common({ chain: { ...Mainnet }, hardfork: Hardfork.Tron }),
+      /Hardfork with name tron not supported/,
+    )
+  })
+
+  it('should preserve proposal options when normalizing the legacy TRON call', () => {
+    const legacy = new Common({
+      chain: Mainnet,
+      hardfork: Hardfork.Tron,
+      activatedProposals: [96],
+    })
+
+    assert.isTrue(legacy.isActivatedProposal(96))
+    assert.strictEqual(legacy.chainId(), 728126428n)
+  })
+
   it('should extend the Ethereum hardfork sequence with the TRON execution hardfork', () => {
     const tron = createTronChainIdCommon('mainnet')
     const ethereum = new Common({ chain: Mainnet })
