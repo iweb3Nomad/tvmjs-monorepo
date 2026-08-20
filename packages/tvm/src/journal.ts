@@ -122,7 +122,16 @@ export class Journal {
   async checkpoint() {
     this.journalHeight++
     this.journalDiff.push([this.journalHeight, [new Set(), new Map(), new Set()]])
-    await this.stateManager.checkpoint()
+    try {
+      await this.stateManager.checkpoint()
+    } catch (error) {
+      // Keep Journal bookkeeping atomic with the StateManager call. Without this cleanup, a
+      // rejected checkpoint leaves the Journal one level too deep and corrupts subsequent
+      // commit/revert pairing on the same TVM instance.
+      this.journalDiff.pop()
+      this.journalHeight--
+      throw error
+    }
   }
 
   async revert() {

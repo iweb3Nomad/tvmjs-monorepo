@@ -259,6 +259,31 @@ describe('initialization', () => {
     assert.strictEqual((tvm.transientStorage as any)._indices.length, transientStorageDepth)
   })
 
+  it('restores journal bookkeeping when the StateManager checkpoint rejects', async () => {
+    const tvm = await createTVM()
+    const contract = new Address(hexToBytes('0x000000000000000000000000000000000000010a'))
+    const originalCheckpoint = tvm.stateManager.checkpoint.bind(tvm.stateManager)
+    const journalHeight = (tvm.journal as any).journalHeight
+    let failCheckpoint = true
+
+    tvm.stateManager.checkpoint = async () => {
+      if (failCheckpoint) {
+        failCheckpoint = false
+        throw new Error('StateManager checkpoint failed')
+      }
+      await originalCheckpoint()
+    }
+
+    await expect(
+      tvm.runCall({ to: contract, code: hexToBytes('0x00'), gasLimit: 100000n }),
+    ).rejects.toThrow('StateManager checkpoint failed')
+    assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
+
+    const retry = await tvm.runCall({ to: contract, code: hexToBytes('0x00'), gasLimit: 100000n })
+    assert.isUndefined(retry.execResult.exceptionError)
+    assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
+  })
+
   it('resets TRON transaction context when a top-level Message is reused', async () => {
     const tvm = await createTVM()
     const contract = new Address(hexToBytes('0x0000000000000000000000000000000000000200'))
