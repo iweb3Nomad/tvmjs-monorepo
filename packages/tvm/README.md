@@ -53,7 +53,9 @@ The following is the simplest example for an TVM instantiation with reasonable d
 `createTVM()` defaults to the execution-only `TronMainnet` configuration. To run Ethereum rules,
 pass an explicit `Common`, for example `new Common({ chain: Mainnet })`. This selects Ethereum
 Mainnet at its current Prague hardfork; it does not recreate the 1.0.0 default combination of
-chainId 1 with the TRON hardfork.
+chainId 1 with the TRON hardfork. The legacy explicit form
+`new Common({ chain: Mainnet, hardfork: 'tron' })` remains accepted and is normalized to
+`TronMainnet` with chainId 728126428; new TRON code should use `TronMainnet` directly.
 
 ```ts
 // ./examples/simple.ts

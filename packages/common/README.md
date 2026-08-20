@@ -220,6 +220,10 @@ Use these presets for `Common.chainId()`, the `CHAINID` opcode, and controlled l
 Do not use them for TRON genesis validation, consensus or block validation, chain synchronization, or
 P2P network discovery.
 
+For TRON Mainnet execution, use `new Common({ chain: TronMainnet })`. The legacy 1.0.x form
+`new Common({ chain: Mainnet, hardfork: 'tron' })` remains accepted in 1.1.x and is normalized to
+`TronMainnet` (chainId 728126428). Plain `new Common({ chain: Mainnet })` remains Ethereum Mainnet.
+
 The following chain-specific parameters are provided:
 
 - `name`
