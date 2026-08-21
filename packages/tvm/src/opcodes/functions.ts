@@ -1375,6 +1375,7 @@ export const handlers: Map<number, OpHandler> = new Map([
 
       if (
         common.isActivatedEIP(3860) &&
+        !common.isTron() &&
         length > Number(common.param('maxInitCodeSize')) &&
         !runState.interpreter._tvm.allowUnlimitedInitCodeSize
       ) {
@@ -1411,6 +1412,7 @@ export const handlers: Map<number, OpHandler> = new Map([
 
       if (
         common.isActivatedEIP(3860) &&
+        !common.isTron() &&
         length > Number(common.param('maxInitCodeSize')) &&
         !runState.interpreter._tvm.allowUnlimitedInitCodeSize
       ) {

@@ -562,7 +562,7 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
           )
         }
 
-        if (common.isActivatedEIP(3860)) {
+        if (common.isActivatedEIP(3860) && !common.isTron()) {
           gas += ((length + BIGINT_31) / BIGINT_32) * common.param('initCodeWordGas')
         }
 
@@ -932,7 +932,7 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
           )
         }
 
-        if (common.isActivatedEIP(3860)) {
+        if (common.isActivatedEIP(3860) && !common.isTron()) {
           gas += ((length + BIGINT_31) / BIGINT_32) * common.param('initCodeWordGas')
         }
 

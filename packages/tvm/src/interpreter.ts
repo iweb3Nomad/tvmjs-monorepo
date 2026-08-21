@@ -1246,7 +1246,7 @@ export class Interpreter {
       )
     }
 
-    if (this.common.isActivatedEIP(3860)) {
+    if (this.common.isActivatedEIP(3860) && !this.common.isTron()) {
       if (
         codeToRun.length > Number(this.common.param('maxInitCodeSize')) &&
         this._tvm.allowUnlimitedInitCodeSize === false

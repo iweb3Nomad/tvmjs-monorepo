@@ -260,16 +260,22 @@ export interface TVMOpts {
   common?: Common
 
   /**
-   * Allows unlimited contract sizes while debugging. By setting this to `true`, the check for
-   * contract size limit of 24KB (see [EIP-170](https://git.io/vxZkK)) is bypassed.
+   * Allows unlimited contract sizes while debugging Ethereum or a custom chain. By setting this
+   * to `true`, the check for the 24KB contract size limit (see
+   * [EIP-170](https://git.io/vxZkK)) is bypassed.
+   *
+   * TRON chain profiles do not apply EIP-170 regardless of this option.
    *
    * Default: `false` [ONLY set to `true` during debugging]
    */
   allowUnlimitedContractSize?: boolean
 
   /**
-   * Allows unlimited contract code-size init while debugging. This (partially) disables EIP-3860.
-   * Gas cost for initcode size analysis will still be charged. Use with caution.
+   * Allows unlimited initcode while debugging Ethereum or a custom chain. This partially disables
+   * EIP-3860: the initcode size check is bypassed, but initcode word gas is still charged.
+   *
+   * TRON chain profiles do not apply EIP-3860 size checks or word gas regardless of this option.
+   * Use with caution.
    */
   allowUnlimitedInitCodeSize?: boolean
 

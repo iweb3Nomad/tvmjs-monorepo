@@ -624,7 +624,7 @@ export class TVM implements TVMInterface {
     await this._reduceSenderBalance(account, message)
     await this._reduceSenderTokenBalance(account, message)
 
-    if (this.common.isActivatedEIP(3860)) {
+    if (this.common.isActivatedEIP(3860) && !this.common.isTron()) {
       if (
         message.data.length > Number(this.common.param('maxInitCodeSize')) &&
         !this.allowUnlimitedInitCodeSize
@@ -844,6 +844,7 @@ export class TVM implements TVMInterface {
     let allowedCodeSize = true
     if (
       !result.exceptionError &&
+      !this.common.isTron() &&
       this.common.gteHardfork(Hardfork.SpuriousDragon) &&
       result.returnValue.length > Number(this.common.param('maxCodeSize'))
     ) {

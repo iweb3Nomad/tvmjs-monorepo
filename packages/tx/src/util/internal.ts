@@ -209,7 +209,12 @@ export function sharedConstructor(
   const createContract = tx.to === undefined || tx.to === null
   const allowUnlimitedInitCodeSize = opts.allowUnlimitedInitCodeSize ?? false
 
-  if (createContract && tx.common.isActivatedEIP(3860) && allowUnlimitedInitCodeSize === false) {
+  if (
+    createContract &&
+    tx.common.isActivatedEIP(3860) &&
+    !tx.common.isTron() &&
+    allowUnlimitedInitCodeSize === false
+  ) {
     checkMaxInitCodeSize(tx.common, tx.data.length)
   }
 }

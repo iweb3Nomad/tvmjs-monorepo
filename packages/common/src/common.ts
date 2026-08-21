@@ -512,6 +512,17 @@ export class Common {
   }
 
   /**
+   * Returns whether this Common instance uses a TRON execution chain profile.
+   *
+   * Unlike `gteHardfork(Hardfork.Tron)`, this identifies the chain independently of the currently
+   * selected hardfork. This is intended for chain-level execution differences which must still
+   * apply when a TRON preset explicitly selects an earlier hardfork such as Shanghai.
+   */
+  isTron(): boolean {
+    return this._chainParams.hardforks.some(({ name }) => name === Hardfork.Tron)
+  }
+
+  /**
    * Checks if a TRON governance proposal is activated, i.e. was passed in
    * with the {@link CommonOpts.activatedProposals} constructor option.
    *

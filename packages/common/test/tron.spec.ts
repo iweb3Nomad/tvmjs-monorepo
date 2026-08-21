@@ -267,6 +267,26 @@ describe('[Common]: TRON proposal gating state', () => {
   })
 })
 
+describe('[Common]: TRON execution profile identity', () => {
+  it('identifies every TRON preset independently of the selected hardfork', () => {
+    for (const chain of [TronMainnet, TronNile, TronShasta]) {
+      assert.isTrue(new Common({ chain }).isTron())
+      assert.isTrue(new Common({ chain, hardfork: Hardfork.Shanghai }).isTron())
+    }
+  })
+
+  it('does not identify Ethereum Mainnet as TRON', () => {
+    assert.isFalse(new Common({ chain: Mainnet }).isTron())
+    assert.isFalse(new Common({ chain: Mainnet, hardfork: Hardfork.Shanghai }).isTron())
+  })
+
+  it('identifies the normalized legacy Mainnet + tron form and its copies', () => {
+    const legacy = new Common({ chain: Mainnet, hardfork: Hardfork.Tron })
+    assert.isTrue(legacy.isTron())
+    assert.isTrue(legacy.copy().isTron())
+  })
+})
+
 describe('[Common]: TRON network chainId presets (execution-only)', () => {
   const mainnetBaseline = new Common({ chain: Mainnet, hardfork: Hardfork.Cancun })
   it('should expose named execution-only chain configurations', () => {
