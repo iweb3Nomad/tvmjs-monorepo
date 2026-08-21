@@ -255,6 +255,34 @@ describe('initialization', () => {
     assert.strictEqual(tvm.events.listenerCount('beforeMessage'), 1)
   })
 
+  it('preserves mixed on/once registrations and listener context after an error', async () => {
+    const tvm = await createTVM()
+    const recipient = new Address(hexToBytes('0x000000000000000000000000000000000000010c'))
+    await tvm.stateManager.putCode(recipient, hexToBytes('0x00'))
+    const context = { calls: 0, shouldThrow: true }
+    function listener(this: typeof context) {
+      this.calls++
+      if (this.shouldThrow) {
+        throw new Error('ordinary listener failed')
+      }
+    }
+    tvm.events.on('beforeMessage', listener, context)
+    tvm.events.once('beforeMessage', listener, context)
+
+    await expect(tvm.runCall({ to: recipient, gasLimit: 100000n })).rejects.toThrow(
+      'ordinary listener failed',
+    )
+    assert.strictEqual(context.calls, 1)
+    assert.strictEqual(tvm.events.listenerCount('beforeMessage'), 2)
+
+    context.shouldThrow = false
+    await tvm.runCall({ to: recipient, gasLimit: 100000n })
+    await tvm.runCall({ to: recipient, gasLimit: 100000n })
+
+    assert.strictEqual(context.calls, 4)
+    assert.strictEqual(tvm.events.listenerCount('beforeMessage'), 1)
+  })
+
   it('keeps the top-level nonce while reverting state for a VM execution error', async () => {
     const tvm = await createTVM()
     const caller = new Address(hexToBytes('0x0000000000000000000000000000000000000108'))
