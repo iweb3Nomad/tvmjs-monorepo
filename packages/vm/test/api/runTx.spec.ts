@@ -1002,6 +1002,12 @@ describe('TRON rootTransactionId propagation', () => {
       SIGNER_A.privateKey,
     )
     let beforeTxCalls = 0
+    let cleanupCalls = 0
+    const originalCleanup = vm.tvm.journal.cleanup.bind(vm.tvm.journal)
+    vm.tvm.journal.cleanup = async () => {
+      cleanupCalls++
+      await originalCleanup()
+    }
     vm.events.on('beforeTx', () => {
       beforeTxCalls++
     })
@@ -1015,6 +1021,7 @@ describe('TRON rootTransactionId propagation', () => {
     ).rejects.toThrow('Invalid TRON transaction ID policy')
 
     assert.strictEqual(beforeTxCalls, 0)
+    assert.strictEqual(cleanupCalls, 0)
     assert.deepEqual(vm.tvm.blockLevelAccessList?.raw(), [])
   })
 

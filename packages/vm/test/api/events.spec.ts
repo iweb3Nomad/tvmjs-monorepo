@@ -27,6 +27,31 @@ describe('VM events', () => {
     assert.strictEqual(vm.events.listenerCount('beforeBlock'), 0)
   })
 
+  it('should preserve mixed on/once registrations and listener context after an error', async () => {
+    const vm = await createVM()
+    const block = createBlock({}, { common: vm.common })
+    const context = { calls: 0, shouldThrow: true }
+    function listener(this: typeof context) {
+      this.calls++
+      if (this.shouldThrow) {
+        throw new Error('ordinary listener failed')
+      }
+    }
+    vm.events.on('beforeBlock', listener, context)
+    vm.events.once('beforeBlock', listener, context)
+
+    await expect(vm._emit('beforeBlock', block)).rejects.toThrow('ordinary listener failed')
+    assert.strictEqual(context.calls, 1)
+    assert.strictEqual(vm.events.listenerCount('beforeBlock'), 2)
+
+    context.shouldThrow = false
+    await vm._emit('beforeBlock', block)
+    await vm._emit('beforeBlock', block)
+
+    assert.strictEqual(context.calls, 4)
+    assert.strictEqual(vm.events.listenerCount('beforeBlock'), 1)
+  })
+
   it('should emit the Block before running it', async () => {
     const vm = await createVM()
 

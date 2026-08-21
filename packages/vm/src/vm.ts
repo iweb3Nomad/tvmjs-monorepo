@@ -10,6 +10,27 @@ import { isDebugEnabled } from '@tvmjs/util'
 import type { BigIntLike } from '@tvmjs/util'
 import type { VMEvent, VMOpts } from './types.ts'
 
+type EventRegistration = {
+  fn: (...args: any[]) => void
+  context: any
+  once: boolean
+}
+
+function getEventRegistrations(emitter: EventEmitter<any>, event: string): EventRegistration[] {
+  // EventEmitter3's public listeners() API discards per-registration `once` and `context`
+  // metadata. Snapshot the v5 registration records so async serial dispatch can match emit().
+  const eventKey = EventEmitter.prefixed ? `${EventEmitter.prefixed}${event}` : event
+  const registered = (
+    emitter as EventEmitter<any> & {
+      _events: Record<string, EventRegistration | EventRegistration[] | undefined>
+    }
+  )._events[eventKey]
+  if (registered === undefined) {
+    return []
+  }
+  return Array.isArray(registered) ? registered.slice() : [registered]
+}
+
 /**
  * The VM is a state transition machine that executes TVM bytecode and updates the state.
  * It can be used to execute transactions, blocks, individual transactions, or snippets of TVM bytecode.
@@ -78,18 +99,20 @@ export class VM {
 
     this._emit = async (topic: string, data: any): Promise<void> => {
       const event = topic as keyof VMEvent
-      const listeners = this.events.listeners(event)
-      for (const listener of listeners) {
+      const registrations = getEventRegistrations(this.events, topic)
+      for (const { fn, context, once } of registrations) {
         // `_emit` invokes listeners directly so callback-style listeners can be awaited in series.
-        // Mirror EventEmitter.emit() by removing one-time listeners before invoking them, including
-        // when they throw.
-        this.events.removeListener(event, listener, undefined, true)
-        if (listener.length === 2) {
+        // Mirror EventEmitter.emit() by removing one-time registrations immediately before their
+        // callback is invoked, including when it throws.
+        if (once) {
+          this.events.removeListener(event, fn, undefined, true)
+        }
+        if (fn.length === 2) {
           await new Promise<void>((resolve) => {
-            listener(data, resolve)
+            fn.call(context, data, resolve)
           })
         } else {
-          listener(data)
+          fn.call(context, data)
         }
       }
     }

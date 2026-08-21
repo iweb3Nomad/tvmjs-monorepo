@@ -26,7 +26,6 @@ import {
 } from '@tvmjs/util'
 
 import { Bloom } from './bloom/index.ts'
-import { runTx } from './index.ts'
 import { accumulateRequests } from './requests.ts'
 import {
   accumulateParentBeaconBlockRoot,
@@ -35,6 +34,8 @@ import {
   encodeReceipt,
   rewardAccount,
 } from './runBlock.ts'
+import { runTx } from './runTx.ts'
+import { validateTronTransactionIdPolicy } from './tronTransactionId.ts'
 
 import type { Block, HeaderData } from '@tvmjs/block'
 import type { TypedTransaction } from '@tvmjs/tx'
@@ -236,6 +237,7 @@ export class BlockBuilder {
     } = {},
   ) {
     this.checkStatus()
+    validateTronTransactionIdPolicy(tronTransactionIdPolicy)
 
     if (!this.checkpointed) {
       await this.vm.tvm.journal.checkpoint()

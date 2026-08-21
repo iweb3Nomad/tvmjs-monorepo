@@ -61,6 +61,28 @@ import type {
 
 const common = new Common({ chain: Mainnet, hardfork: Hardfork.Berlin })
 describe('runBlock() -> successful API parameter usage', async () => {
+  it('rejects an invalid transaction ID policy before block hooks or BAL replacement', async () => {
+    const vm = await createVM()
+    const block = createBlock({}, { common: vm.common })
+    const originalBlockLevelAccessList = vm.tvm.blockLevelAccessList
+    let beforeBlockCalls = 0
+    vm.events.on('beforeBlock', () => {
+      beforeBlockCalls++
+    })
+
+    await expect(
+      runBlock(vm, {
+        block,
+        tronTransactionIdPolicy: 'invalid' as any,
+        generate: true,
+        skipBlockValidation: true,
+      }),
+    ).rejects.toThrow('Invalid TRON transaction ID policy')
+
+    assert.strictEqual(beforeBlockCalls, 0)
+    assert.strictEqual(vm.tvm.blockLevelAccessList, originalBlockLevelAccessList)
+  })
+
   it('forwards transaction-indexed root IDs for TRON contract deployment', async () => {
     const tronCommon = new Common({ chain: TronMainnet })
     const vm = await createVM({ common: tronCommon })

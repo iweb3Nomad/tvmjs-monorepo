@@ -32,6 +32,7 @@ import debugDefault from 'debug'
 
 import { Bloom } from './bloom/index.ts'
 import { emitTVMProfile } from './emitTVMProfile.ts'
+import { validateTronTransactionIdPolicy } from './tronTransactionId.ts'
 
 import type { Block } from '@tvmjs/block'
 import type { Common } from '@tvmjs/common'
@@ -360,6 +361,15 @@ async function updateMinerBalance(
  * @ignore
  */
 export async function runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
+  const tronTransactionIdPolicy = validateTronTransactionIdPolicy(opts.tronTransactionIdPolicy)
+  const rootTransactionId =
+    opts.rootTransactionId ??
+    (tronTransactionIdPolicy === 'fallback-to-tx-hash' &&
+    vm.common.gteHardfork(Hardfork.Tron) &&
+    opts.tx.isSigned()
+      ? opts.tx.hash()
+      : undefined)
+
   if (vm['_opts'].profilerOpts?.reportAfterTx === true) {
     enableProfiler = true
   }
@@ -462,7 +472,7 @@ export async function runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
   }
 
   try {
-    const result = await _runTx(vm, opts)
+    const result = await _runTx(vm, opts, rootTransactionId)
     await vm.tvm.journal.commit()
     if (vm.DEBUG) {
       debug(`tx checkpoint committed`)
@@ -494,28 +504,13 @@ export async function runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
   }
 }
 
-async function _runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
+async function _runTx(
+  vm: VM,
+  opts: RunTxOpts,
+  rootTransactionId: Uint8Array | undefined,
+): Promise<RunTxResult> {
   const state = vm.stateManager
   const { tx, block } = opts
-
-  // Validate execution options before emitting events or mutating state/BAL. This runtime guard is
-  // needed for JavaScript callers even though TypeScript narrows the public option to the union.
-  const tronTransactionIdPolicy = opts.tronTransactionIdPolicy ?? 'fallback-to-tx-hash'
-  if (
-    tronTransactionIdPolicy !== 'fallback-to-tx-hash' &&
-    tronTransactionIdPolicy !== 'require-explicit'
-  ) {
-    throw EthereumJSErrorWithoutCode(
-      `Invalid TRON transaction ID policy: ${tronTransactionIdPolicy}`,
-    )
-  }
-  const rootTransactionId =
-    opts.rootTransactionId ??
-    (tronTransactionIdPolicy === 'fallback-to-tx-hash' &&
-    vm.common.gteHardfork(Hardfork.Tron) &&
-    tx.isSigned()
-      ? tx.hash()
-      : undefined)
 
   // ===========================
   // SETUP: Binary Tree Witness

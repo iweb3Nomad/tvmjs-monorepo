@@ -31,8 +31,9 @@ import debugDefault from 'debug'
 
 import { Bloom } from './bloom/index.ts'
 import { emitTVMProfile } from './emitTVMProfile.ts'
-import { runTx } from './index.ts'
 import { accumulateRequests } from './requests.ts'
+import { runTx } from './runTx.ts'
+import { validateTronTransactionIdPolicy } from './tronTransactionId.ts'
 
 import type { Block } from '@tvmjs/block'
 import type { Common } from '@tvmjs/common'
@@ -72,6 +73,8 @@ const entireBlockLabel = 'Entire block'
  *  - `generate`: false
  */
 export async function runBlock(vm: VM, opts: RunBlockOpts): Promise<RunBlockResult> {
+  validateTronTransactionIdPolicy(opts.tronTransactionIdPolicy)
+
   if (vm['_opts'].profilerOpts?.reportAfterBlock === true) {
     enableProfiler = true
     // eslint-disable-next-line no-console

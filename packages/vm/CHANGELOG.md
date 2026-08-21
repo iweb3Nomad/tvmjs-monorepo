@@ -15,12 +15,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Preserve 1.0.x simulator compatibility without reverting TRON address derivation: `runTx()` now uses the signed TVMJS transaction hash as a deterministic simulation ID when a TRON deployment or internal CREATE has no explicit `rootTransactionId`
 - Add `TronTransactionIdPolicy` with a default `fallback-to-tx-hash` mode and an opt-in `require-explicit` mode for real-chain replay and consistency testing; explicit IDs always take precedence
 - Forward the transaction ID policy through `runBlock()` and block builders while keeping fallback resolution centralized in `runTx()`
-- Validate the transaction ID policy before emitting VM events or mutating transaction state and block access lists
+- Validate the transaction ID policy at `runTx()`, `runBlock()`, and block-builder public boundaries before hooks, checkpoints, hardfork changes, state cleanup, or block access-list replacement
 - Forward `rootTransactionId` for both java-tron-compatible top-level contract deployment and internal CREATE address derivation; `runBlock()` accepts transaction-indexed `rootTransactionIds`, and block builders accept an ID per added transaction
 - Keep VM and TVM `Common`, `StateManager`, and exposed blockchain instances consistent when supplied through a custom TVM or `tvmOpts`
 - Reject EIP-155 and typed transactions whose chainId does not match the VM while preserving support for unprotected legacy transactions. Transactions executed by the default TRON VM must be constructed with the same `Common`, for example `createLegacyTx(data, { common: vm.common })`
 - Align TRON version-0 CALL/CREATE energy forwarding with java-tron and apply TIP-854 invalid-calldata failures only when the TRON Proposal 96 / Osaka gate is active
-- Preserve EventEmitter `once()` semantics for VM block and transaction events, including listeners that throw
+- Preserve EventEmitter registration order, `once()`, and custom listener-context semantics for VM block and transaction events, including listeners that throw
 
 ### Features
 
