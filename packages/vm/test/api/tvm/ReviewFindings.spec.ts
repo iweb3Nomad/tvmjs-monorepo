@@ -304,12 +304,12 @@ describe('Review Findings - Precompile Utilities', () => {
     assert.equal(result, addr) // same reference
   })
 
-  it('extractBytesArray returns empty for offset beyond words', async () => {
-    const { extractBytesArray } = await import('../../../../tvm/src/precompiles/util.ts')
+  it('extractSigArray returns empty for offset beyond words', async () => {
+    const { extractSigArray } = await import('../../../../tvm/src/precompiles/util.ts')
     const { DataWord } = await import('../../../../tvm/src/precompiles/dataWord.ts')
     const data = new Uint8Array(32)
     const words = DataWord.parseArray(data)
-    const result = extractBytesArray(words, 10, data) // offset=10, but only 1 word
+    const result = extractSigArray(words, 10, 0, data) // offset=10, but only 1 word
     assert.equal(result.length, 0)
   })
 })

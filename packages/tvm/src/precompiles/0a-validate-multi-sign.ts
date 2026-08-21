@@ -9,7 +9,8 @@ import { DataWord } from './dataWord.ts'
 import type { PrecompileInput } from './types.ts'
 import {
   convertToTronAddress,
-  extractBytesArray,
+  extractArrayLength,
+  extractSigArray,
   isTronOsakaEnabled,
   isValidTronSignatureCalldata,
   recoverAddrBySign,
@@ -45,18 +46,15 @@ export async function precompile0a(opts: PrecompileInput): Promise<ExecResult> {
 
     const hash = sha256(combine)
 
-    const signatures = extractBytesArray(
-      words,
-      words[3].intValueSafe() / DataWord.WORD_SIZE,
-      rawData,
-    )
-
-    if (signatures.length === 0 || signatures.length > MAX_SIZE) {
+    const signaturesOffset = words[3].intValueSafe() / DataWord.WORD_SIZE
+    const signatureCount = extractArrayLength(words, signaturesOffset)
+    if (signatureCount === 0 || signatureCount > MAX_SIZE) {
       return {
         executionGasUsed: gasUsed,
         returnValue: new Uint8Array(DataWord.WORD_SIZE),
       }
     }
+    const signatures = extractSigArray(words, signaturesOffset, signatureCount, rawData)
 
     const address = new Address(addr)
     const account = await vm.stateManager.getAccount(address)
