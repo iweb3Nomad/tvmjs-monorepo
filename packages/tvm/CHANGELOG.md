@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Preserve EventEmitter registration order, `once()`, and custom listener-context semantics when awaiting hook callbacks, including listeners that throw
 - Skip outer checkpoint revert when an inner checkpoint remains active after rollback retries, preserving StateManager stack alignment instead of reverting the wrong layer
 - Restore the exact EIP-7928 block access-list snapshot for host hook failures while retaining read-preservation semantics for ordinary EVM frame reverts
+- Align `CALLTOKEN` and `TOKENBALANCE` with java-tron by validating only the TRC-10 token ID range, allowing valid but unissued IDs to continue or return zero without requiring `StateManager.tokenIdExists()`
 - Serialize all public `runCall()` and `runCode()` executions on a TVM instance so shared transaction, block, state-manager, and journal context cannot be overwritten by overlapping calls; interpreter-driven recursive calls continue through the private entry point
 - Validate a depth-0 TRON deployment's `rootTransactionId` before mutating the caller account, so invalid standalone calls cannot leak nonce changes
 - Select Ethereum EIP-1014 or TRON CREATE2 address derivation by hardfork instead of applying TRON's `0x41` preimage globally
