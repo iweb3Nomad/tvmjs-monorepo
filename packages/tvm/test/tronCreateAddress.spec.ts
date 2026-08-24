@@ -107,6 +107,47 @@ describe('TRON CREATE address derivation', () => {
     )
   })
 
+  it('tracks a successful CREATE through runCode when EIP-6780 is active', async () => {
+    const tvm = await createTVM()
+    const expectedAddress = generateTronCreateAddress(ROOT_TRANSACTION_ID, 0n)
+
+    const result = await tvm.runCode({
+      // CREATE with empty initcode, then return the created address.
+      code: hexToBytes('0x600060006000f060005260206000f3'),
+      to: CREATOR,
+      rootTransactionId: ROOT_TRANSACTION_ID,
+      gasLimit: 200000n,
+    })
+
+    assert.isUndefined(result.exceptionError)
+    assert.deepEqual(result.returnValue, tronStackAddress(expectedAddress))
+    assert.isTrue(result.createdAddresses?.has(bytesToHex(expectedAddress)))
+    assert.isDefined(await tvm.stateManager.getAccount(new Address(expectedAddress)))
+  })
+
+  it('tracks a successful CREATE2 in a caller-provided runCode set', async () => {
+    const tvm = await createTVM()
+    const salt = new Uint8Array(32)
+    salt[31] = 1
+    const expectedAddress = generateTronAddress2(CREATOR.bytes, salt, new Uint8Array())
+    const createdAddresses = new Set<`0x${string}`>()
+
+    const result = await tvm.runCode({
+      // CREATE2 with salt 1 and empty initcode, then return the created address.
+      code: hexToBytes('0x6001600060006000f560005260206000f3'),
+      to: CREATOR,
+      rootTransactionId: ROOT_TRANSACTION_ID,
+      gasLimit: 200000n,
+      createdAddresses,
+    })
+
+    assert.isUndefined(result.exceptionError)
+    assert.deepEqual(result.returnValue, tronStackAddress(expectedAddress))
+    assert.strictEqual(result.createdAddresses, createdAddresses)
+    assert.isTrue(createdAddresses.has(bytesToHex(expectedAddress)))
+    assert.isDefined(await tvm.stateManager.getAccount(new Address(expectedAddress)))
+  })
+
   it('returns zero when CREATE fails', async () => {
     const tvm = await createTVM()
     // The creator has no balance, so CREATE with value=1 fails before address generation.

@@ -646,7 +646,8 @@ export class TVM implements TVMInterface {
     message.to = await this._generateAddress(message)
 
     if (this.common.isActivatedEIP(6780)) {
-      message.createdAddresses!.add(message.to.toString())
+      message.createdAddresses ??= new Set()
+      message.createdAddresses.add(message.to.toString())
     }
 
     if (this.DEBUG) {
@@ -1003,6 +1004,10 @@ export class TVM implements TVMInterface {
     message: Message,
     opts: InterpreterOpts = {},
   ): Promise<ExecResult> {
+    if (this.common.isActivatedEIP(6780)) {
+      message.createdAddresses ??= new Set()
+    }
+
     let contract = await this.stateManager.getAccount(message.to ?? createZeroAddress())
     if (!contract) {
       contract = new Account()
@@ -1514,6 +1519,7 @@ export class TVM implements TVMInterface {
         tokenValue: opts.tokenValue,
         depth: opts.depth,
         selfdestruct: opts.selfdestruct ?? new Map(),
+        createdAddresses: opts.createdAddresses ?? new Set(),
         isStatic: opts.isStatic,
         blobVersionedHashes: opts.blobVersionedHashes,
         tronTransactionContext:
