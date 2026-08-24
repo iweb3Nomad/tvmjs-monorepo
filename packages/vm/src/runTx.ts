@@ -242,7 +242,13 @@ async function processSelfdestructs(vm: VM, results: RunTxResult): Promise<void>
 
     // EIP-6780: Only delete contracts created in the same transaction
     if (vm.common.isActivatedEIP(6780)) {
-      if (!results.execResult.createdAddresses!.has(address.toString())) {
+      const createdAddresses = results.execResult.createdAddresses
+      if (createdAddresses === undefined) {
+        throw EthereumJSErrorWithoutCode(
+          'createdAddresses is required to finalize SELFDESTRUCT entries when EIP-6780 is active',
+        )
+      }
+      if (!createdAddresses.has(address.toString())) {
         continue
       }
     }

@@ -606,6 +606,12 @@ export class TVM implements TVMInterface {
   }
 
   protected async _executeCreate(message: Message): Promise<TVMResult> {
+    if (this.common.isActivatedEIP(6780) && message.createdAddresses === undefined) {
+      throw EthereumJSErrorWithoutCode(
+        'createdAddresses must be initialized when EIP-6780 is active',
+      )
+    }
+
     let gasLimit = message.gasLimit
     const fromAddress = message.caller
 
@@ -646,8 +652,7 @@ export class TVM implements TVMInterface {
     message.to = await this._generateAddress(message)
 
     if (this.common.isActivatedEIP(6780)) {
-      message.createdAddresses ??= new Set()
-      message.createdAddresses.add(message.to.toString())
+      message.createdAddresses!.add(message.to.toString())
     }
 
     if (this.DEBUG) {
@@ -1204,6 +1209,13 @@ export class TVM implements TVMInterface {
     ) {
       message.tronTransactionContext = createTronTransactionContext(opts.rootTransactionId)
     }
+    if (
+      isStandaloneCall &&
+      this.common.isActivatedEIP(6780) &&
+      message.createdAddresses === undefined
+    ) {
+      message.createdAddresses = opts.createdAddresses ?? new Set()
+    }
 
     // Validate transaction-level TRON deployment context before skipBalance or the top-level nonce
     // can write the caller account. Internal CREATE is validated later inside its own checkpoint.
@@ -1519,7 +1531,7 @@ export class TVM implements TVMInterface {
         tokenValue: opts.tokenValue,
         depth: opts.depth,
         selfdestruct: opts.selfdestruct ?? new Map(),
-        createdAddresses: opts.createdAddresses ?? new Set(),
+        createdAddresses: opts.createdAddresses,
         isStatic: opts.isStatic,
         blobVersionedHashes: opts.blobVersionedHashes,
         tronTransactionContext:

@@ -94,7 +94,7 @@ export interface Env {
   gasRefund: bigint /* Current value (at begin of the frame) of the gas refund */
   eof?: EOFEnv /* Optional EOF environment in case of EOF execution */
   blobVersionedHashes: PrefixedHexString[] /** Versioned hashes for blob transactions */
-  createdAddresses?: Set<string>
+  createdAddresses?: Set<PrefixedHexString>
   accessWitness?: BinaryTreeAccessWitnessInterface
   chargeCodeAccesses?: boolean
   /** Logs to prepend (e.g. EIP-7708 ETH transfer log from message-level value transfer) */

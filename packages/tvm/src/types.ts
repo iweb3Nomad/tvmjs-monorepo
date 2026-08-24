@@ -95,10 +95,6 @@ interface TVMRunOpts {
    */
   selfdestruct?: SelfdestructMap
   /**
-   * Created addresses in the current context. Used by EIP-6780 and defaults to an empty set.
-   */
-  createdAddresses?: Set<PrefixedHexString>
-  /**
    * The address of the account that is executing this code (`address(this)`). Defaults to the zero address.
    */
   to?: Address
@@ -118,6 +114,10 @@ export interface TVMRunCodeOpts extends TVMRunOpts {
    * The initial program counter. Defaults to `0`
    */
   pc?: number
+  /**
+   * Created addresses in the current context. Defaults to an empty set when EIP-6780 is active.
+   */
+  createdAddresses?: Set<PrefixedHexString>
 }
 
 /**
@@ -132,6 +132,10 @@ export interface TVMRunCallOpts extends TVMRunOpts {
    * An optional salt to pass to CREATE2.
    */
   salt?: Uint8Array
+  /**
+   * Created addresses in the current context. Used by EIP-6780.
+   */
+  createdAddresses?: Set<PrefixedHexString>
   /**
    * Skip balance checks if true. If caller balance is less than message value,
    * sets balance to message value to ensure execution doesn't fail.
