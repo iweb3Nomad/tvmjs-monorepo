@@ -356,6 +356,31 @@ describe('runBlock() -> successful API parameter usage', async () => {
 })
 
 describe('runBlock() -> API parameter usage/data errors', async () => {
+  it('reverts the block checkpoint when state-root generation fails after applyBlock', async () => {
+    const vm = await createVM()
+    const block = createBlock({}, { common: vm.common })
+    const stateManager = vm.stateManager as any
+    const originalGetStateRoot = stateManager.getStateRoot
+    const checkpointCountBefore = stateManager._checkpointCount
+    stateManager.getStateRoot = async () => {
+      throw new Error('state-root generation failed')
+    }
+
+    try {
+      await expect(
+        runBlock(vm, {
+          block,
+          generate: true,
+          skipBlockValidation: true,
+        }),
+      ).rejects.toThrow('state-root generation failed')
+    } finally {
+      stateManager.getStateRoot = originalGetStateRoot
+    }
+
+    assert.strictEqual(stateManager._checkpointCount, checkpointCountBefore)
+  })
+
   const vm = await createVM({ common })
 
   it('should fail when runTx fails', async () => {

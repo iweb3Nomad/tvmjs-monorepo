@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
+- Revert the complete block checkpoint when request accumulation, state-root generation, generated-field construction, or pre-commit validation fails after transaction execution
 - Preserve 1.0.x simulator compatibility without reverting TRON address derivation: `runTx()` now uses the signed TVMJS transaction hash as a deterministic simulation ID when a TRON deployment or internal CREATE has no explicit `rootTransactionId`
 - Add `TronTransactionIdPolicy` with a default `fallback-to-tx-hash` mode and an opt-in `require-explicit` mode for real-chain replay and consistency testing; explicit IDs always take precedence
 - Forward the transaction ID policy through `runBlock()` and block builders while keeping fallback resolution centralized in `runTx()`
