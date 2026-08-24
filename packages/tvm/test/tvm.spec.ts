@@ -360,7 +360,7 @@ describe('initialization', () => {
     assert.strictEqual((tvm.journal as any).journalHeight, journalHeight)
   })
 
-  it('keeps journal and StateManager checkpoints retryable when StateManager revert rejects', async () => {
+  it('keeps journal and StateManager checkpoints available to be retried when StateManager revert rejects', async () => {
     const tvm = await createTVM()
     const originalRevert = tvm.stateManager.revert.bind(tvm.stateManager)
     const journalHeight = (tvm.journal as any).journalHeight
