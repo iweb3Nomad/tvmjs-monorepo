@@ -69,7 +69,7 @@ describe('TRON configuration across execution entry points', () => {
   })
 
   it('does not discard a supplied parameter override when tvmOpts.common starts without parameters', async () => {
-    const common = new Common({ chain: TronMainnet, params: { tron: { balanceGas: 20 } } })
+    const common = new Common({ chain: TronMainnet, params: { tron: { balanceGas: 21 } } })
     await assertRejected(
       createVM({
         common,
@@ -78,7 +78,7 @@ describe('TRON configuration across execution entry points', () => {
       /Conflicting Common/,
     )
     const vm = await createVM({ common, tvmOpts: { common: common.copy() } })
-    assert.strictEqual(vm.common.param('balanceGas'), 20n)
+    assert.strictEqual(vm.common.param('balanceGas'), 21n)
   })
 
   it('runs a default signed transaction and rejects a different chainId', async () => {

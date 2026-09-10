@@ -205,6 +205,12 @@ void main()
 
 This library by default uses JavaScript implementations for the basic standard crypto primitives like hashing or signature verification (for included txs). See `@tvmjs/common` [README](https://github.com/tronweb3/tvmjs-monorepo/tree/master/packages/common) for instructions on how to replace with e.g. a more performant WASM implementation by using a shared `common` instance.
 
+## TRON Energy and transaction overhead
+
+`runTx().execResult.executionGasUsed` uses the same [TRON Energy schedule](../tvm/README.md#tron-energy-accounting) as a direct TVM call with equivalent state, code and execution settings. `totalGasSpent` also includes the TVMJS transaction envelope's intrinsic gas: the base transaction cost, calldata cost and any top-level creation cost. This wrapper overhead is not java-tron execution Energy or its bandwidth/staking/feeLimit accounting.
+
+EIP-2930 and EIP-1559 transactions remain available as TVMJS transaction formats. Their access-list fields are validated and signed, but have no address/slot surcharge and do not warm state. `reportAccessList` reports diagnostic accesses without changing execution costs. The default TRON schedule generates no SSTORE or SELFDESTRUCT refunds; unused prepaid call and transaction gas is still returned.
+
 ## Examples
 
 See the [examples](./examples/) folder for different meaningful examples on how to use the VM package and invoke certain aspects of it, e.g. running a complete block, a certain tx or using event listeners, among others. Some noteworthy examples to point out:
@@ -460,7 +466,7 @@ The VM processes state changes at several levels:
   - Commits or reverts state changes based on success.
 - **[`runTx`](./src/runTx.ts)**: Processes a single transaction.
   - Performs pre-execution checks: Sender balance sufficient for gas+value, sender nonce validity, transaction gas limit against block gas limit, supported transaction types and chainId.
-  - Warms up state access based on Access Lists (EIP-2929/2930).
+  - Collects requested access diagnostics without prewarming addresses or storage.
   - Pays intrinsic gas cost.
   - Executes the transaction code using `vm.tvm.runCall` (or specific logic for contract creation).
   - Calculates gas used and refunds remaining gas.

@@ -287,10 +287,10 @@ export class TVM implements TVMInterface {
 
     // Supported EIPs
     const supportedEIPs = [
-      1153, 1559, 2537, 2565, 2718, 2929, 2930, 2935, 3198, 3529, 3540, 3541, 3607, 3651, 3670,
-      3855, 3860, 4200, 4399, 4750, 4788, 4844, 4895, 5133, 5450, 5656, 6110, 6206, 6780, 7002,
-      7069, 7251, /* 7480, */ 7516, 7594, 7620, 7685, 7691, 7692, 7698, 7702, 7709, 7823, 7825,
-      7934, 7939, 7951, 8024,
+      1153, 1559, 2537, 2565, 2718, 2930, 2935, 3198, 3540, 3541, 3607, 3670, 3855, 3860, 4200,
+      4399, 4750, 4788, 4844, 4895, 5133, 5450, 5656, 6110, 6206, 6780, 7002, 7069, 7251,
+      /* 7480, */ 7516, 7594, 7620, 7685, 7691, 7692, 7698, 7702, 7709, 7823, 7825, 7934, 7939,
+      7951, 8024,
     ]
 
     for (const eip of this.common.eips()) {
@@ -305,7 +305,7 @@ export class TVM implements TVMInterface {
       )
     }
 
-    this.common.updateParams(opts.params ?? paramsTVM)
+    this.common.updateParams(opts.params ?? paramsTVM, opts.params !== undefined)
 
     this.allowUnlimitedContractSize = opts.allowUnlimitedContractSize ?? false
     this.allowUnlimitedInitCodeSize = opts.allowUnlimitedInitCodeSize ?? false
@@ -374,6 +374,7 @@ export class TVM implements TVMInterface {
   protected async _executeCall(message: MessageWithTo): Promise<TVMResult> {
     let gasLimit = message.gasLimit
     const fromAddress = message.caller
+    this.journal.addAccessedAddress(message.codeAddress.bytes)
 
     if (this.common.isActivatedEIP(7864)) {
       if (message.accessWitness === undefined) {
@@ -430,6 +431,7 @@ export class TVM implements TVMInterface {
 
     // Load `to` account
     let toAccount = await this.stateManager.getAccount(message.to)
+    const recipientExists = toAccount !== undefined
     if (!toAccount) {
       if (this.common.isActivatedEIP(6800) || this.common.isActivatedEIP(7864)) {
         const absenceProofAccessGas = message.accessWitness!.readAccountHeader(message.to)
@@ -451,8 +453,15 @@ export class TVM implements TVMInterface {
       }
       toAccount = new Account()
     }
-    // Add tx value to the `to` account
-    if (!message.delegatecall) {
+    // Supplied bytecode needs an account for its execution context. Empty calls
+    // and precompiles without a transfer must not create a missing recipient.
+    if (
+      !message.delegatecall &&
+      (recipientExists ||
+        message.value !== BIGINT_0 ||
+        message.tokenValue !== BIGINT_0 ||
+        (message.code instanceof Uint8Array && message.code.length !== 0))
+    ) {
       try {
         await this._addToBalance(toAccount, message)
         await this._addToTokenBalance(toAccount, message)
@@ -619,6 +628,7 @@ export class TVM implements TVMInterface {
     message.code = message.data
     message.data = message.eofCallData ?? new Uint8Array()
     message.to = await this._generateAddress(message)
+    this.journal.addAccessedAddress(message.to.bytes)
 
     if (this.common.isActivatedEIP(6780)) {
       message.createdAddresses!.add(message.to.toString())
@@ -1353,11 +1363,6 @@ export class TVM implements TVMInterface {
       }
 
       await this._emit('beforeMessage', message)
-
-      if (!message.to && this.common.isActivatedEIP(2929)) {
-        message.code = message.data
-        this.journal.addWarmedAddress((await this._generateAddress(message)).bytes)
-      }
 
       // A nested execution checkpoint preserves the existing semantics for VM-level failures: the
       // call/create changes are reverted while the top-level nonce remains in the outer checkpoint.

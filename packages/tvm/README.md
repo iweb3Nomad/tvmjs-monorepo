@@ -1,4 +1,4 @@
-<!-- cspell:ignore blockhashes Fusaka prehash subarray -->
+<!-- cspell:ignore blockhashes Fusaka prehash subarray CALLDATACOPY CODECOPY -->
 
 # @tvmjs/tvm
 
@@ -127,6 +127,31 @@ Additionally, this example shows how to use events to listen to the inner workin
 ### WASM Crypto Support
 
 This library by default uses JavaScript implementations for the basic standard crypto primitives like hashing or signature verification (for included txs). See `@tvmjs/common` [README](https://github.com/tronweb3/tvmjs-monorepo/tree/master/packages/common) for instructions on how to replace them with, e.g., a more performant WASM implementation by using a shared `common` instance.
+
+## TRON Energy accounting
+
+The default schedule follows java-tron [GreatVoyage-v4.8.2 EnergyCost](https://github.com/tronprotocol/java-tron/blob/f8ff7c76f45ab41d9bb76922329657506819701b/actuator/src/main/java/org/tron/core/vm/EnergyCost.java). It uses version-0 call forwarding, no dynamic Energy penalty, the original memory instruction schedule, and the SELFDESTRUCT restriction already selected by this profile. These are execution settings, not a claim about the current governance state of a network.
+
+| Operation | Energy |
+| --- | --- |
+| BALANCE, EXTCODESIZE, TOKENBALANCE, ISCONTRACT | 20 |
+| EXTCODEHASH | 400 |
+| SLOAD | 50 |
+| SSTORE, zero to nonzero | 20,000 |
+| Other SSTORE writes, including unchanged values | 5,000 |
+| CALL, CALLCODE, DELEGATECALL, STATICCALL, CALLTOKEN | 40 base |
+| Nonzero CALL/CALLTOKEN transfer | 9,000, plus 25,000 if the recipient is missing |
+| SELFDESTRUCT | 5,000, plus 25,000 if the beneficiary is missing |
+
+Memory expansion, data copying and callee execution are charged separately. A CALL transfers at most the remaining Energy after caller costs, without reserving Ethereum's 1/64. The 2,300 value-transfer stipend and unused callee Energy follow the reference call rules. Existing empty accounts do not pay creation Energy, and zero-value calls do not create missing recipients.
+
+An explicit `runCall({ code })` override initializes a missing execution account so storage writes continue to work, without saving the supplied code.
+
+There are no cold/warm access surcharges or SSTORE/SELFDESTRUCT refunds. Access-list reporting is diagnostic and does not warm state. Journal checkpoints and revert behavior remain active.
+
+MLOAD, MSTORE and MSTORE8 charge memory expansion without an additional base fee in the original schedule. To reproduce java-tron's `allowHigherLimitForMaxCpuTimeOfOneTx` memory adjustment, set `params: { tron: { mloadGas: 1, mstoreGas: 1, mstore8Gas: 1 } }` on Common. CALLDATACOPY, CODECOPY and RETURNDATACOPY charge expansion and copying without an extra base fee in either schedule.
+
+The [Energy vectors](./test/testdata/tronEnergy.json) record the reference commit, settings, expected costs and pre-migration results. They are derived from source; live-node comparison, dynamic Energy penalties, version-1 contracts and the full bandwidth/staking/feeLimit resource model are outside this validation. `executionGasUsed` measures execution Energy; the VM wrapper's transaction overhead is reported separately in `totalGasSpent`.
 
 ## Examples
 

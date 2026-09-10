@@ -145,7 +145,7 @@ export function sharedConstructor(
 ) {
   // LOAD base tx super({ ...txData, type: TransactionType.Legacy }, opts)
   tx.common = getCommon(opts.common)
-  tx.common.updateParams(opts.params ?? paramsTx)
+  tx.common.updateParams(opts.params ?? paramsTx, opts.params !== undefined)
 
   validateNotArray(txData) // is this necessary?
 

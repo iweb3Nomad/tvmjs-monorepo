@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Keep access-list transaction encoding while removing Ethereum address and storage-key access-list charges from TRON intrinsic gas.
 - Default transaction configuration to `TronMainnet` and use the TRON capability matrix for legacy signature and replay-protection behavior. Pass the intended network's Common explicitly when constructing and signing transactions.
 
 ### Fixes

@@ -51,6 +51,28 @@ describe('[Common]: TRON parameters', () => {
     assert.throws(() => common.paramByEIP('unknown', 999999), /not supported/)
   })
 
+  it('keeps TRON pricing when an already active capability is explicitly selected', () => {
+    const common = new Common({
+      chain: TronMainnet,
+      params: { 2930: { accessListAddressGas: 2400 }, tron: { accessListAddressGas: 0 } },
+      eips: [2930],
+    })
+    assert.strictEqual(common.param('accessListAddressGas'), 0n)
+    assert.strictEqual(common.copy().param('accessListAddressGas'), 0n)
+    assert.strictEqual(common.paramByHardfork('accessListAddressGas', Hardfork.Tron), 0n)
+  })
+
+  it('loads defaults without replacing caller overrides when requested', () => {
+    const common = new Common({ chain: TronMainnet, params: { tron: { balanceGas: 21 } } })
+    const defaults = { tron: { balanceGas: 20, sloadGas: 50 } }
+    common.updateParams(defaults, false)
+    assert.strictEqual(common.param('balanceGas'), 21n)
+    assert.strictEqual(common.param('sloadGas'), 50n)
+    common.updateParams({ tron: { balanceGas: 22 } })
+    assert.strictEqual(common.param('balanceGas'), 22n)
+    assert.deepEqual(defaults, { tron: { balanceGas: 20, sloadGas: 50 } })
+  })
+
   it('queries supported optional parameters without activating the capability', () => {
     const common = new Common({ chain: TronMainnet, params: { 7939: { clzGas: 5 } } })
     assert.isFalse(common.isActivatedEIP(7939))
@@ -63,7 +85,7 @@ describe('[Common]: TRON parameters', () => {
     assert.strictEqual(common.param('clzGas'), 5n)
   })
 
-  it.each([4788, 4844, 4895, 7516, 7702])(
+  it.each([2929, 3529, 3651, 4788, 4844, 4895, 7516, 7702])(
     'rejects parameter queries and activation for retired EIP %s even when parameters exist',
     (eip) => {
       const common = new Common({

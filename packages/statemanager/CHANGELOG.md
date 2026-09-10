@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Copy SimpleStateManager TRC-10 balance maps across checkpoints and shallow copies so reverted, failed and independently copied executions cannot leak token transfers.
 - Bind EIP-1186 account proofs to the StateManager state root and storage proofs to the authenticated account storage root; reject storage proofs for nonexistent accounts
 
 ### Chores

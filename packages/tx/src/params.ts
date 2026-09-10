@@ -1,6 +1,11 @@
 import type { ParamsDict } from '@tvmjs/common'
 
 export const paramsTx: ParamsDict = {
+  // Access lists remain serializable metadata and do not buy warm TRON accesses.
+  tron: {
+    accessListStorageKeyGas: 0,
+    accessListAddressGas: 0,
+  },
   /**
    * Frontier/Chainstart
    */

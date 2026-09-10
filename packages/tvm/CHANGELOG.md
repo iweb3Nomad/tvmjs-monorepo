@@ -10,15 +10,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Replace Ethereum cold/warm access and storage refunds with the documented java-tron 4.8.2 Energy schedule. Align account access, SLOAD/SSTORE, CALL/CALLTOKEN, SELFDESTRUCT, EXP and memory/copy instruction costs.
 - Accept only the TRON execution profile. Resolve shared opcode and precompile capabilities directly without Ethereum hardfork ordering or inherited consensus metadata.
 
 ### Fixes
 
+- Charge new-account Energy only for missing CALL/CALLTOKEN recipients with nonzero value. Keep existing empty accounts across transactions and avoid creating recipients on zero-value calls, preserving the execution account for explicit `runCall({ code })` overrides.
+- Keep access reporting independent of warming and retain version-0 forwarding, checkpoint rollback and unused callee Energy handling.
+- Add pinned source vectors and VM/TVM, storage, transfer, insufficient Energy and revert regressions.
 - Remove unreachable Ethereum gas-forwarding branches and unused arguments from `maxCallGas`, preserving the current TRON version-0 forwarding rules and migrating the opcode regression tests.
 - Remove redundant TRON hardfork guards from CREATE/CREATE2, transaction-wide nonces, SELFDESTRUCT gas and Proposal 96 checks while preserving their active execution rules.
 - Limit the internal precompile registry to EIP capability checks and remove its unused hardfork declarations. Migrate availability tests to the three TRON networks and retain custom precompile override coverage.
 - Preserve caller options and custom BN254 implementations during TVM creation.
-- Migrate retained configuration examples and TRON regressions; retire examples requiring unsupported Ethereum profiles. EIP-2929 accounting remains pending the separate TRON Gas migration.
+- Migrate retained configuration examples and TRON regressions; retire examples requiring unsupported Ethereum profiles.
 
 ## 1.1.0
 

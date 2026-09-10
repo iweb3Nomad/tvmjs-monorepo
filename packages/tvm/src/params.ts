@@ -3,6 +3,39 @@ import { SYSTEM_ADDRESS } from '@tvmjs/util'
 
 export const paramsTVM: ParamsDict = {
   /**
+   * TRON version-0 Energy schedule, java-tron GreatVoyage-v4.8.2.
+   * Memory instructions use the original schedule; callers can select the
+   * higher CPU limit schedule with mloadGas/mstoreGas/mstore8Gas set to 1.
+   * SELFDESTRUCT follows the restriction already selected by this profile.
+   */
+  tron: {
+    expByteGas: 10,
+    balanceGas: 20,
+    extcodesizeGas: 20,
+    extcodecopyGas: 20,
+    extcodehashGas: 400,
+    sloadGas: 50,
+    sstoreSetGas: 20000,
+    sstoreResetGas: 5000,
+    sstoreRefundGas: 0,
+    callGas: 40,
+    callcodeGas: 40,
+    delegatecallGas: 40,
+    staticcallGas: 40,
+    calltokenGas: 40,
+    tokenbalanceGas: 20,
+    iscontractGas: 20,
+    selfdestructGas: 5000,
+    selfdestructRefundGas: 0,
+    // These handlers charge memory expansion and copying without an extra base fee.
+    mloadGas: 0,
+    mstoreGas: 0,
+    mstore8Gas: 0,
+    calldatacopyGas: 0,
+    codecopyGas: 0,
+    returndatacopyGas: 0,
+  },
+  /**
    * Frontier/Chainstart
    */
   1: {

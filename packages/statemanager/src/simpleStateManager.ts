@@ -8,6 +8,15 @@ import type { AccountFields, Common, StateManagerInterface } from '@tvmjs/common
 import type { Address, PrefixedHexString } from '@tvmjs/util'
 import type { SimpleStateManagerOpts } from './index.ts'
 
+function copyAccount(account: Account | undefined): Account | undefined {
+  if (account === undefined) return undefined
+  // Sharing the mutable TRC-10 balance map across checkpoints leaks transfers
+  // through REVERT and OOG, even when the Account instances themselves are copied.
+  return Object.assign(Object.create(Object.getPrototypeOf(account)), account, {
+    _asset: account._asset === null ? null : { ...account._asset },
+  })
+}
+
 /**
  * Simple and dependency-free state manager for basic state access use cases
  * where a merkle-patricia or binary tree backed state manager is too heavy-weight.
@@ -55,11 +64,7 @@ export class SimpleStateManager implements StateManagerInterface {
   protected checkpointSync() {
     const newTopA = new Map(this.topAccountStack())
     for (const [address, account] of newTopA) {
-      const accountCopy =
-        account !== undefined
-          ? Object.assign(Object.create(Object.getPrototypeOf(account)), account)
-          : undefined
-      newTopA.set(address, accountCopy)
+      newTopA.set(address, copyAccount(account))
     }
     this.accountStack.push(newTopA)
     this.codeStack.push(new Map(this.topCodeStack()))
@@ -133,11 +138,12 @@ export class SimpleStateManager implements StateManagerInterface {
 
   shallowCopy(): StateManagerInterface {
     const copy = new SimpleStateManager({ common: this.common })
-    for (let i = 0; i < this.accountStack.length; i++) {
-      copy.accountStack.push(new Map(this.accountStack[i]))
-      copy.codeStack.push(new Map(this.codeStack[i]))
-      copy.storageStack.push(new Map(this.storageStack[i]))
-    }
+    copy.accountStack = this.accountStack.map(
+      (accounts) =>
+        new Map([...accounts].map(([address, account]) => [address, copyAccount(account)])),
+    )
+    copy.codeStack = this.codeStack.map((code) => new Map(code))
+    copy.storageStack = this.storageStack.map((storage) => new Map(storage))
     return copy
   }
 

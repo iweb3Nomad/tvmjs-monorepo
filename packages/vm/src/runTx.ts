@@ -63,7 +63,7 @@ const debugGas = debugDefault('vm:tx:gas')
 const DEFAULT_HEADER = createBlockHeader()
 
 let enableProfiler = false
-const initLabel = 'TVM journal init, address/slot warming, fee validation'
+const initLabel = 'TVM journal init, access reporting, fee validation'
 const balanceNonceLabel = 'Balance/Nonce checks and update'
 const executionLabel = 'Execution'
 const logsGasBalanceLabel = 'Logs, gas usage, account/miner balances'
@@ -421,7 +421,7 @@ export async function runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
     throw EthereumJSErrorWithoutCode(msg)
   }
 
-  // Ensure we start with a clear warmed accounts Map
+  // Start with clean transaction bookkeeping, preserving existing TRON accounts.
   await vm.tvm.journal.cleanup()
 
   if (opts.reportAccessList === true) {
@@ -462,15 +462,17 @@ export async function runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
       throw EthereumJSErrorWithoutCode(msg)
     }
 
-    const castedTx = opts.tx as AccessList2930Tx
-
-    for (const accessListItem of castedTx.accessList) {
-      const [addressBytes, slotBytesList] = accessListItem
-      // Using deprecated bytesToUnprefixedHex for performance: journal methods expect unprefixed hex strings for Map/Set lookups.
-      const address = bytesToUnprefixedHex(addressBytes)
-      vm.tvm.journal.addAlwaysWarmAddress(address, true)
-      for (const storageKey of slotBytesList) {
-        vm.tvm.journal.addAlwaysWarmSlot(address, bytesToUnprefixedHex(storageKey), true)
+    // Preserve requested access-list diagnostics without transaction prewarming.
+    const reported = vm.tvm.journal.accessList
+    if (reported !== undefined) {
+      for (const [addressBytes, slotBytesList] of (opts.tx as AccessList2930Tx).accessList) {
+        const address = bytesToUnprefixedHex(addressBytes)
+        let slots = reported.get(address)
+        if (slots === undefined) {
+          slots = new Set()
+          reported.set(address, slots)
+        }
+        for (const storageKey of slotBytesList) slots.add(bytesToUnprefixedHex(storageKey))
       }
     }
   }
@@ -489,9 +491,7 @@ export async function runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
     }
     throw e
   } finally {
-    if (vm.common.isActivatedEIP(2929)) {
-      vm.tvm.journal.cleanJournal()
-    }
+    vm.tvm.journal.cleanJournal()
     vm.tvm.stateManager.originalStorageCache.clear()
     if (enableProfiler) {
       // eslint-disable-next-line no-console
@@ -552,28 +552,6 @@ async function _runTx(
         opts.tx.isSigned() ? bytesToHex(opts.tx.hash()) : 'unsigned'
       } sender=${caller}`,
     )
-  }
-
-  // ===========================
-  // SETUP: Address Warming (EIP-2929)
-  // ===========================
-  if (vm.common.isActivatedEIP(2929)) {
-    // Add origin, precompiles, and relevant addresses to warm set
-    const activePrecompiles = vm.tvm.precompiles
-    for (const [addressStr] of activePrecompiles.entries()) {
-      vm.tvm.journal.addAlwaysWarmAddress(addressStr)
-    }
-    vm.tvm.journal.addAlwaysWarmAddress(caller.toString())
-    if (tx.to !== undefined) {
-      // Note: in case we create a contract, we do vm in TVMs `_executeCreate` (vm is also correct in inner calls, per the EIP)
-      // Using deprecated bytesToUnprefixedHex for performance: journal methods expect unprefixed hex strings.
-      vm.tvm.journal.addAlwaysWarmAddress(bytesToUnprefixedHex(tx.to.bytes))
-    }
-    if (vm.common.isActivatedEIP(3651)) {
-      const coinbase = block?.header.coinbase.bytes ?? DEFAULT_HEADER.coinbase.bytes
-      // Using deprecated bytesToUnprefixedHex for performance: journal methods expect unprefixed hex strings.
-      vm.tvm.journal.addAlwaysWarmAddress(bytesToUnprefixedHex(coinbase))
-    }
   }
 
   // ===========================

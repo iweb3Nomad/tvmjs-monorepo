@@ -1,19 +1,13 @@
+import type { Common, StateManagerInterface } from '@tvmjs/common'
 import {
-  Address,
   EthereumJSErrorWithoutCode,
   RIPEMD160_ADDRESS_STRING,
   bytesToHex,
   bytesToUnprefixedHex,
-  hexToBytes,
-  isDebugEnabled,
   stripHexPrefix,
   unprefixedHexToBytes,
 } from '@tvmjs/util'
-import debugDefault from 'debug'
-
-import type { Common, StateManagerInterface } from '@tvmjs/common'
-import type { Account, PrefixedHexString } from '@tvmjs/util'
-import type { Debugger } from 'debug'
+import type { Account, Address, PrefixedHexString } from '@tvmjs/util'
 
 type AddressString = string
 type SlotString = string
@@ -34,9 +28,6 @@ type JournalHeight = number
 
 export class Journal {
   private stateManager: StateManagerInterface
-  private common: Common
-  private DEBUG: boolean
-  private _debug: Debugger
 
   private journal!: JournalType
   private alwaysWarmJournal!: Map<AddressString, Set<SlotString>>
@@ -48,18 +39,12 @@ export class Journal {
   public accessList?: Map<AddressString, Set<SlotString>>
   public preimages?: Map<PrefixedHexString, Uint8Array>
 
-  constructor(stateManager: StateManagerInterface, common: Common) {
-    // Skip DEBUG calls unless 'tvmjs' included in environmental DEBUG variables
-    this.DEBUG = isDebugEnabled('tvmjs')
-
-    this._debug = debugDefault('tvm:journal')
-
+  constructor(stateManager: StateManagerInterface, _common: Common) {
     // TODO maybe call into this.clearJournal
     this.cleanJournal()
     this.journalHeight = 0
 
     this.stateManager = stateManager
-    this.common = common
   }
 
   /**
@@ -196,26 +181,27 @@ export class Journal {
   }
 
   /**
-   * Removes accounts from the state trie that have been touched,
-   * as defined in EIP-161 (https://eips.ethereum.org/EIPS/eip-161).
-   * Also cleanups any other internal fields
+   * Clears transaction bookkeeping. TRON keeps existing empty accounts, whose
+   * existence affects the new-account Energy charged by CALL and SELFDESTRUCT.
    */
   async cleanup(): Promise<void> {
-    if (this.common.isActivatedEIP(607)) {
-      for (const addressHex of this.touched) {
-        const address = new Address(hexToBytes(`0x${addressHex}`))
-        const account = await this.stateManager.getAccount(address)
-        if (account === undefined || account.isEmpty()) {
-          await this.deleteAccount(address)
-          if (this.DEBUG) {
-            this._debug(`Cleanup touched account address=${address} (>= SpuriousDragon)`)
-          }
-        }
-      }
-    }
     this.cleanJournal()
     delete this.accessList
     delete this.preimages
+  }
+
+  /** Records optional diagnostic access data without warming or charging. */
+  addAccessedAddress(address: Uint8Array): void {
+    if (this.accessList === undefined) return
+    const key = bytesToUnprefixedHex(address)
+    if (!this.accessList.has(key)) this.accessList.set(key, new Set())
+  }
+
+  /** Records a storage access, including accesses in subsequently reverted calls. */
+  addAccessedStorage(address: Uint8Array, slot: Uint8Array): void {
+    if (this.accessList === undefined) return
+    this.addAccessedAddress(address)
+    this.accessList.get(bytesToUnprefixedHex(address))!.add(bytesToUnprefixedHex(slot))
   }
 
   addAlwaysWarmAddress(addressStr: string, addToAccessList: boolean = false) {

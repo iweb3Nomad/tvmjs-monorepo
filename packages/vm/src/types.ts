@@ -451,14 +451,11 @@ export interface RunTxOpts {
   skipHardForkValidation?: boolean
 
   /**
-   * If true, adds a generated EIP-2930 access list
+   * If true, adds diagnostic accesses in EIP-2930 access-list format
    * to the `RunTxResult` returned.
    *
-   * Option works with all tx types. EIP-2929 needs to
-   * be activated (included in `berlin` HF).
-   *
-   * Note: if this option is used with a custom {@link StateManager} implementation
-   * {@link StateManager.generateAccessList} must be implemented.
+   * Works with all supported transaction types. The TVM journal collects the
+   * accesses without activating EIP-2929, warming state or changing Energy costs.
    */
   reportAccessList?: boolean
 

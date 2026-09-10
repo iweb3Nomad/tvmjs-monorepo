@@ -50,7 +50,7 @@ console.log(common.isActivatedProposal(96)) // true
 console.log(common.isActivatedEIP(7939)) // true
 ```
 
-The configuration migration currently retains existing EIP-2929 access accounting. Its removal and java-tron Energy comparisons are a separate v1.2.0 development stage; this configuration change does not claim complete Gas alignment.
+EIP-2929 cold/warm pricing, EIP-3529 refund rules and EIP-3651 coinbase warming are disabled and cannot be enabled explicitly. EIP-2930 remains available for transaction encoding; access lists do not change TRON Energy costs. See [TVM Energy accounting](../tvm/README.md#tron-energy-accounting) for the reference schedule and its boundaries.
 
 ## Execution presets and network metadata
 
@@ -72,7 +72,7 @@ Ethereum fork-hash operations and creating execution configuration from Geth gen
 
 ## Parameters
 
-Execution packages register their parameter dictionaries with Common. Parameters are merged in the explicit order in `tronExecutionProfile.eips`, followed by the `tron` parameter group and explicitly enabled EIPs.
+Execution packages register their parameter dictionaries with Common. Parameters are merged in the explicit order in `tronExecutionProfile.eips`, followed by the `tron` parameter group and explicitly enabled optional EIPs. Selecting an already active baseline EIP does not override the TRON parameter group.
 
 ```ts
 import { Common, TronMainnet } from '@tvmjs/common'
@@ -87,6 +87,8 @@ console.log(common.paramByHardfork('exampleLimit', 'tron')) // 128n
 ```
 
 `updateParams()` merges dictionaries; `resetParams()` replaces them. `paramByEIP()` uses the same supported EIP set as `setEIPs()`. It can read parameters for a supported optional EIP before activation, and querying does not activate that EIP. Retired EIPs are rejected even if their parameter dictionaries were supplied. `paramByHardfork()` accepts the TRON profile, while `paramByBlock()` uses the same profile for the supplied context. Missing parameters throw.
+
+Execution constructors preserve existing Common parameters when loading defaults. `updateParams(defaults, false)` fills missing values; the default `updateParams(overrides)` behavior still replaces supplied values. Put custom Energy settings in the `tron` parameter group.
 
 ## Custom networks and cryptography
 

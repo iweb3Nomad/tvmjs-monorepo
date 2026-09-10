@@ -353,11 +353,9 @@ describe('RunCall tests', () => {
       // - Does NOT check transfer amount (charges even if TRX=0 and Token=0)
       // This differs from EIP-161 which requires both transfersValue AND isEmpty().
       const beneficiaryDoesNotExist = beneficiaryState === 'missing'
-      // The current tron profile still activates EIP-2929, so the beneficiary
-      // access adds 2600 gas independently of the java-tron new-account decision.
-      const expectedGas = 5003n + 2600n + (beneficiaryDoesNotExist ? 25000n : 0n)
+      const expectedGas = 5003n + (beneficiaryDoesNotExist ? 25000n : 0n)
       assert.strictEqual(result.execResult.executionGasUsed, expectedGas, 'gas used correct')
-      assert.strictEqual(result.execResult.gasRefund, 0n, 'EIP-3529 removes selfdestruct refund')
+      assert.strictEqual(result.execResult.gasRefund, 0n, 'TRON has no selfdestruct refund')
 
       if (beneficiaryState !== 'self') {
         const beneficiaryAccount = await tvm.stateManager.getAccount(beneficiary)
@@ -393,16 +391,16 @@ describe('RunCall tests', () => {
     },
   )
 
-  it('charges SELFDESTRUCT new-account gas on tron hardfork with EIP-2929/3529/6780 active', async () => {
-    // Regression: verify the fix works on the default tron hardfork, which has
-    // different gas schedule (EIP-2929 warm/cold, EIP-3529 reduced refund, EIP-6780
-    // same-tx destruction) than SpuriousDragon.
+  it('charges SELFDESTRUCT new-account gas without cold access pricing on tron', async () => {
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee'))
     const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
     const beneficiary = new Address(hexToBytes('0x00000000000000000000000000000000000000fe'))
     const tokenId = MIN_TOKEN_ID + 1n
     const tokenBalance = 100n
     const common = new Common({ chain: TronMainnet })
+    assert.isFalse(common.isActivatedEIP(2929))
+    assert.isFalse(common.isActivatedEIP(3529))
+    assert.isTrue(common.isActivatedEIP(6780))
     const tvm = await createTVM({ common })
     const code = `0x73${beneficiary.toString().slice(2)}ff` as `0x${string}`
 
@@ -417,10 +415,9 @@ describe('RunCall tests', () => {
       gasLimit: BigInt(0xffffffffff),
     })
 
-    // Tron hardfork: base 5003 + new-account 25000 + EIP-2929 cold beneficiary 2600 = 32603
-    // EIP-3529 reduces refund from 24000 to 0
-    assert.strictEqual(result.execResult.executionGasUsed, 32603n, 'gas used correct on tron')
-    assert.strictEqual(result.execResult.gasRefund, 0n, 'EIP-3529 reduced refund on tron')
+    // PUSH20 3 + SELFDESTRUCT 5000 + new account 25000 = 30003 Energy.
+    assert.strictEqual(result.execResult.executionGasUsed, 30003n, 'gas used correct on tron')
+    assert.strictEqual(result.execResult.gasRefund, 0n, 'TRON has no selfdestruct refund')
 
     const beneficiaryAccount = await tvm.stateManager.getAccount(beneficiary)
     assert.strictEqual(
@@ -444,10 +441,10 @@ describe('RunCall tests', () => {
     contractAccount!.asset = { [Number(tokenId)]: tokenBalance }
     await tvm.stateManager.putAccount(address, contractAccount!)
 
-    // 5003 base + 2600 EIP-2929 cold access + 25000 new-account gas = 32603.
-    const result = await tvm.runCall({ caller, to: address, gasLimit: 32602n })
+    // One less than PUSH1 3 + SELFDESTRUCT 5000 + new account 25000.
+    const result = await tvm.runCall({ caller, to: address, gasLimit: 30002n })
 
-    assert.strictEqual(result.execResult.executionGasUsed, 32602n, 'all available gas consumed')
+    assert.strictEqual(result.execResult.executionGasUsed, 30002n, 'all available gas consumed')
     assert.strictEqual(result.execResult.exceptionError?.error, TVMError.errorMessages.OUT_OF_GAS)
     assert.isUndefined(await tvm.stateManager.getAccount(beneficiary), 'beneficiary not created')
     assert.strictEqual(

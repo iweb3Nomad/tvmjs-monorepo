@@ -10,11 +10,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove transaction prewarming and use the TVM's TRON Energy schedule. Access lists remain diagnostic metadata; transaction envelope overhead remains separate from execution Energy.
 - Use TRON-only configuration throughout VM execution and block construction. Execution presets no longer imply Ethereum consensus or block rewards.
 - Reject conflicting Common settings across VM and TVM initialization, including parameter overrides that would otherwise be discarded.
 
 ### Fixes
 
+- Verify equal execution Energy and state changes through VM and direct TVM calls, including CALLTOKEN rollback and empty-recipient handling across transactions.
+- Match the pinned java-tron ChargeTest deployment cost without an extra memory/copy base fee.
 - Remove the redundant TRON hardfork guard from transaction ID fallback selection. Move transaction ID policy regressions into a standalone TRON suite covering hash fallback, explicit IDs and strict mode.
 - Keep equivalent VM/TVM configurations on one shared Common without mutating caller options.
 - Migrate local transaction, block and contract examples; retire Ethereum Mainnet, Goerli and Blob execution examples.

@@ -56,7 +56,7 @@ describe('ChargeTest', async () => {
     )) as RunTxResult
 
     // JAVA-TRON expected 51293 energy usage
-    const expectEnergyUsageTotal = 51299n // 200 * code.length() + 93
+    const expectEnergyUsageTotal = 51293n // 200 * code.length() + 93
     const resultBalance = await vm.stateManager
       .getAccount(address)
       .then((account) => account?.balance)

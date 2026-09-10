@@ -137,13 +137,20 @@ export class Common {
    * ```
    *
    * @param params
+   * @param overwrite Set to false when loading defaults to preserve caller overrides.
    */
-  updateParams(params: ParamsDict) {
+  updateParams(params: ParamsDict, overwrite = true) {
     for (const [eip, paramsConfig] of Object.entries(params)) {
       if (!(eip in this._params)) {
         this._params[eip] = JSON.parse(JSON.stringify(paramsConfig)) // copy
       } else {
-        this._params[eip] = JSON.parse(JSON.stringify({ ...this._params[eip], ...params[eip] })) // copy
+        this._params[eip] = JSON.parse(
+          JSON.stringify(
+            overwrite
+              ? { ...this._params[eip], ...paramsConfig }
+              : { ...paramsConfig, ...this._params[eip] },
+          ),
+        ) // copy
       }
     }
 
@@ -358,6 +365,8 @@ export class Common {
 
     // Iterate through all additionally activated EIPs
     for (const eip of this._eips) {
+      // Selecting an already active implementation must not undo TRON pricing.
+      if (tronExecutionProfile.eips.includes(eip)) continue
       if (this._params[eip] !== undefined && this._params[eip] !== null) {
         this._mergeWithParamsCache(this._params[eip])
       }

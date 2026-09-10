@@ -90,7 +90,7 @@ export async function createVM(opts: VMOpts = {}): Promise<VM> {
   // with the final parameter set so a supplied top-level override cannot be
   // silently discarded by an initially empty tvmOpts.common instance.
   const executionCommon = opts.common.copy()
-  executionCommon.updateParams(opts.params ?? paramsVM)
+  executionCommon.updateParams(opts.params ?? paramsVM, opts.params !== undefined)
   for (const common of commons.slice(0, -1)) {
     const suppliedCommon = common.copy()
     if (opts.params !== undefined) suppliedCommon.updateParams(opts.params)

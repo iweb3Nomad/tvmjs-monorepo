@@ -270,32 +270,16 @@ export function writeCallOutput(runState: RunState, outOffset: bigint, outLength
 }
 
 /**
- * The first rule set of SSTORE rules, which are the rules pre-Constantinople and in Petersburg
+ * TRON SSTORE Energy depends only on the current and new values. Clearing or
+ * restoring a slot does not generate an Ethereum storage refund.
  */
 export function updateSstoreGas(
-  runState: RunState,
   currentStorage: Uint8Array,
   value: Uint8Array,
   common: Common,
 ): bigint {
-  if (
-    (value.length === 0 && currentStorage.length === 0) ||
-    (value.length > 0 && currentStorage.length > 0)
-  ) {
-    const gas = common.param('sstoreResetGas')
-    return gas
-  } else if (value.length === 0 && currentStorage.length > 0) {
-    const gas = common.param('sstoreResetGas')
-    runState.interpreter.refundGas(common.param('sstoreRefundGas'), 'updateSstoreGas')
-    return gas
-  } else {
-    /*
-      The situations checked above are:
-      -> Value/Slot are both 0
-      -> Value/Slot are both nonzero
-      -> Value is zero, but slot is nonzero
-      Thus, the remaining case is where value is nonzero, but slot is zero, which is this clause
-    */
+  if (currentStorage.length === 0 && value.length !== 0) {
     return common.param('sstoreSetGas')
   }
+  return common.param('sstoreResetGas')
 }

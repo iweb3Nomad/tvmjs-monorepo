@@ -1365,11 +1365,7 @@ export class Interpreter {
   }
 
   async _selfDestruct(toAddress: Address): Promise<void> {
-    // only add to refund if this is the first selfdestruct for the address
     const selfdestructAddressHex = bytesToHex(this._env.address.bytes)
-    if (!this._result.selfdestruct.has(selfdestructAddressHex)) {
-      this.refundGas(this.common.param('selfdestructRefundGas'))
-    }
 
     // TRON: advance internal nonce for SELFDESTRUCT (java-tron increaseNonce behavior)
     // This happens on EVERY suicide() call, not just the first one
