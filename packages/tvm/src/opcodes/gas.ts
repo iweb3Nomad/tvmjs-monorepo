@@ -388,7 +388,7 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
             setLengthLeftStorage(value),
             common,
           )
-        } else if (common.gteHardfork(Hardfork.Istanbul)) {
+        } else if (common.isActivatedEIP(1679)) {
           if (!common.isActivatedEIP(6800) && !common.isActivatedEIP(7864)) {
             gas += updateSstoreGasEIP2200(
               runState,
@@ -526,7 +526,7 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
         gas += common.param('keccak256WordGas') * divCeil(BigInt(container.length), BIGINT_32)
 
         const gasLeft = runState.interpreter.getGasLeft() - gas
-        runState.messageGasLimit = maxCallGas(gasLeft, gasLeft, runState, common)
+        runState.messageGasLimit = maxCallGas(gasLeft, gasLeft)
 
         return gas
       },
@@ -569,7 +569,7 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
         gas += subMemUsage(runState, offset, length, common)
 
         let gasLimit = BigInt(runState.interpreter.getGasLeft()) - gas
-        gasLimit = maxCallGas(gasLimit, gasLimit, runState, common)
+        gasLimit = maxCallGas(gasLimit, gasLimit)
 
         runState.messageGasLimit = gasLimit
         return gas
@@ -631,7 +631,7 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
 
         // For BAL eligibility check: compute new account gas upfront only when needed
         // (SpuriousDragon+ with value transfer)
-        if (value !== BIGINT_0 && common.gteHardfork(Hardfork.SpuriousDragon)) {
+        if (value !== BIGINT_0 && common.isActivatedEIP(607)) {
           const account = await runState.stateManager.getAccount(toAddress)
           if (account === undefined || account.isEmpty()) {
             newAccountGas = common.param('callNewAccountGas')
@@ -654,7 +654,7 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
         gas += valueTransferGas + newAccountGas
 
         // For pre-SpuriousDragon: check new account gas regardless of value
-        if (!common.gteHardfork(Hardfork.SpuriousDragon)) {
+        if (!common.isActivatedEIP(607)) {
           if ((await runState.stateManager.getAccount(toAddress)) === undefined) {
             gas += common.param('callNewAccountGas')
           }
@@ -686,14 +686,7 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
           }
         }
 
-        const gasLimit = maxCallGas(
-          currentGasLimit,
-          runState.interpreter.getGasLeft() - gas,
-          runState,
-          common,
-        )
-        // note that TangerineWhistle or later this cannot happen
-        // (it could have ran out of gas prior to getting here though)
+        const gasLimit = maxCallGas(currentGasLimit, runState.interpreter.getGasLeft() - gas)
         if (gasLimit > runState.interpreter.getGasLeft() - gas) {
           trap(TVMError.errorMessages.OUT_OF_GAS)
         }
@@ -789,14 +782,7 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
           }
         }
 
-        const gasLimit = maxCallGas(
-          currentGasLimit,
-          runState.interpreter.getGasLeft() - gas,
-          runState,
-          common,
-        )
-        // note that TangerineWhistle or later this cannot happen
-        // (it could have ran out of gas prior to getting here though)
+        const gasLimit = maxCallGas(currentGasLimit, runState.interpreter.getGasLeft() - gas)
         if (gasLimit > runState.interpreter.getGasLeft() - gas) {
           trap(TVMError.errorMessages.OUT_OF_GAS)
         }
@@ -890,15 +876,8 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
           }
         }
 
-        const gasLimit = maxCallGas(
-          currentGasLimit,
-          runState.interpreter.getGasLeft() - gas,
-          runState,
-          common,
-        )
+        const gasLimit = maxCallGas(currentGasLimit, runState.interpreter.getGasLeft() - gas)
 
-        // note that TangerineWhistle or later this cannot happen
-        // (it could have ran out of gas prior to getting here though)
         if (gasLimit > runState.interpreter.getGasLeft() - gas) {
           trap(TVMError.errorMessages.OUT_OF_GAS)
         }
@@ -938,7 +917,7 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
 
         gas += common.param('keccak256WordGas') * divCeil(length, BIGINT_32)
         let gasLimit = runState.interpreter.getGasLeft() - gas
-        gasLimit = maxCallGas(gasLimit, gasLimit, runState, common) // CREATE2 is only available after TangerineWhistle (Constantinople introduced this opcode)
+        gasLimit = maxCallGas(gasLimit, gasLimit)
         runState.messageGasLimit = gasLimit
         return gas
       },
@@ -1145,12 +1124,7 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
           }
         }
 
-        const gasLimit = maxCallGas(
-          currentGasLimit,
-          runState.interpreter.getGasLeft() - gas,
-          runState,
-          common,
-        ) // we set TangerineWhistle or later to true here, as STATICCALL was available from Byzantium (which is after TangerineWhistle)
+        const gasLimit = maxCallGas(currentGasLimit, runState.interpreter.getGasLeft() - gas)
 
         runState.messageGasLimit = gasLimit
         return gas
@@ -1233,32 +1207,10 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
         const balance = await runState.interpreter.getExternalBalance(contractAddress)
 
         // Calculate new account gas first (needed for checkpoint ordering)
-        let newAccountGas = BIGINT_0
-        if (common.gteHardfork(Hardfork.Tron)) {
-          // TRON: java-tron getSuicideCost2/3 + isDeadAccount logic:
-          // - Only checks if beneficiary account does NOT exist (account === undefined)
-          // - Does NOT check isEmpty() (existing empty accounts don't charge)
-          // - Does NOT check transfer amount (charges even if TRX=0 and Token=0)
-          // This differs from EIP-161 which requires both transfersValue AND isEmpty().
-          const account = await runState.stateManager.getAccount(selfdestructToAddress)
-          if (account === undefined) {
-            newAccountGas = common.param('callNewAccountGas')
-          }
-        } else if (common.gteHardfork(Hardfork.SpuriousDragon)) {
-          // EIP-161 (Spurious Dragon): charge newAccountGas if transferring value to empty account
-          const account = await runState.stateManager.getAccount(selfdestructToAddress)
-          const transfersValue = balance > BIGINT_0
-          if (transfersValue && (account === undefined || account.isEmpty())) {
-            newAccountGas = common.param('callNewAccountGas')
-          }
-        } else if (common.gteHardfork(Hardfork.TangerineWhistle)) {
-          // EIP-150 (Tangerine Whistle) gas semantics
-          const exists =
-            (await runState.stateManager.getAccount(selfdestructToAddress)) !== undefined
-          if (!exists) {
-            newAccountGas = common.param('callNewAccountGas')
-          }
-        }
+        // TRON: java-tron getSuicideCost2/3 + isDeadAccount checks account existence.
+        // Existing empty accounts do not charge; missing accounts charge even with TRX=0/Token=0.
+        const account = await runState.stateManager.getAccount(selfdestructToAddress)
+        const newAccountGas = account === undefined ? common.param('callNewAccountGas') : BIGINT_0
 
         let selfDestructToCharge2929Gas = true
         if (
@@ -1339,7 +1291,7 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
         }
 
         const account = await runState.stateManager.getAccount(toAddress)
-        if (common.gteHardfork('spuriousDragon')) {
+        if (common.isActivatedEIP(607)) {
           // We are at or after Spurious Dragon
           // Call new account gas: account is DEAD and we transfer nonzero value
           if ((account === undefined || account.isEmpty()) && value !== BIGINT_0) {
@@ -1351,13 +1303,7 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
           gas += common.param('callNewAccountGas')
         }
 
-        const gasLimit = maxCallGas(
-          currentGasLimit,
-          runState.interpreter.getGasLeft() - gas,
-          runState,
-          common,
-        )
-        // note that TangerineWhistle or later this cannot happen (it could have ran out of gas prior to getting here though)
+        const gasLimit = maxCallGas(currentGasLimit, runState.interpreter.getGasLeft() - gas)
         if (gasLimit > runState.interpreter.getGasLeft()) {
           trap(TVMError.errorMessages.OUT_OF_GAS)
         }

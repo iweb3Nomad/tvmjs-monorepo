@@ -9,13 +9,10 @@ import {
   KECCAK256_NULL,
   KECCAK256_RLP,
   MAX_INTEGER,
-  bigIntToBytes,
   bytesToUnprefixedHex,
   createBlockLevelAccessList,
   createZeroAddress,
   equalsBytes,
-  generateAddress,
-  generateAddress2,
   generateTronAddress2,
   generateTronContractAddress,
   generateTronCreateAddress,
@@ -188,35 +185,7 @@ export function defaultBlock(): Block {
  * - {@link createTVM}
  */
 export class TVM implements TVMInterface {
-  protected static supportedHardforks = [
-    Hardfork.Chainstart,
-    Hardfork.Homestead,
-    Hardfork.Dao,
-    Hardfork.TangerineWhistle,
-    Hardfork.SpuriousDragon,
-    Hardfork.Byzantium,
-    Hardfork.Constantinople,
-    Hardfork.Petersburg,
-    Hardfork.Istanbul,
-    Hardfork.MuirGlacier,
-    Hardfork.Berlin,
-    Hardfork.London,
-    Hardfork.ArrowGlacier,
-    Hardfork.GrayGlacier,
-    Hardfork.MergeNetsplitBlock,
-    Hardfork.Paris,
-    Hardfork.Shanghai,
-    Hardfork.Cancun,
-    Hardfork.Prague,
-    Hardfork.Osaka,
-    Hardfork.Bpo1,
-    Hardfork.Bpo2,
-    Hardfork.Bpo3,
-    Hardfork.Bpo4,
-    Hardfork.Bpo5,
-    Hardfork.Amsterdam,
-    Hardfork.Tron,
-  ]
+  protected static supportedHardforks: Hardfork[] = [Hardfork.Tron]
   protected _tx?: {
     gasPrice: bigint
     origin: Address
@@ -698,11 +667,7 @@ export class TVM implements TVMInterface {
         this.blockLevelAccessList!.addAddress(message.to.toString())
       }
       // TRON: advance internal nonce even on collision, so the next CREATE uses nonce+1
-      if (
-        message.depth > 0 &&
-        this.common.gteHardfork(Hardfork.Tron) &&
-        message.tronTransactionContext !== undefined
-      ) {
+      if (message.depth > 0 && message.tronTransactionContext !== undefined) {
         message.tronTransactionContext.nonce += BIGINT_1
       }
       return {
@@ -715,11 +680,7 @@ export class TVM implements TVMInterface {
       }
     }
 
-    if (
-      message.depth > 0 &&
-      this.common.gteHardfork(Hardfork.Tron) &&
-      message.tronTransactionContext !== undefined
-    ) {
+    if (message.depth > 0 && message.tronTransactionContext !== undefined) {
       message.tronTransactionContext.nonce += BIGINT_1
     }
 
@@ -738,7 +699,7 @@ export class TVM implements TVMInterface {
       toAccount = new Account()
     }
     // EIP-161 on account creation and CREATE execution
-    if (this.common.gteHardfork(Hardfork.SpuriousDragon)) {
+    if (this.common.isActivatedEIP(607)) {
       toAccount.nonce += BIGINT_1
     }
     if (this.common.isActivatedEIP(7928)) {
@@ -851,7 +812,7 @@ export class TVM implements TVMInterface {
     if (
       !result.exceptionError &&
       !this.common.isTron() &&
-      this.common.gteHardfork(Hardfork.SpuriousDragon) &&
+      this.common.isActivatedEIP(607) &&
       result.returnValue.length > Number(this.common.param('maxCodeSize'))
     ) {
       allowedCodeSize = false
@@ -881,7 +842,7 @@ export class TVM implements TVMInterface {
         result.executionGasUsed = totalGas
       }
     } else {
-      if (this.common.gteHardfork(Hardfork.Homestead)) {
+      if (this.common.isActivatedEIP(606)) {
         if (!allowedCodeSize) {
           if (this.DEBUG) {
             debug(`Code size exceeds maximum code size (>= SpuriousDragon)`)
@@ -982,7 +943,7 @@ export class TVM implements TVMInterface {
       }
     } else if (CodestoreOOG) {
       // This only happens at Frontier. But, let's do a sanity check;
-      if (!this.common.gteHardfork(Hardfork.Homestead)) {
+      if (!this.common.isActivatedEIP(606)) {
         // Pre-Homestead behavior; put an empty contract.
         // This contract would be considered "DEAD" in later hard forks.
         // It is thus an unnecessary default item, which we have to save to disk
@@ -1223,7 +1184,6 @@ export class TVM implements TVMInterface {
       message.depth === 0 &&
       message.to === undefined &&
       message.salt === undefined &&
-      this.common.gteHardfork(Hardfork.Tron) &&
       message.tronTransactionContext === undefined
     ) {
       throw EthereumJSErrorWithoutCode(
@@ -1624,11 +1584,8 @@ export class TVM implements TVMInterface {
   protected async _generateAddress(message: Message): Promise<Address> {
     let addr
     if (message.salt) {
-      const generateCreate2Address = this.common.gteHardfork(Hardfork.Tron)
-        ? generateTronAddress2
-        : generateAddress2
-      addr = generateCreate2Address(message.caller.bytes, message.salt, message.code as Uint8Array)
-    } else if (this.common.gteHardfork(Hardfork.Tron)) {
+      addr = generateTronAddress2(message.caller.bytes, message.salt, message.code as Uint8Array)
+    } else {
       const context = message.tronTransactionContext
       if (context === undefined) {
         throw EthereumJSErrorWithoutCode(
@@ -1641,13 +1598,6 @@ export class TVM implements TVMInterface {
         message.depth === 0
           ? generateTronContractAddress(context.rootTransactionId, message.caller.bytes)
           : generateTronCreateAddress(context.rootTransactionId, context.nonce)
-    } else {
-      let acc = await this.stateManager.getAccount(message.caller)
-      if (!acc) {
-        acc = new Account()
-      }
-      const newNonce = acc.nonce - BIGINT_1
-      addr = generateAddress(message.caller.bytes, bigIntToBytes(newNonce))
     }
     return new Address(addr)
   }

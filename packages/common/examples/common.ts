@@ -1,19 +1,19 @@
-import { Common, Hardfork, Mainnet, createCustomCommon } from '@tvmjs/common'
+import { Common, Hardfork, TronMainnet, createCustomCommon } from '@tvmjs/common'
 
 // With enums:
-const commonWithEnums = new Common({ chain: Mainnet, hardfork: Hardfork.Cancun })
+const commonWithEnums = new Common({ chain: TronMainnet, hardfork: Hardfork.Tron })
 
 // Instantiate with the chain (and the default hardfork)
-let c = new Common({ chain: Mainnet })
+let c = new Common({ chain: TronMainnet })
 
 // Get bootstrap nodes for chain/network
 console.log('Below are the known bootstrap nodes')
 console.log(c.bootstrapNodes()) // Array with current nodes
 
-// Instantiate with an EIP activated (with pre-EIP hardfork)
-c = new Common({ chain: Mainnet, hardfork: Hardfork.Cancun, eips: [7702] })
-console.log(`EIP 7702 is active -- ${c.isActivatedEIP(7702)}`)
+// Explicitly activate the CLZ instruction
+c = new Common({ chain: TronMainnet, hardfork: Hardfork.Tron, eips: [7939] })
+console.log(`CLZ is active -- ${c.isActivatedEIP(7939)}`)
 
 // Instantiate common with custom chainID
-const commonWithCustomChainId = createCustomCommon({ chainId: 1234 }, Mainnet)
+const commonWithCustomChainId = createCustomCommon({ chainId: 1234 }, TronMainnet)
 console.log(`The current chain ID is ${commonWithCustomChainId.chainId()}`)

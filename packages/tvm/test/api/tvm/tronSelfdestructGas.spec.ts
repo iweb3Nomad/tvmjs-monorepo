@@ -1,5 +1,5 @@
 // cspell:ignore deaddeaddeaddeaddeaddeaddeaddeaddeaddead
-import { Common, Hardfork, Mainnet, TronMainnet } from '@tvmjs/common'
+import { Common, TronMainnet } from '@tvmjs/common'
 import { Account, MIN_TOKEN_ID, createAddressFromString, hexToBytes } from '@tvmjs/util'
 import { assert, describe, it } from 'vitest'
 
@@ -93,68 +93,20 @@ describe('TRON SELFDESTRUCT new account gas (java-tron alignment)', () => {
   })
 })
 
-describe('Ethereum EIP-161 SELFDESTRUCT regression (ensure not broken by TRON changes)', () => {
-  const common = new Common({ chain: Mainnet, hardfork: Hardfork.SpuriousDragon })
-
-  it('EIP-161: should charge newAccountGas when transferring value to empty account', async () => {
-    const beneficiaryHex = 'deaddeaddeaddeaddeaddeaddeaddeaddeaddead'
-    const beneficiary = createAddressFromString(`0x${beneficiaryHex}`)
-    const code = hexToBytes(`0x73${beneficiaryHex}ff`)
-    const caller = createAddressFromString('0x1000000000000000000000000000000000000001')
+describe('TRON SELFDESTRUCT existing beneficiary transfer', () => {
+  it('transfers TRX without charging creation for an existing empty beneficiary', async () => {
+    const common = new Common({ chain: TronMainnet })
+    const source = createAddressFromString('0x1000000000000000000000000000000000000001')
+    const beneficiary = createAddressFromString('0xdeaddeaddeaddeaddeaddeaddeaddeaddeaddead')
     const tvm = await createTVM({ common })
-
-    // Pre-create an empty beneficiary account
-    const emptyAccount = new Account()
-    await tvm.stateManager.putAccount(beneficiary, emptyAccount)
-
-    // Give caller some TRX balance so SELFDESTRUCT transfers value
-    const callerAccount = new Account(0n, 1000n)
-    await tvm.stateManager.putAccount(caller, callerAccount)
-    await tvm.stateManager.putCode(caller, code)
-
-    const result = await tvm.runCall({
-      to: caller,
-      gasLimit: BigInt(50000),
-    })
-
-    // EIP-161: should charge newAccountGas because transfersValue && isEmpty()
-    // PUSH20 (3) + base SELFDESTRUCT (5000) + new account (25000) = 30003
-    assert.isUndefined(result.execResult.exceptionError, 'Should not error')
-    assert.equal(
-      result.execResult.executionGasUsed,
-      30003n,
-      'EIP-161: should charge newAccountGas when transferring value to empty account',
-    )
-  })
-
-  it('EIP-161: should NOT charge newAccountGas when balance=0 (no value transfer)', async () => {
-    const beneficiaryHex = 'deaddeaddeaddeaddeaddeaddeaddeaddeaddead'
-    const beneficiary = createAddressFromString(`0x${beneficiaryHex}`)
-    const code = hexToBytes(`0x73${beneficiaryHex}ff`)
-    const caller = createAddressFromString('0x1000000000000000000000000000000000000001')
-    const tvm = await createTVM({ common })
-
-    // Pre-create an empty beneficiary account
-    const emptyAccount = new Account()
-    await tvm.stateManager.putAccount(beneficiary, emptyAccount)
-
-    // Caller has ZERO balance - no value transfer
-    const callerAccount = new Account(0n, 0n)
-    await tvm.stateManager.putAccount(caller, callerAccount)
-    await tvm.stateManager.putCode(caller, code)
-
-    const result = await tvm.runCall({
-      to: caller,
-      gasLimit: BigInt(50000),
-    })
-
-    // EIP-161: should NOT charge because balance=0 (no value transfer)
-    // PUSH20 (3) + base SELFDESTRUCT (5000) = 5003
-    assert.isUndefined(result.execResult.exceptionError, 'Should not error')
-    assert.equal(
-      result.execResult.executionGasUsed,
-      5003n,
-      'EIP-161: should NOT charge newAccountGas when balance=0',
-    )
+    await tvm.stateManager.putAccount(beneficiary, new Account())
+    await tvm.stateManager.putAccount(source, new Account(0n, 1000n))
+    await tvm.stateManager.putCode(source, hexToBytes(`0x73${beneficiary.toString().slice(2)}ff`))
+    const result = await tvm.runCall({ to: source, gasLimit: 50000n })
+    assert.isUndefined(result.execResult.exceptionError)
+    // Existing access accounting is changed separately by the Energy migration.
+    assert.strictEqual(result.execResult.executionGasUsed, 7603n)
+    assert.strictEqual((await tvm.stateManager.getAccount(beneficiary))!.balance, 1000n)
+    assert.strictEqual((await tvm.stateManager.getAccount(source))!.balance, 0n)
   })
 })

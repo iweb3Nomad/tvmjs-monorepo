@@ -94,7 +94,7 @@ export function getIntrinsicGas(tx: LegacyTxInterface): bigint {
   } catch {
     isContractCreation = false
   }
-  if (tx.common.gteHardfork('homestead') && isContractCreation) {
+  if (tx.common.isActivatedEIP(606) && isContractCreation) {
     const txCreationFee = tx.common.param('txCreationGas')
     if (txCreationFee) fee += txCreationFee
   }
@@ -138,7 +138,7 @@ export function hash(tx: LegacyTxInterface): Uint8Array {
  */
 export function validateHighS(tx: LegacyTxInterface): void {
   const { s } = tx
-  if (tx.common.gteHardfork('homestead') && s !== undefined && s > SECP256K1_ORDER_DIV_2) {
+  if (tx.common.isActivatedEIP(606) && s !== undefined && s > SECP256K1_ORDER_DIV_2) {
     const msg = errorMsg(
       tx,
       'Invalid Signature: s-values greater than secp256k1n/2 are considered invalid',
@@ -291,7 +291,7 @@ export function sign(
   let hackApplied = false
   if (
     tx.type === TransactionType.Legacy &&
-    tx.common.gteHardfork('spuriousDragon') &&
+    tx.common.isActivatedEIP(607) &&
     !tx.supports(Capability.EIP155ReplayProtection)
   ) {
     ;(tx as LegacyTx)['activeCapabilities'].push(Capability.EIP155ReplayProtection)

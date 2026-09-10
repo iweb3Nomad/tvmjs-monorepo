@@ -353,7 +353,7 @@ export class BlockBuilder {
   async build(sealOpts?: SealBlockOpts) {
     this.checkStatus()
     const blockOpts = this.blockOpts
-    const consensusType = this.vm.common.consensusType()
+    const consensusType = this.vm.common.hasConsensus() ? this.vm.common.consensusType() : undefined
 
     if (consensusType === ConsensusType.ProofOfWork) {
       await this.rewardMiner()

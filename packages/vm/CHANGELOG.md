@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Breaking Changes
+
+- Use TRON-only configuration throughout VM execution and block construction. Execution presets no longer imply Ethereum consensus or block rewards.
+- Reject conflicting Common settings across VM and TVM initialization, including parameter overrides that would otherwise be discarded.
+
+### Fixes
+
+- Remove the redundant TRON hardfork guard from transaction ID fallback selection. Move transaction ID policy regressions into a standalone TRON suite covering hash fallback, explicit IDs and strict mode.
+- Keep equivalent VM/TVM configurations on one shared Common without mutating caller options.
+- Migrate local transaction, block and contract examples; retire Ethereum Mainnet, Goerli and Blob execution examples.
+
 ## 1.1.0
 
 ### Bug Fixes

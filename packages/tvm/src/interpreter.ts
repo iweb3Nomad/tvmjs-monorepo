@@ -1,4 +1,4 @@
-import { ConsensusAlgorithm, Hardfork } from '@tvmjs/common'
+import { ConsensusAlgorithm } from '@tvmjs/common'
 import {
   Account,
   BIGINT_0,
@@ -195,6 +195,7 @@ export class Interpreter {
     this.common = this._tvm.common
 
     if (
+      this.common.hasConsensus() &&
       this.common.consensusType() === 'poa' &&
       this._tvm['_optsCached'].cliqueSigner === undefined
     )
@@ -946,7 +947,10 @@ export class Interpreter {
    */
   getBlockCoinbase(): bigint {
     let coinbase: Address
-    if (this.common.consensusAlgorithm() === ConsensusAlgorithm.Clique) {
+    if (
+      this.common.hasConsensus() &&
+      this.common.consensusAlgorithm() === ConsensusAlgorithm.Clique
+    ) {
       coinbase = this._tvm['_optsCached'].cliqueSigner!(this._env.block.header)
     } else {
       coinbase = this._env.block.header.coinbase
@@ -1159,7 +1163,7 @@ export class Interpreter {
       return BIGINT_0
     }
 
-    if (this.common.gteHardfork(Hardfork.Tron) && this._env.tronTransactionContext !== undefined) {
+    if (this._env.tronTransactionContext !== undefined) {
       this._env.tronTransactionContext.nonce += BIGINT_1
     }
 
@@ -1316,9 +1320,7 @@ export class Interpreter {
       if (results.createdAddress) {
         const createdAddress = bytesToBigInt(results.createdAddress.bytes)
         // java-tron right-aligns its 21-byte TRON address in the 32-byte stack word.
-        return this.common.gteHardfork(Hardfork.Tron)
-          ? TRON_ADDRESS_PREFIX_WORD | createdAddress
-          : createdAddress
+        return TRON_ADDRESS_PREFIX_WORD | createdAddress
       }
     }
 
@@ -1371,7 +1373,7 @@ export class Interpreter {
 
     // TRON: advance internal nonce for SELFDESTRUCT (java-tron increaseNonce behavior)
     // This happens on EVERY suicide() call, not just the first one
-    if (this.common.gteHardfork(Hardfork.Tron) && this._env.tronTransactionContext !== undefined) {
+    if (this._env.tronTransactionContext !== undefined) {
       this._env.tronTransactionContext.nonce += BIGINT_1
     }
 

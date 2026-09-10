@@ -90,6 +90,11 @@ export class Block {
 
     this.uncleHeaders = uncleHeaders
     if (uncleHeaders.length > 0) {
+      if (!this.common.hasConsensus()) {
+        throw EthereumJSErrorWithoutCode(
+          'Uncle headers are not supported by TRON execution presets',
+        )
+      }
       this.validateUncles()
       if (this.common.consensusType() === ConsensusType.ProofOfAuthority) {
         const msg = this._errorMsg(

@@ -1,4 +1,4 @@
-import { Common, Mainnet } from '@tvmjs/common'
+import { Common, TronMainnet } from '@tvmjs/common'
 import {
   Address,
   BIGINT_0,
@@ -20,10 +20,10 @@ import type { TransactionInterface, TxData, TxOptions } from '../types.ts'
 /**
  * Gets a Common instance, creating a new one if none provided
  * @param common - Optional Common instance
- * @returns Common instance (copied if provided, new Mainnet instance if not)
+ * @returns Common instance (copied if provided, new TronMainnet instance if not)
  */
 export function getCommon(common?: Common): Common {
-  return common?.copy() ?? new Common({ chain: Mainnet })
+  return common?.copy() ?? new Common({ chain: TronMainnet })
 }
 
 /**

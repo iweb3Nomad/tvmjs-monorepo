@@ -8,7 +8,7 @@ import {
 import { assert, describe, it } from 'vitest'
 
 import { parseGethGenesisState } from '../src/gethGenesis.ts'
-import { Hardfork, Mainnet, createCommonFromGethGenesis, parseGethGenesis } from '../src/index.ts'
+import { Hardfork, createCommonFromGethGenesis, parseGethGenesis } from '../src/index.ts'
 
 describe('[Common/genesis]', () => {
   it('should properly generate stateRoot from gethGenesis', () => {
@@ -77,230 +77,35 @@ describe('[Utils/Parse]', () => {
     assert.strictEqual(params.genesis.nonce, '0x0000000000000042', 'nonce parsed correctly')
   })
 
-  it('should set merge to block 0 when terminalTotalDifficultyPassed is true', () => {
-    const mergeAtGenesisData = {} as any
-    Object.assign(mergeAtGenesisData, postMergeGethGenesis)
-    mergeAtGenesisData.config.terminalTotalDifficultyPassed = true
-    const common = createCommonFromGethGenesis(mergeAtGenesisData, {})
-    assert.strictEqual(common.hardforks().slice(-1)[0].block, 0)
-  })
-
-  it('should successfully assign mainnet deposit contract address when none provided', async () => {
-    const common = createCommonFromGethGenesis(postMergeGethGenesis, {
-      chain: 'customChain',
-    })
-    const depositContractAddress =
-      common['_chainParams'].depositContractAddress ?? Mainnet.depositContractAddress
-
-    assert.strictEqual(
-      depositContractAddress,
-      Mainnet.depositContractAddress,
-      'should assign mainnet deposit contract',
-    )
-  })
-
-  it('should correctly parse deposit contract address', async () => {
-    // clone json out to not have side effects
-    const customData = JSON.parse(JSON.stringify(postMergeGethGenesis))
-    Object.assign(customData.config, {
-      depositContractAddress: '0x4242424242424242424242424242424242424242',
-    })
-
-    const common = createCommonFromGethGenesis(customData, {
-      chain: 'customChain',
-    })
-    const depositContractAddress =
-      common['_chainParams'].depositContractAddress ?? Mainnet.depositContractAddress
-
-    assert.strictEqual(
-      depositContractAddress,
-      '0x4242424242424242424242424242424242424242',
-      'should parse correct address',
-    )
-  })
-  it('should add MergeNetSplitBlock if not present when Shanghai is present', () => {
-    const genesisJSON = postMergeGethGenesis
-    genesisJSON.config.shanghaiTime = Date.now()
-    const common = createCommonFromGethGenesis(genesisJSON, {})
-    assert.strictEqual(
-      common.hardforks().findIndex((hf) => hf.name === Hardfork.MergeNetsplitBlock),
-      12,
-    )
-  })
-  it('should not add Paris and MergeNetsplitBlock if Shanghai and ttdPassed are not present ', () => {
-    const genesisJSON = postMergeGethGenesis
-    delete genesisJSON.config.shanghaiTime
-    delete genesisJSON.config.terminalTotalDifficultyPassed
-    delete genesisJSON.config.mergeForkBlock
-    const common = createCommonFromGethGenesis(genesisJSON, {})
-    assert.strictEqual(
-      common.hardforks().findIndex((hf) => hf.name === Hardfork.MergeNetsplitBlock),
-      -1,
-    )
-    assert.strictEqual(
-      common.hardforks().findIndex((hf) => hf.name === Hardfork.Paris),
-      -1,
-    )
-  })
-
-  it('should assign correct blob schedule', () => {
-    // clone json out to not have side effects
-    const customData = JSON.parse(JSON.stringify(postMergeGethGenesis))
-    const customConfigData = {
-      chainId: 3151908,
-      homesteadBlock: 0,
-      eip150Block: 0,
-      eip155Block: 0,
-      eip158Block: 0,
-      byzantiumBlock: 0,
-      constantinopleBlock: 0,
-      petersburgBlock: 0,
-      istanbulBlock: 0,
-      berlinBlock: 0,
-      londonBlock: 0,
-      mergeNetsplitBlock: 0,
-      depositContractAddress: '0x4242424242424242424242424242424242424242',
-      terminalTotalDifficulty: 0,
-      terminalTotalDifficultyPassed: true,
-      shanghaiTime: 0,
-      cancunTime: 0,
-      blobSchedule: {
-        prague: {
-          target: 61,
-          max: 91,
-          baseFeeUpdateFraction: 13338477,
-        },
-        bpo1: {
-          target: 71,
-          max: 101,
-          baseFeeUpdateFraction: 23338477,
-        },
-        bpo2: {
-          target: 81,
-          max: 111,
-          baseFeeUpdateFraction: 33338477,
-        },
-      },
-      pragueTime: 1736942378,
-      bpo1Time: 1736942478,
-      bpo2Time: 1736942578,
-    }
-    Object.assign(customData.config, customConfigData)
-
-    const common = createCommonFromGethGenesis(customData, {
-      chain: 'customChain',
-    })
-    const paramsTx = {
-      4844: {
-        blobCommitmentVersionKzg: 1, // The number indicated a versioned hash is a KZG commitment
-        blobGasPerBlob: 131072, // The base fee for blob gas per blob
-        maxBlobGasPerBlock: 786432, // The max blob gas allowable per block
-        blobGasPriceUpdateFraction: 3338477,
-        targetBlobGasPerBlock: 393216,
-      },
-      7691: {
-        maxBlobGasPerBlock: 1179648, // The max blob gas allowable per block
-      },
-    }
-    common.updateParams(paramsTx)
-
-    const blobGasPerBlob = common.param('blobGasPerBlob')
-
-    const testCases = [
-      // should be picked from eip params
-      [Hardfork.Cancun, blobGasPerBlob * BigInt(3), blobGasPerBlob * BigInt(6), 3338477n],
-      // from the genesis blobschedule
-      [
-        Hardfork.Prague,
-        blobGasPerBlob * BigInt(customConfigData.blobSchedule.prague.target),
-        blobGasPerBlob * BigInt(customConfigData.blobSchedule.prague.max),
-        customConfigData.blobSchedule.prague.baseFeeUpdateFraction,
-      ],
-      [
-        Hardfork.Bpo1,
-        blobGasPerBlob * BigInt(customConfigData.blobSchedule.bpo1.target),
-        blobGasPerBlob * BigInt(customConfigData.blobSchedule.bpo1.max),
-        customConfigData.blobSchedule.bpo1.baseFeeUpdateFraction,
-      ],
-      [
-        Hardfork.Bpo2,
-        blobGasPerBlob * BigInt(customConfigData.blobSchedule.bpo2.target),
-        blobGasPerBlob * BigInt(customConfigData.blobSchedule.bpo2.max),
-        customConfigData.blobSchedule.bpo2.baseFeeUpdateFraction,
-      ],
-    ]
-    for (const [testHf, testTarget, testMax, testUpdateFraction] of testCases) {
-      common.setHardfork(testHf as Hardfork)
-
-      const targetBlobGasPerBlock = common.param('targetBlobGasPerBlock')
-      const maxBlobGasPerBlock = common.param('maxBlobGasPerBlock')
-      const blobGasPriceUpdateFraction = common.param('blobGasPriceUpdateFraction')
-
-      assert.strictEqual(targetBlobGasPerBlock, testTarget, 'target blob gas should match')
-      assert.strictEqual(maxBlobGasPerBlock, testMax, 'max blob gas should match')
-      assert.strictEqual(
-        Number(blobGasPriceUpdateFraction),
-        Number(testUpdateFraction),
-        'update fraction should match',
+  it('rejects Ethereum genesis as an execution configuration', () => {
+    for (const genesis of [eip4844GethGenesis, goerliGethGenesis, postMergeGethGenesis]) {
+      assert.throws(
+        () => createCommonFromGethGenesis(genesis, {}),
+        /Only TRON execution configurations/,
+      )
+      assert.throws(
+        () =>
+          createCommonFromGethGenesis(genesis, {
+            hardfork: Hardfork.Tron,
+            activatedProposals: [95, 96],
+          }),
+        /Only TRON execution configurations/,
       )
     }
   })
 
-  it('should throw on invalid blob schedules', () => {
-    const customData = JSON.parse(JSON.stringify(postMergeGethGenesis))
-    const customConfigData = {
-      chainId: 3151908,
-      homesteadBlock: 0,
-      eip150Block: 0,
-      eip155Block: 0,
-      eip158Block: 0,
-      byzantiumBlock: 0,
-      constantinopleBlock: 0,
-      petersburgBlock: 0,
-      istanbulBlock: 0,
-      berlinBlock: 0,
-      londonBlock: 0,
-      mergeNetsplitBlock: 0,
-      depositContractAddress: '0x4242424242424242424242424242424242424242',
-      terminalTotalDifficulty: 0,
-      terminalTotalDifficultyPassed: true,
-      shanghaiTime: 0,
-      cancunTime: 0,
-      pragueTime: 1736942378,
-      blobSchedule: undefined,
-    }
-    Object.assign(customData.config, customConfigData)
-    const invalidBlobSchedules = [
-      {
-        prague: {
-          max: 91,
-          baseFeeUpdateFraction: 13338477,
-        },
-      },
-      {
-        prague: {
-          target: 61,
-          baseFeeUpdateFraction: 13338477,
-        },
-      },
-      {
-        prague: {
-          target: 61,
-          max: 91,
-        },
-      },
-      {
-        unknownHardfork: {
-          target: 61,
-          max: 91,
-          baseFeeUpdateFraction: 13338477,
-        },
-      },
-    ]
-
-    for (const schedule of invalidBlobSchedules) {
-      customData.config.blobSchedule = schedule
-      assert.throws(() => createCommonFromGethGenesis(customData, {}))
-    }
-  })
+  it.each(['cancun', 'prague', 'tron', 'unknown', 'empty'])(
+    'explicitly rejects a %s blob schedule in parsing and execution constructors',
+    (name) => {
+      const blobSchedule =
+        name === 'empty' ? {} : { [name]: { target: 3, max: 6, baseFeeUpdateFraction: 3338477 } }
+      const genesis = {
+        ...postMergeGethGenesis,
+        config: { ...postMergeGethGenesis.config, blobSchedule },
+      }
+      const message = /blobSchedule is not supported by TRON configuration parsing/
+      assert.throws(() => parseGethGenesis(genesis), message)
+      assert.throws(() => createCommonFromGethGenesis(genesis, {}), message)
+    },
+  )
 })

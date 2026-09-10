@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Breaking Changes
+
+- Accept only the TRON execution profile. Resolve shared opcode and precompile capabilities directly without Ethereum hardfork ordering or inherited consensus metadata.
+
+### Fixes
+
+- Remove unreachable Ethereum gas-forwarding branches and unused arguments from `maxCallGas`, preserving the current TRON version-0 forwarding rules and migrating the opcode regression tests.
+- Remove redundant TRON hardfork guards from CREATE/CREATE2, transaction-wide nonces, SELFDESTRUCT gas and Proposal 96 checks while preserving their active execution rules.
+- Limit the internal precompile registry to EIP capability checks and remove its unused hardfork declarations. Migrate availability tests to the three TRON networks and retain custom precompile override coverage.
+- Preserve caller options and custom BN254 implementations during TVM creation.
+- Migrate retained configuration examples and TRON regressions; retire examples requiring unsupported Ethereum profiles. EIP-2929 accounting remains pending the separate TRON Gas migration.
+
 ## 1.1.0
 
 ### Bug Fixes

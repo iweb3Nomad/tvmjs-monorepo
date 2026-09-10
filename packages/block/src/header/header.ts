@@ -1,5 +1,5 @@
 import { keccak_256 } from '@noble/hashes/sha3.js'
-import { Common, ConsensusAlgorithm, ConsensusType, Hardfork, Mainnet } from '@tvmjs/common'
+import { Common, ConsensusAlgorithm, ConsensusType, Hardfork, TronMainnet } from '@tvmjs/common'
 import { RLP } from '@tvmjs/rlp'
 import {
   Address,
@@ -99,7 +99,7 @@ export class BlockHeader {
       this.common = opts.common.copy()
     } else {
       this.common = new Common({
-        chain: Mainnet, // default
+        chain: TronMainnet, // default
       })
     }
     this.common.updateParams(opts.params ?? paramsBlock)
@@ -407,6 +407,7 @@ export class BlockHeader {
    * @throws if any check fails
    */
   protected _consensusFormatValidation() {
+    if (!this.common.hasConsensus()) return
     const { nonce, uncleHash, difficulty, extraData, number } = this
 
     // Consensus type dependent checks

@@ -1,6 +1,5 @@
-import { Common, Hardfork, Mainnet, createCustomCommon } from '@tvmjs/common'
-import { testnetMergeChainConfig } from '@tvmjs/testdata'
-import { TVM, createTVM } from '@tvmjs/tvm'
+import { Common, Hardfork, TronNile, createCustomCommon } from '@tvmjs/common'
+import { createTVM } from '@tvmjs/tvm'
 import {
   Account,
   KECCAK256_RLP,
@@ -15,6 +14,7 @@ import { type VMOpts, createVM, paramsVM } from '../../src/index.ts'
 import { setupVM } from './utils.ts'
 
 import type { MerkleStateManager } from '@tvmjs/statemanager'
+import type { TVM } from '@tvmjs/tvm'
 
 /**
  * Tests for the main constructor API and
@@ -75,14 +75,14 @@ describe('VM -> Default TVM / Custom TVM Opts', () => {
   })
 
   it('should use the Common owned by a custom TVM', async () => {
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Byzantium })
+    const common = new Common({ chain: TronNile, hardfork: Hardfork.Tron })
     const tvm = await createTVM({ common })
     const vm = await createVM({ tvm })
 
     assert.strictEqual(vm.common, common)
     assert.strictEqual(vm.tvm.common, vm.common)
-    assert.strictEqual(vm.common.chainId(), 1n)
-    assert.strictEqual(vm.common.hardfork(), Hardfork.Byzantium)
+    assert.strictEqual(vm.common.chainId(), 3448148188n)
+    assert.strictEqual(vm.common.hardfork(), Hardfork.Tron)
     assert.strictEqual(vm.stateManager, tvm.stateManager)
     assert.strictEqual(vm.blockchain, tvm.blockchain)
 
@@ -103,26 +103,26 @@ describe('VM -> Default TVM / Custom TVM Opts', () => {
   })
 
   it('Default TVM should use VM common', async () => {
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Byzantium })
+    const common = new Common({ chain: TronNile, hardfork: Hardfork.Tron })
     const vm = await createVM({ common })
+    assert.strictEqual((vm.tvm as TVM).common.hardfork(), 'tron', 'use modified HF from VM common')
     assert.strictEqual(
-      (vm.tvm as TVM).common.hardfork(),
-      'byzantium',
-      'use modified HF from VM common',
+      vm.common.chainId(),
+      3448148188n,
+      'explicit TronNile should use its own chainId',
     )
-    assert.strictEqual(vm.common.chainId(), 1n, 'explicit Ethereum Mainnet should keep chainId 1')
     assert.strictEqual(vm.tvm.common, vm.common, 'VM and TVM should share the explicit Common')
 
     const copiedVM = await vm.shallowCopy()
     assert.strictEqual(
       (copiedVM.tvm as TVM).common.hardfork(),
-      'byzantium',
+      'tron',
       'use modified HF from VM common (for shallowCopied VM)',
     )
   })
 
   it('Default TVM should prefer common from tvmOpts if provided (same logic for blockchain, statemanager)', async () => {
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Byzantium })
+    const common = new Common({ chain: TronNile, hardfork: Hardfork.Tron })
     const resources = await createTVM({ common })
     const vm = await createVM({
       tvmOpts: {
@@ -131,11 +131,7 @@ describe('VM -> Default TVM / Custom TVM Opts', () => {
         blockchain: resources.blockchain,
       },
     })
-    assert.strictEqual(
-      (vm.tvm as TVM).common.hardfork(),
-      'byzantium',
-      'use modified HF from tvmOpts',
-    )
+    assert.strictEqual((vm.tvm as TVM).common.hardfork(), 'tron', 'use modified HF from tvmOpts')
     assert.strictEqual(vm.common, common, 'VM should use the Common selected by tvmOpts')
     assert.strictEqual(vm.tvm.common, vm.common, 'VM and TVM should not diverge')
     assert.strictEqual(vm.stateManager, resources.stateManager)
@@ -146,48 +142,24 @@ describe('VM -> Default TVM / Custom TVM Opts', () => {
     const copiedVM = await vm.shallowCopy()
     assert.strictEqual(
       (copiedVM.tvm as TVM).common.hardfork(),
-      'byzantium',
+      'tron',
       'use modified HF from tvmOpts (for shallowCopied VM)',
     )
   })
 })
 
 describe('VM -> supportedHardforks', () => {
-  it('should throw when common is set to an unsupported hardfork', async () => {
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Shanghai })
-    const prevSupported = TVM['supportedHardforks']
-    TVM['supportedHardforks'] = [
-      Hardfork.Chainstart,
-      Hardfork.Homestead,
-      Hardfork.Dao,
-      Hardfork.TangerineWhistle,
-      Hardfork.SpuriousDragon,
-      Hardfork.Byzantium,
-      Hardfork.Constantinople,
-      Hardfork.Petersburg,
-      Hardfork.Istanbul,
-      Hardfork.MuirGlacier,
-      Hardfork.Berlin,
-      Hardfork.London,
-      Hardfork.ArrowGlacier,
-      Hardfork.GrayGlacier,
-      Hardfork.MergeNetsplitBlock,
-      Hardfork.Paris,
-    ]
-    try {
-      await createVM({ common })
-      assert.fail('should have failed for unsupported hardfork')
-    } catch (e: any) {
-      assert.isTrue(e.message.includes('supportedHardforks') === true)
-    }
-    // restore supported hardforks
-    TVM['supportedHardforks'] = prevSupported
+  it('rejects unsupported hardforks before execution', () => {
+    assert.throws(
+      () => new Common({ chain: TronNile, hardfork: Hardfork.Shanghai }),
+      /not supported/,
+    )
   })
 
   it('should succeed when common is set to a supported hardfork', async () => {
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Byzantium })
+    const common = new Common({ chain: TronNile, hardfork: Hardfork.Tron })
     const vm = await createVM({ common })
-    assert.strictEqual(vm.common.hardfork(), Hardfork.Byzantium)
+    assert.strictEqual(vm.common.hardfork(), Hardfork.Tron)
   })
 
   it('should overwrite parameters when param option is used', async () => {
@@ -218,7 +190,7 @@ describe('VM -> supportedHardforks', () => {
 
 describe('VM -> common (chain, HFs, EIPs)', () => {
   it('should accept a common object as option', async () => {
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
+    const common = new Common({ chain: TronNile, hardfork: Hardfork.Tron })
 
     let vm = await createVM({ common })
     assert.strictEqual(vm.common, common)
@@ -232,13 +204,13 @@ describe('VM -> common (chain, HFs, EIPs)', () => {
   })
 
   it('should only accept valid chain and fork', async () => {
-    let common = createCustomCommon({ chainId: 3 }, Mainnet)
-    common.setHardfork(Hardfork.Byzantium)
+    let common = createCustomCommon({ chainId: 3 }, TronNile)
+    common.setHardfork(Hardfork.Tron)
     let vm = await createVM({ common })
-    assert.strictEqual(vm.common.param('bn254AddGas'), BigInt(500))
+    assert.strictEqual(vm.common.param('bn254AddGas'), BigInt(150))
 
     try {
-      common = new Common({ chain: Mainnet, hardfork: 'extraCheese' })
+      common = new Common({ chain: TronNile, hardfork: 'extraCheese' })
       vm = await createVM({ common })
       assert.fail('should have failed for invalid chain')
     } catch (e: any) {
@@ -247,7 +219,7 @@ describe('VM -> common (chain, HFs, EIPs)', () => {
   })
 
   it('should accept a supported EIP', async () => {
-    const common = new Common({ chain: Mainnet, eips: [2537] })
+    const common = new Common({ chain: TronNile, eips: [7939] })
     try {
       await createVM({ common })
       assert.isTrue(true, 'did not throw')
@@ -258,8 +230,8 @@ describe('VM -> common (chain, HFs, EIPs)', () => {
 
   it('should accept a custom chain config (createCustomCommon() static constructor)', async () => {
     const customChainParams = { name: 'custom', chainId: 123 }
-    const common = createCustomCommon(customChainParams, Mainnet, {
-      hardfork: 'byzantium',
+    const common = createCustomCommon(customChainParams, TronNile, {
+      hardfork: 'tron',
     })
 
     const vm = await createVM({ common })
@@ -269,8 +241,8 @@ describe('VM -> common (chain, HFs, EIPs)', () => {
 
 describe('VM -> setHardfork, blockchain', () => {
   it('setHardfork', async () => {
-    const common = createCustomCommon(testnetMergeChainConfig, Mainnet, {
-      hardfork: Hardfork.Istanbul,
+    const common = createCustomCommon({ name: 'custom-tron', chainId: 123 }, TronNile, {
+      hardfork: Hardfork.Tron,
     })
 
     let vm = await createVM({ common, setHardfork: true })
@@ -291,15 +263,15 @@ describe('VM -> setHardfork, blockchain', () => {
 
   it('should pass the correct Common object when copying the VM', async () => {
     const vm = await setupVM({
-      common: new Common({ chain: Mainnet, hardfork: Hardfork.Byzantium }),
+      common: new Common({ chain: TronNile, hardfork: Hardfork.Tron }),
     })
 
-    assert.strictEqual(vm.common.chainName(), 'mainnet')
-    assert.strictEqual(vm.common.hardfork(), 'byzantium')
+    assert.strictEqual(vm.common.chainName(), 'tron-nile')
+    assert.strictEqual(vm.common.hardfork(), 'tron')
 
     const copiedVM = await vm.shallowCopy()
-    assert.strictEqual(copiedVM.common.chainName(), 'mainnet')
-    assert.strictEqual(copiedVM.common.hardfork(), 'byzantium')
+    assert.strictEqual(copiedVM.common.chainName(), 'tron-nile')
+    assert.strictEqual(copiedVM.common.hardfork(), 'tron')
   })
 
   it('should pass the correct VM options when copying the VM', async () => {
@@ -347,7 +319,7 @@ describe('VM -> setHardfork, blockchain', () => {
       const caller = createAddressFromString('0x00000000000000000000000000000000000000ee') // caller address
       const contractAddress = createAddressFromString('0x00000000000000000000000000000000000000ff') // contract address
       // setup the vm
-      const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
+      const common = new Common({ chain: TronNile, hardfork: Hardfork.Tron })
       const vmNotActivated = await createVM({ common })
       const vmActivated = await createVM({ common, activatePrecompiles: true })
       const code = '0x6000808080347300000000000000000000000000000000000000045AF100'

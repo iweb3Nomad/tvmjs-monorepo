@@ -1,8 +1,6 @@
-import { tronHardforksDict } from './hardforks.ts'
+import type { NetworkChainConfig, TronExecutionChainConfig } from './types.ts'
 
-import type { ChainConfig } from './types.ts'
-
-export const Mainnet: ChainConfig = {
+export const Mainnet: NetworkChainConfig = {
   name: 'mainnet',
   chainId: 1,
   defaultHardfork: 'prague',
@@ -180,62 +178,43 @@ export const Mainnet: ChainConfig = {
 }
 
 /**
- * Creates an execution-only TRON chain config from the Ethereum Mainnet execution baseline.
+ * Creates a TRON execution preset without claiming network genesis or consensus data.
  *
- * These configs intentionally do not claim to be complete TRON network definitions: genesis,
- * consensus, and hardfork data still require a verified java-tron network configuration. Network
- * discovery fields are cleared so they cannot accidentally be used to connect to a node.
+ * The profile applies to the supplied execution context. Block zero is a profile
+ * marker, not a historical TRON protocol activation or Ethereum fork hash.
  */
-function createTronExecutionChainConfig(name: string, chainId: number): ChainConfig {
+function createTronExecutionChainConfig(name: string, chainId: number): TronExecutionChainConfig {
   return {
-    ...Mainnet,
+    execution: 'tron',
     name,
     chainId,
     defaultHardfork: 'tron',
-    hardforks: [
-      ...Mainnet.hardforks.filter((hardfork) =>
-        [
-          'chainstart',
-          'homestead',
-          'dao',
-          'tangerineWhistle',
-          'spuriousDragon',
-          'byzantium',
-          'constantinople',
-          'petersburg',
-          'istanbul',
-          'berlin',
-          'london',
-          'paris',
-          'shanghai',
-          'cancun',
-        ].includes(hardfork.name),
-      ),
-      {
-        name: 'tron',
-        block: null,
-        forkHash: '0xcb6b9941',
-      },
-    ],
-    customHardforks: tronHardforksDict,
+    hardforks: [{ name: 'tron', block: 0 }],
     comment: `Execution-only ${name} chainId preset; not a complete TRON network configuration`,
-    url: undefined,
     bootstrapNodes: [],
     dnsNetworks: [],
-    depositContractAddress: undefined,
   }
 }
 
 /** Execution-only TRON Mainnet chainId configuration. */
-export const TronMainnet: ChainConfig = createTronExecutionChainConfig('tron-mainnet', 728126428)
+export const TronMainnet: TronExecutionChainConfig = createTronExecutionChainConfig(
+  'tron-mainnet',
+  728126428,
+)
 
 /** Execution-only TRON Nile testnet chainId configuration. */
-export const TronNile: ChainConfig = createTronExecutionChainConfig('tron-nile', 3448148188)
+export const TronNile: TronExecutionChainConfig = createTronExecutionChainConfig(
+  'tron-nile',
+  3448148188,
+)
 
 /** Execution-only TRON Shasta testnet chainId configuration. */
-export const TronShasta: ChainConfig = createTronExecutionChainConfig('tron-shasta', 2494104990)
+export const TronShasta: TronExecutionChainConfig = createTronExecutionChainConfig(
+  'tron-shasta',
+  2494104990,
+)
 
-export const Sepolia: ChainConfig = {
+export const Sepolia: NetworkChainConfig = {
   name: 'sepolia',
   chainId: 11155111,
   defaultHardfork: 'prague',
@@ -398,7 +377,7 @@ export const Sepolia: ChainConfig = {
   ],
 }
 
-export const Holesky: ChainConfig = {
+export const Holesky: NetworkChainConfig = {
   name: 'holesky',
   chainId: 17000,
   defaultHardfork: 'prague',
@@ -541,7 +520,7 @@ export const Holesky: ChainConfig = {
   ],
 }
 
-export const Hoodi: ChainConfig = {
+export const Hoodi: NetworkChainConfig = {
   name: 'hoodi',
   chainId: 560048,
   defaultHardfork: 'prague',

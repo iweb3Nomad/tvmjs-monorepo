@@ -13,13 +13,13 @@ import type { BaseOpts, ChainConfig, GethConfigOpts } from './index.ts'
  * in a provided {@link chainParamsOrName} dictionary. Some usage example:
  *
  * ```javascript
- * import { createCustomCommon, Mainnet } from '@tvmjs/common'
+ * import { createCustomCommon, TronMainnet } from '@tvmjs/common'
  *
- * createCustomCommon({chainId: 123}, Mainnet)
+ * createCustomCommon({chainId: 123}, TronMainnet)
  * ```
  *
  * @param partialConfig Custom parameter dict
- * @param baseChain `ChainConfig` chain configuration taken as a base chain, e.g. `Mainnet` (exported at root level)
+ * @param baseChain TRON execution configuration used as a base, e.g. `TronMainnet`
  * @param opts Custom chain options to set various {@link BaseOpts}
  */
 export function createCustomCommon(
@@ -37,7 +37,9 @@ export function createCustomCommon(
 }
 
 /**
- * Static method to load and set common from a geth genesis object
+ * Legacy Geth execution constructor. Ethereum configurations are rejected;
+ * use parseGethGenesis() when only the raw genesis data is needed.
+ * @deprecated Use a TRON execution preset with explicit network metadata.
  * @param genesisJSON GethGenesis object
  * @returns a new {@link Common} object
  */
@@ -83,9 +85,9 @@ const TRON_CHAIN_CONFIGS: Record<TronNetwork, ChainConfig> = {
  * Creates a {@link Common} instance with TRON network chainId preset for CHAINID opcode execution.
  *
  * This is an execution-only preset that provides the correct chainId value for TRON networks
- * while using the TRON execution hardfork sequence and parameter overlay.
- * It does NOT represent a complete TRON chain configuration: genesis and consensus details are
- * inherited from Mainnet, and network discovery data is intentionally omitted.
+ * while using the independent TRON execution profile and capability matrix.
+ * Genesis, consensus and network discovery data are intentionally omitted.
+ * Use Common.hasGenesis() / hasConsensus() before accessing network metadata.
  *
  * Full TRON chain configurations with verified genesis and network data will be added in a future release.
  *

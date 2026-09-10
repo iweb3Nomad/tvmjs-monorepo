@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Breaking Changes
+
+- Default MerkleStateManager and RPCStateManager configuration to `TronMainnet`, matching VM/TVM and transaction defaults. Supply Common explicitly for other TRON networks.
+
 ### Fixes
 
 - Bind EIP-1186 account proofs to the StateManager state root and storage proofs to the authenticated account storage root; reject storage proofs for nonexistent accounts
@@ -33,4 +37,3 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Rename package namespace from `@ethereumjs/statemanager` to `@tvmjs/statemanager`; update all internal imports to `@tvmjs/*`
 - Bump package version to `1.0.0`
 - Lock all dependency versions by removing `^` and `~` prefixes
-

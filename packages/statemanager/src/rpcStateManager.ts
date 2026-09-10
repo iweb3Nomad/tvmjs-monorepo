@@ -1,5 +1,5 @@
 import { keccak_256 } from '@noble/hashes/sha3.js'
-import { Common, Mainnet } from '@tvmjs/common'
+import { Common, TronMainnet } from '@tvmjs/common'
 import { RLP } from '@tvmjs/rlp'
 import {
   Account,
@@ -53,7 +53,7 @@ export class RPCStateManager implements StateManagerInterface {
     this._caches = new Caches({ storage: { size: 100000 }, code: { size: 100000 } })
 
     this.originalStorageCache = new OriginalStorageCache(this.getStorage.bind(this))
-    this.common = opts.common ?? new Common({ chain: Mainnet })
+    this.common = opts.common ?? new Common({ chain: TronMainnet })
     this.keccakFunction = opts.common?.customCrypto.keccak256 ?? keccak_256
   }
 

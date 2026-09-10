@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Breaking Changes
+
+- Default to `TronMainnet` and require an explicit genesis block or network genesis metadata. Reject mismatched genesis chainIds and consensus validation without explicit network metadata.
+- Support local execution block storage without an implicit Ethereum consensus implementation.
+
 ### Fixes
 
 - Require Clique epoch checkpoint signer lists to exactly match the active signer list, rejecting empty, truncated, extended, duplicated, and reordered checkpoints

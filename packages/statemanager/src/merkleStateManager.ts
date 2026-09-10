@@ -1,5 +1,5 @@
 import { keccak_256 } from '@noble/hashes/sha3.js'
-import { Common, Mainnet } from '@tvmjs/common'
+import { Common, TronMainnet } from '@tvmjs/common'
 import { MerklePatriciaTrie } from '@tvmjs/mpt'
 import { RLP } from '@tvmjs/rlp'
 import {
@@ -97,7 +97,7 @@ export class MerkleStateManager implements StateManagerInterface {
 
     this._debug = debugDefault('statemanager:merkle')
 
-    this.common = opts.common ?? new Common({ chain: Mainnet })
+    this.common = opts.common ?? new Common({ chain: TronMainnet })
 
     this._checkpointCount = 0
 

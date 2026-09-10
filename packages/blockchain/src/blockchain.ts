@@ -1,5 +1,5 @@
 import { Block, BlockHeader, createBlock } from '@tvmjs/block'
-import { Common, ConsensusAlgorithm, ConsensusType, Hardfork, Mainnet } from '@tvmjs/common'
+import { Common, ConsensusAlgorithm, ConsensusType, Hardfork, TronMainnet } from '@tvmjs/common'
 import {
   BIGINT_0,
   BIGINT_1,
@@ -118,11 +118,8 @@ export class Blockchain implements BlockchainInterface {
     if (opts.common) {
       this.common = opts.common
     } else {
-      const DEFAULT_CHAIN = Mainnet
-      const DEFAULT_HARDFORK = Hardfork.Chainstart
       this.common = new Common({
-        chain: DEFAULT_CHAIN,
-        hardfork: DEFAULT_HARDFORK,
+        chain: TronMainnet,
       })
     }
 
@@ -155,6 +152,11 @@ export class Blockchain implements BlockchainInterface {
   }
 
   private _consensusCheck() {
+    if (this._validateConsensus && !this.common.hasConsensus()) {
+      throw EthereumJSErrorWithoutCode(
+        'Consensus validation requires explicit network metadata; TRON execution presets do not provide it',
+      )
+    }
     if (this._validateConsensus && this.consensus === undefined) {
       throw EthereumJSErrorWithoutCode(
         `Consensus object for ${this.common.consensusAlgorithm()} must be passed (see consensusDict option) if consensus validation is activated`,
@@ -167,6 +169,7 @@ export class Blockchain implements BlockchainInterface {
    * or undefined if non available
    */
   get consensus(): Consensus | undefined {
+    if (!this.common.hasConsensus()) return undefined
     return this._consensusDict[this.common.consensusAlgorithm()]
   }
 
@@ -453,7 +456,8 @@ export class Blockchain implements BlockchainInterface {
         if (
           block.isGenesis() ||
           td > currentTd.header ||
-          block.common.consensusType() === ConsensusType.ProofOfStake
+          (block.common.hasConsensus() &&
+            block.common.consensusType() === ConsensusType.ProofOfStake)
         ) {
           const foundCommon = await this.findCommonAncestor(header)
           commonAncestor = foundCommon.commonAncestor
@@ -540,9 +544,13 @@ export class Blockchain implements BlockchainInterface {
       throw EthereumJSErrorWithoutCode(`invalid timestamp ${header.errorStr()}`)
     }
 
-    if (!(header.common.consensusType() === 'pos')) await this.consensus?.validateDifficulty(header)
+    if (header.common.hasConsensus() && header.common.consensusType() !== 'pos')
+      await this.consensus?.validateDifficulty(header)
 
-    if (this.common.consensusAlgorithm() === ConsensusAlgorithm.Clique) {
+    if (
+      this.common.hasConsensus() &&
+      this.common.consensusAlgorithm() === ConsensusAlgorithm.Clique
+    ) {
       const period = (this.common.consensusConfig() as CliqueConfig).period
       // Timestamp diff between blocks is lower than PERIOD (clique)
       if (parentHeader.timestamp + BigInt(period) > header.timestamp) {
@@ -1332,7 +1340,7 @@ export class Blockchain implements BlockchainInterface {
       withdrawalsRoot: common.isActivatedEIP(4895) ? KECCAK256_RLP : undefined,
       requestsHash: common.isActivatedEIP(7685) ? SHA256_NULL : undefined,
     }
-    if (common.consensusType() === 'poa') {
+    if (common.hasConsensus() && common.consensusType() === 'poa') {
       if (common.genesis().extraData) {
         // Ensure extra data is populated from genesis data if provided
         header.extraData = common.genesis().extraData

@@ -1,4 +1,4 @@
-import { Common, Hardfork, Mainnet, TronMainnet } from '@tvmjs/common'
+import { Common, Hardfork, TronMainnet } from '@tvmjs/common'
 import { BIGINT_0, bytesToBigInt, createAddressFromString, hexToBytes } from '@tvmjs/util'
 import { assert, describe, it } from 'vitest'
 
@@ -37,7 +37,7 @@ async function runFactory(common: Common, code: Uint8Array, params = paramsTVM) 
 describe('TRON contract creation size semantics', () => {
   it.each([
     ['default hardfork', undefined],
-    ['explicit Shanghai hardfork', Hardfork.Shanghai],
+    ['explicit TRON profile', Hardfork.Tron],
   ] as const)(
     'deploys runtime code one byte above the EIP-170 limit with the %s',
     async (_name, hardfork) => {
@@ -58,23 +58,9 @@ describe('TRON contract creation size semantics', () => {
     },
   )
 
-  it('keeps the EIP-170 runtime limit for Ethereum', async () => {
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Shanghai })
-    const tvm = await createTVM({ common })
-    const result = await tvm.runCall({
-      data: OVERSIZED_RUNTIME_INITCODE,
-      gasLimit: 6000000n,
-    })
-
-    assert.strictEqual(
-      result.execResult.exceptionError?.error,
-      TVMError.errorMessages.CODESIZE_EXCEEDS_MAXIMUM,
-    )
-  })
-
   it.each([
     ['default hardfork', undefined],
-    ['explicit Shanghai hardfork', Hardfork.Shanghai],
+    ['explicit TRON profile', Hardfork.Tron],
   ] as const)(
     'accepts top-level initcode one byte above the EIP-3860 limit with the %s',
     async (_name, hardfork) => {
@@ -90,20 +76,6 @@ describe('TRON contract creation size semantics', () => {
       assert.isDefined(result.createdAddress)
     },
   )
-
-  it('keeps the EIP-3860 initcode limit for Ethereum', async () => {
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Shanghai })
-    const tvm = await createTVM({ common })
-    const result = await tvm.runCall({
-      data: new Uint8Array(MAX_INITCODE_SIZE + 1),
-      gasLimit: 100000n,
-    })
-
-    assert.strictEqual(
-      result.execResult.exceptionError?.error,
-      TVMError.errorMessages.INITCODE_SIZE_VIOLATION,
-    )
-  })
 
   it.each(['f0', 'f5'] as const)(
     'allows oversized initcode through internal CREATE opcode 0x%s',

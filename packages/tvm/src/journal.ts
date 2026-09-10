@@ -1,4 +1,3 @@
-import { Hardfork } from '@tvmjs/common'
 import {
   Address,
   EthereumJSErrorWithoutCode,
@@ -202,7 +201,7 @@ export class Journal {
    * Also cleanups any other internal fields
    */
   async cleanup(): Promise<void> {
-    if (this.common.gteHardfork(Hardfork.SpuriousDragon)) {
+    if (this.common.isActivatedEIP(607)) {
       for (const addressHex of this.touched) {
         const address = new Address(hexToBytes(`0x${addressHex}`))
         const account = await this.stateManager.getAccount(address)

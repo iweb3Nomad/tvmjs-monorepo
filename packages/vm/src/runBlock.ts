@@ -464,7 +464,7 @@ async function applyBlock(vm: VM, block: Block, opts: RunBlockOpts): Promise<App
     await vm.tvm.journal.cleanup()
   }
   // Pay ommers and miners
-  if (block.common.consensusType() === ConsensusType.ProofOfWork) {
+  if (block.common.hasConsensus() && block.common.consensusType() === ConsensusType.ProofOfWork) {
     await assignBlockRewards(vm, block)
   }
 

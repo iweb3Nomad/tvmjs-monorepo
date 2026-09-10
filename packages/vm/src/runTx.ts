@@ -1,5 +1,5 @@
 import { cliqueSigner, createBlockHeader } from '@tvmjs/block'
-import { ConsensusType, Hardfork } from '@tvmjs/common'
+import { ConsensusType } from '@tvmjs/common'
 import {
   BinaryTreeAccessWitness,
   type Log,
@@ -320,7 +320,7 @@ async function updateMinerBalance(
 ): Promise<void> {
   // Determine miner address based on consensus type
   let miner: Address
-  if (vm.common.consensusType() === ConsensusType.ProofOfAuthority) {
+  if (vm.common.hasConsensus() && vm.common.consensusType() === ConsensusType.ProofOfAuthority) {
     miner = cliqueSigner(block?.header ?? DEFAULT_HEADER)
   } else {
     miner = block?.header.coinbase ?? DEFAULT_HEADER.coinbase
@@ -370,9 +370,7 @@ export async function runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
   const tronTransactionIdPolicy = validateTronTransactionIdPolicy(opts.tronTransactionIdPolicy)
   const rootTransactionId =
     opts.rootTransactionId ??
-    (tronTransactionIdPolicy === 'fallback-to-tx-hash' &&
-    vm.common.gteHardfork(Hardfork.Tron) &&
-    opts.tx.isSigned()
+    (tronTransactionIdPolicy === 'fallback-to-tx-hash' && opts.tx.isSigned()
       ? opts.tx.hash()
       : undefined)
 
@@ -1185,7 +1183,7 @@ export async function generateTxReceipt(
 
   if (!tx.supports(Capability.EIP2718TypedTransaction)) {
     // Legacy transaction
-    if (vm.common.gteHardfork(Hardfork.Byzantium)) {
+    if (vm.common.isActivatedEIP(609)) {
       // Post-Byzantium
       receipt = {
         status: txResult.execResult.exceptionError !== undefined ? 0 : 1, // Receipts have a 0 as status on error

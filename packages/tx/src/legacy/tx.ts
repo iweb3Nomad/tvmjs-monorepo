@@ -57,7 +57,7 @@ function validateVAndExtractChainID(common: Common, _v?: bigint): bigint | undef
   }
 
   // No unsigned tx and EIP-155 activated and chain ID included
-  if (v !== undefined && v !== 0 && common.gteHardfork('spuriousDragon') && v !== 27 && v !== 28) {
+  if (v !== undefined && v !== 0 && common.isActivatedEIP(607) && v !== 27 && v !== 28) {
     if (!meetsEIP155(BigInt(v), common.chainId())) {
       throw EthereumJSErrorWithoutCode(
         `Incompatible EIP155-based V ${v} and chain id ${common.chainId()}. See the Common parameter of the Transaction constructor to set the chain id.`,
@@ -144,7 +144,7 @@ export class LegacyTx implements TransactionInterface<typeof TransactionType.Leg
       throw EthereumJSErrorWithoutCode('gas limit * gasPrice cannot exceed MAX_INTEGER (2^256-1)')
     }
 
-    if (this.common.gteHardfork('spuriousDragon')) {
+    if (this.common.isActivatedEIP(607)) {
       if (!this.isSigned()) {
         this.activeCapabilities.push(Capability.EIP155ReplayProtection)
       } else {

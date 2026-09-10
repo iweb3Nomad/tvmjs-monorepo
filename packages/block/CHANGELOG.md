@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Breaking Changes
+
+- Default execution blocks to `TronMainnet`. Do not require inherited Ethereum consensus metadata for execution headers, and reject uncle headers when using execution-only presets.
+
 ### Chores
 
 - Update internal `@tvmjs/*` dependencies for the coordinated TVMJS release

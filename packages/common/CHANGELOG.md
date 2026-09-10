@@ -1,3 +1,5 @@
+<!-- cspell:ignore SLOTNUM DUPN SWAPN -->
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -7,6 +9,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+
+### Breaking Changes
+
+- Restrict Common to the independent TRON execution profile and explicit capability matrix. Reject Ethereum presets, hardfork schedules, unsupported EIPs and the legacy implicit `Mainnet + tron` mapping.
+- Remove inherited Ethereum genesis, consensus and fork metadata from TRON presets. Add `TronExecutionChainConfig`, `NetworkChainConfig`, `hasGenesis()` and `hasConsensus()`; missing metadata queries and Ethereum fork-hash operations now throw.
+
+### Fixes
+
+- Use the TRON profile for both EIP selection and parameter queries, while allowing queries for supported optional EIPs without activating them.
+- Reject Geth blob schedules explicitly, including empty schedules and entries named `tron`, instead of reporting a misleading unknown-hardfork error.
+- Isolate copied configuration and validate execution compatibility across VM layers, including capabilities, proposals, crypto implementations and active parameters.
+- Document the v1.2.0 configuration migration. Existing EIP-2929 accounting remains pending the separate TRON Gas migration.
 
 ## 1.1.0
 

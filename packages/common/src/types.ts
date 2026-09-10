@@ -33,16 +33,31 @@ type ConsensusConfig = {
 export interface ChainConfig {
   name: string
   chainId: number | string
+  /** Execution profile family. Ethereum network configurations are not executable. */
+  execution?: 'tron'
   defaultHardfork?: string
   comment?: string
   url?: string
-  genesis: GenesisBlockConfig
+  genesis?: GenesisBlockConfig
   hardforks: HardforkTransitionConfig[]
   customHardforks?: HardforksDict
   bootstrapNodes: BootstrapNodeConfig[]
   dnsNetworks?: string[]
-  consensus: ConsensusConfig
+  consensus?: ConsensusConfig
   depositContractAddress?: PrefixedHexString
+}
+
+/** A network configuration with explicitly supplied genesis and consensus data. */
+export interface NetworkChainConfig extends ChainConfig {
+  genesis: GenesisBlockConfig
+  consensus: ConsensusConfig
+}
+
+/** A TRON execution preset without network genesis or consensus metadata. */
+export interface TronExecutionChainConfig extends ChainConfig {
+  execution: 'tron'
+  genesis?: never
+  consensus?: never
 }
 
 export interface GenesisBlockConfig {
@@ -93,18 +108,18 @@ export interface CustomCrypto {
 
 export interface BaseOpts {
   /**
-   * String identifier ('byzantium') for hardfork or {@link Hardfork} enum.
+   * TRON execution profile. Only `tron` / {@link Hardfork.Tron} is supported.
    *
-   * Default: Hardfork.London
+   * Default: Hardfork.Tron
    */
   hardfork?: string | Hardfork
   /**
    * Selected EIPs which can be activated, please use an array for instantiation
-   * (e.g. `eips: [ 2537, ]`)
+   * (e.g. `eips: [7939]`)
    *
    * Currently supported:
    *
-   * - [EIP-2537](https://eips.ethereum.org/EIPS/eip-2537) - BLS12-381 precompiles
+   * - [EIP-7939](https://eips.ethereum.org/EIPS/eip-7939) - CLZ instruction
    */
   eips?: number[]
   /**
@@ -153,8 +168,8 @@ export interface BaseOpts {
  */
 export interface CommonOpts extends BaseOpts {
   /**
-   * The chain configuration to be used. There are available configuration object for mainnet
-   * (`Mainnet`) and the currently active testnets which can be directly used.
+   * TRON execution configuration, such as TronMainnet, TronNile or TronShasta.
+   * Ethereum presets and hardfork schedules are rejected with a migration error.
    */
   chain: ChainConfig
 }

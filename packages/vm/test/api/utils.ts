@@ -1,4 +1,6 @@
+import { createBlock } from '@tvmjs/block'
 import { createBlockchain } from '@tvmjs/blockchain'
+import { Common, TronMainnet } from '@tvmjs/common'
 import { TransactionType, createTx } from '@tvmjs/tx'
 import { Account, blobsToCommitments, computeVersionedHash, getBlobs } from '@tvmjs/util'
 import { MemoryLevel } from 'memory-level'
@@ -8,7 +10,6 @@ import { createVM } from '../../src/index.ts'
 import { LevelDB } from './level.ts'
 
 import type { Block } from '@tvmjs/block'
-import type { Common } from '@tvmjs/common'
 import { SIGNER_G } from '@tvmjs/testdata'
 import type { Address, PrefixedHexString } from '@tvmjs/util'
 import type { VMOpts } from '../../src/types.ts'
@@ -27,7 +28,8 @@ export async function setBalance(vm: VM, address: Address, balance = BigInt(1000
 
 export async function setupVM(opts: VMOpts & { genesisBlock?: Block } = {}) {
   const db: any = new LevelDB(new MemoryLevel())
-  const { common, genesisBlock } = opts
+  const common = opts.common ?? opts.genesisBlock?.common ?? new Common({ chain: TronMainnet })
+  const genesisBlock = opts.genesisBlock ?? createBlock({}, { common })
   if (opts.blockchain === undefined) {
     opts.blockchain = await createBlockchain({
       db,
@@ -39,6 +41,7 @@ export async function setupVM(opts: VMOpts & { genesisBlock?: Block } = {}) {
   }
   const vm = await createVM({
     ...opts,
+    common,
   })
   return vm
 }

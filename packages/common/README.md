@@ -1,410 +1,123 @@
-# @tvmjs/common `1.1.0`
+# @tvmjs/common
 
-| Resources common to all TVMJS implementations. Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
-| --- |
-
-## Table of Contents
-
-- [@tvmjs/common `v1.0.0`](#tvmjscommon-v1.0.0)
-  - [Table of Contents](#table-of-contents)
-  - [Installation](#installation)
-  - [Getting Started](#getting-started)
-    - [import / require](#import--require)
-    - [Parameters](#parameters)
-  - [Custom Cryptography Primitives (WASM)](#custom-cryptography-primitives-wasm)
-    - [Example 1: keccak256 Hashing](#example-1-keccak256-hashing)
-    - [Example 2: KZG](#example-2-kzg)
-  - [Browser](#browser)
-  - [API](#api)
-    - [Docs](#docs)
-    - [Hybrid CJS/ESM Builds](#hybrid-cjsesm-builds)
-  - [Events](#events)
-    - [Chains and Genesis](#chains-and-genesis)
-    - [Working with Private/Custom Chains](#working-with-privatecustom-chains)
-      - [Initialize using Geth's genesis json](#initialize-using-geths-genesis-json)
-  - [Hardfork Support and Usage](#hardfork-support-and-usage)
-    - [Active Hardforks](#active-hardforks)
-    - [Future Hardforks](#future-hardforks)
-    - [Parameter Access](#parameter-access)
-  - [Supported EIPs](#supported-eips)
-  - [Upstream](#upstream)
-  - [License](#license)
+Shared configuration for TVMJS. This development branch introduces the v1.2.0 TRON-only execution configuration.
 
 ## Installation
 
-To obtain the latest version, simply require the project using `npm`:
-
-```shell
+```sh
 npm install @tvmjs/common
 ```
 
-## Getting Started
+## TRON networks
 
-### import / require
-
-import (ESM, TypeScript):
+| Preset | chainId | Execution profile |
+| --- | --- | --- |
+| `TronMainnet` | `728126428` | `tron` |
+| `TronNile` | `3448148188` | `tron` |
+| `TronShasta` | `2494104990` | `tron` |
 
 ```ts
-import { Chain, Common, Hardfork } from '@tvmjs/common'
+import { Common, Hardfork, TronMainnet, createTronChainIdCommon } from '@tvmjs/common'
+
+const common = new Common({ chain: TronMainnet, hardfork: Hardfork.Tron })
+console.log(common.chainId()) // 728126428n
+const nile = createTronChainIdCommon('nile')
+console.log(nile.chainId()) // 3448148188n
 ```
 
-require (CommonJS, Node.js):
+`tron` is the only selectable execution profile. Block numbers and timestamps do not select Ethereum upgrades. The profile's block-zero marker describes an execution configuration, not a historical TRON activation schedule. The `chainId` is returned by the CHAINID opcode when this Common is supplied to a VM or TVM.
+
+Ethereum presets, Ethereum hardforks, custom hardfork schedules and the old `Mainnet + hardfork: 'tron'` combination are rejected. Unknown preset names or IDs also throw instead of selecting a different network.
+
+## Execution capabilities and proposals
+
+The exported `tronExecutionProfile` lists the shared implementation groups explicitly. It has no inherited Ethereum hardfork schedule or consensus transition.
+
+- Baseline execution includes the existing TRON opcode set, transient storage, PUSH0, MCOPY and SELFDESTRUCT behavior.
+- `eips: [7939]` explicitly enables CLZ. `common.eips()` returns explicit selections; `common.isActivatedEIP(id)` includes baseline selections.
+- Unsupported capabilities, including Blob transactions, beacon roots, withdrawals and Ethereum consensus transitions, cannot be activated through `setEIPs()` or a custom hardfork.
+- Proposal 95 and 96 remain independent governance flags. No proposal is active by default, and they do not automatically activate CLZ or the complete Prague/Osaka feature sets.
 
 ```ts
-const { Common, Chain, Hardfork } = require('@tvmjs/common')
-```
-
-### Parameters
-
-All parameters can be accessed through the `Common` class, instantiated with an object containing either the `chain` (e.g. 'Mainnet') or the `chain` together with a specific `hardfork` provided:
-
-```ts
-// ./examples/common.ts#L1-L7
-
-import { Common, Hardfork, Mainnet, createCustomCommon } from '@tvmjs/common'
-
-// With enums:
-const commonWithEnums = new Common({ chain: Mainnet, hardfork: Hardfork.Cancun })
-
-// Instantiate with the chain (and the default hardfork)
-let c = new Common({ chain: Mainnet })
-```
-
-If no hardfork is provided, the common is initialized with the default hardfork.
-
-Current `DEFAULT_HARDFORK`: `Hardfork.Prague`
-
-Here are some simple usage examples:
-
-```ts
-// ./examples/common.ts#L9-L23
-
-// Get bootstrap nodes for chain/network
-console.log('Below are the known bootstrap nodes')
-console.log(c.bootstrapNodes()) // Array with current nodes
-
-// Instantiate with an EIP activated (with pre-EIP hardfork)
-c = new Common({ chain: Mainnet, hardfork: Hardfork.Cancun, eips: [7702] })
-console.log(`EIP 7702 is active -- ${c.isActivatedEIP(7702)}`)
-
-// Instantiate common with custom chainID
-const commonWithCustomChainId = createCustomCommon({ chainId: 1234 }, Mainnet)
-console.log(`The current chain ID is ${commonWithCustomChainId.chainId()}`)
-```
-
-## Custom Cryptography Primitives (WASM)
-
-All TVMJS packages use cryptographic primitives from the audited `ethereum-cryptography` library by default. These primitives, including `keccak256`, `sha256`, and elliptic curve signature methods, are all written in native JavaScript and therefore have the potential downside of being less performant than alternative cryptography modules written in other languages and then compiled to WASM. If cryptography performance is a bottleneck in your usage of the TVMJS libraries, you can provide your own primitives to the `Common` constructor and they will be used in place of the defaults. Depending on how your preferred primitives are implemented, you may need to write wrapper methods around them so they conform to the interface exposed by the [`common.customCrypto` property](./src/types.ts).
-
-Note: replacing native JS crypto primitives with WASM based libraries comes with new security assumptions (additional external dependencies, unauditability of WASM code). It is therefore recommended to evaluate your usage context before applying!
-
-### Example 1: keccak256 Hashing
-
-The following is an example using the [@polkadot/wasm-crypto](https://github.com/polkadot-js/wasm/tree/master/packages/wasm-crypto) package:
-
-```ts
-// ./examples/customCrypto.ts
-
-import { createBlock } from '@tvmjs/block'
-import { Common, Mainnet } from '@tvmjs/common'
-import { keccak256, waitReady } from '@polkadot/wasm-crypto'
-
-const main = async () => {
-  // @polkadot/wasm-crypto specific initialization
-  await waitReady()
-
-  const common = new Common({ chain: Mainnet, customCrypto: { keccak256 } })
-  const block = createBlock({}, { common })
-
-  // Method invocations within TVMJS library instantiations where the common
-  // instance above is passed will now use the custom keccak_256 implementation
-  console.log(block.hash())
-}
-
-void main()
-
-```
-
-### Example 2: KZG
-
-The KZG library used for EIP-4844 Blob Transactions is initialized by `common` under the `common.customCrypto` property and is then used throughout the `Ethereumjs` stack wherever KZG cryptography is required. Below is an example of how to initialize (assuming you are using the `c-kzg` package as your KZG cryptography library).
-
-```ts
-// ./examples/initKzg.ts
-
-import { Common, Hardfork, Mainnet } from '@tvmjs/common'
-import { trustedSetup } from '@paulmillr/trusted-setups/fast-peerdas.js'
-import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
-
-const main = async () => {
-  const kzg = new microEthKZG(trustedSetup)
-  const common = new Common({
-    chain: Mainnet,
-    hardfork: Hardfork.Cancun,
-    customCrypto: { kzg },
-  })
-  console.log(common.customCrypto.kzg) // Should print the initialized KZG interface
-}
-
-void main()
-```
-
-## Browser
-
-We provide hybrid ESM/CJS builds for all our libraries. With the v10 breaking release round from Spring 2025 all libraries are "pure-JS" by default and we have eliminated all hard-wired WASM code. Additionally we have substantially lowered the bundle sizes, reduced the number of dependencies and cut out all usages of Node.js specific primitives (like the Node.js event emitter).
-
-It is easily possible to run a browser build of one of the TVMJS libraries within a modern browser using the provided ESM build. For a setup example see [./examples/browser.html](./examples/browser.html).
-
-## API
-
-### Docs
-
-See the API documentation for a full list of functions for accessing specific chain and
-dependent hardfork parameters. There are also additional helper functions like
-`paramByBlock (topic, name, blockNumber)` or `hardforkIsActiveOnBlock (hardfork, blockNumber)`
-to ease `blockNumber` based access to parameters.
-
-Generated TypeDoc API [Documentation](./docs/README.md)
-
-### Hybrid CJS/ESM Builds
-
-With the breaking releases from Summer 2023 we have started to ship our libraries with both CommonJS (`cjs` folder) and ESM builds (`esm` folder), see `package.json` for the detailed setup.
-
-If you use an ES6-style `import` in your code files from the ESM build will be used:
-
-```ts
-import { TVMJSClass } from '@tvmjs/[PACKAGE_NAME]'
-```
-
-If you use Node.js specific `require`, the CJS build will be used:
-
-```ts
-const { TVMJSClass } = require('@tvmjs/[PACKAGE_NAME]')
-```
-
-Using ESM will give you additional advantages over CJS beyond browser usage like static code analysis / Tree Shaking which CJS can not provide.
-
-## Events
-
-The `Common` class has a public property `events` which contains an `EventEmitter` (using [EventEmitter3](https://github.com/primus/eventemitter3)). Following events are emitted on which you can react within your code:
-
-| Event             | Description                                                |
-| ----------------- | ---------------------------------------------------------- |
-| `hardforkChanged` | Emitted when a hardfork change occurs in the Common object |
-
-### Chains and Genesis
-
-The `chain` can be set in the constructor like this:
-
-```ts
-import { Common, Mainnet } from '@tvmjs/common'
-const common = new Common({ chain: Mainnet })
-```
-
-Supported chains:
-
-- `mainnet` (`Mainnet`)
-- `sepolia` (`Sepolia`) (`v2.6.1`+)
-- `holesky` (`Holesky`) (`v4.1.0`+)
-- `hoodi` (`Hoodi`) (`v10+` (new versioning scheme))
-- `tron-mainnet` (`TronMainnet`, execution-only)
-- `tron-nile` (`TronNile`, execution-only)
-- `tron-shasta` (`TronShasta`, execution-only)
-- Private/custom chain parameters
-
-The TRON presets provide chainId and local execution settings only. They inherit unverified genesis,
-consensus, and hardfork data from the Mainnet execution baseline and intentionally contain no peer
-discovery data. Do not use them as complete node or production network configurations.
-
-Use these presets for `Common.chainId()`, the `CHAINID` opcode, and controlled local TVM/VM execution.
-Do not use them for TRON genesis validation, consensus or block validation, chain synchronization, or
-P2P network discovery.
-
-For TRON Mainnet execution, use `new Common({ chain: TronMainnet })`. The legacy 1.0.x form
-`new Common({ chain: Mainnet, hardfork: 'tron' })` remains accepted in 1.1.x and is normalized to
-`TronMainnet` (chainId 728126428). Plain `new Common({ chain: Mainnet })` remains Ethereum Mainnet.
-
-The following chain-specific parameters are provided:
-
-- `name`
-- `chainId`
-- `networkId`
-- `consensusType` (e.g. `pow` or `poa`)
-- `consensusAlgorithm` (e.g. `ethash` or `clique`)
-- `consensusConfig` (depends on `consensusAlgorithm`, e.g. `period` and `epoch` for `clique`)
-- `genesis` block header values
-- `hardforks` block numbers
-- `bootstrapNodes` list
-- `dnsNetworks` list ([EIP-1459](https://eips.ethereum.org/EIPS/eip-1459)-compliant list of DNS networks for peer discovery)
-
-To get an overview of the different parameters have a look at one of the chain configurations in the `chains.ts` configuration
-file, or to the `Chain` type in [./src/types.ts](./src/types.ts).
-
-### Working with Private/Custom Chains
-
-Starting with the `v10` release series using custom chain configurations has been simplified and consolidated in a single API `createCustomCommon()`. This constructor can be used both to make simple chain ID adjustments and keep the rest of the config conforming to a given "base chain":
-
-```ts
-import { createCustomCommon, Mainnet } from '@tvmjs/common'
- 
-createCustomCommon({chainId: 123}, Mainnet)
-```
-
-See the `Tx` library [README](https://github.com/tronweb3/tvmjs-monorepo/tree/master/packages/tx) for how to use such a `Common` instance in the context of sending txs to L2 networks.
-
-Beyond that, it is possible to customize to a fully custom chain by passing in a complete configuration object as first parameter:
-
-```ts
-// ./examples/customChain.ts
-
-import { Mainnet, createCustomCommon } from '@tvmjs/common'
-import { customChainConfig } from '@tvmjs/testdata'
-
-// Add custom chain config
-const common1 = createCustomCommon(customChainConfig, Mainnet)
-console.log(`Common is instantiated with custom chain parameters - ${common1.chainName()}`)
-
-```
-
-#### Initialize using Geth's genesis json
-
-For lots of custom chains (e.g., devnets and testnets), you might come across a genesis json config which
-has both config specification for the chain as well as the genesis state specification. You can derive the
-common from such configuration in the following manner:
-
-```ts
-// ./examples/fromGeth.ts
-
-import { createCommonFromGethGenesis } from '@tvmjs/common'
-import { postMergeGethGenesis } from '@tvmjs/testdata'
-import { hexToBytes } from '@tvmjs/util'
-
-const genesisHash = hexToBytes('0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a')
-// Load geth genesis JSON file into lets say `genesisJSON` and optional `chain` and `genesisHash`
-const common = createCommonFromGethGenesis(postMergeGethGenesis, {
-  chain: 'customChain',
-  genesisHash,
+import { Common, TronNile } from '@tvmjs/common'
+
+const common = new Common({
+  chain: TronNile,
+  activatedProposals: [95, 96],
+  eips: [7939],
 })
-// If you don't have `genesisHash` while initiating common, you can later configure common (for e.g.
-// after calculating it via `blockchain`)
-common.setForkHashes(genesisHash)
-
-console.log(`The London forkhash for this custom chain is ${common.forkHash('london')}`)
-
+console.log(common.isActivatedProposal(96)) // true
+console.log(common.isActivatedEIP(7939)) // true
 ```
 
-## Hardfork Support and Usage
+The configuration migration currently retains existing EIP-2929 access accounting. Its removal and java-tron Energy comparisons are a separate v1.2.0 development stage; this configuration change does not claim complete Gas alignment.
 
-The `hardfork` can be set in constructor like this:
+## Execution presets and network metadata
+
+`TronExecutionChainConfig` contains execution settings without `genesis` or `consensus`. `NetworkChainConfig` describes explicitly supplied network metadata. No TRON preset inherits Ethereum genesis, Ethash, Casper, discovery records or fork hashes.
 
 ```ts
-// ./examples/common.ts#L1-L4
+import { Common, TronMainnet } from '@tvmjs/common'
 
-import { Common, Hardfork, Mainnet, createCustomCommon } from '@tvmjs/common'
-
-// With enums:
-const commonWithEnums = new Common({ chain: Mainnet, hardfork: Hardfork.Cancun })
+const common = new Common({ chain: TronMainnet })
+console.log(common.hasGenesis()) // false
+console.log(common.hasConsensus()) // false
 ```
 
-### Active Hardforks
+`genesis()`, `consensusType()`, `consensusAlgorithm()` and `consensusConfig()` throw a metadata error when the corresponding data was not supplied. VM/TVM execution and execution block contexts work without it. Creating a `Blockchain` requires an explicit genesis block or network genesis metadata; enabling consensus validation additionally requires explicit consensus metadata and an implementation. This library does not provide a TRON node consensus implementation.
 
-There are currently parameter changes by the following past and future hardforks
-supported by the library:
+Ethereum fork-hash operations and creating execution configuration from Geth genesis are unsupported. Legacy preset constants and raw parsing helpers may remain available during migration, but they do not enable Ethereum execution.
 
-- `chainstart` (`Hardfork.Chainstart`)
-- `homestead` (`Hardfork.Homestead`)
-- `dao` (`Hardfork.Dao`)
-- `tangerineWhistle` (`Hardfork.TangerineWhistle`)
-- `spuriousDragon` (`Hardfork.SpuriousDragon`)
-- `byzantium` (`Hardfork.Byzantium`)
-- `constantinople` (`Hardfork.Constantinople`)
-- `petersburg` (`Hardfork.Petersburg`) (aka `constantinopleFix`, apply together with `constantinople`)
-- `istanbul` (`Hardfork.Istanbul`)
-- `muirGlacier` (`Hardfork.MuirGlacier`)
-- `berlin` (`Hardfork.Berlin`) (since `v2.2.0`)
-- `london` (`Hardfork.London`) (since `v2.4.0`)
-- `merge` (`Hardfork.Merge`) (since `v2.5.0`)
-- `shanghai` (`Hardfork.Shanghai`) (since `v3.1.0`)
-- `cancun` (`Hardfork.Cancun`) (since `v4.2.0`)
-- `prague` (`Hardfork.Prague`) (`DEFAULT_HARDFORK`) (since `v10`)
-- `osaka` (`Hardfork.Osaka`) (since `v10.1.0`)
-- `amsterdam` (`Hardfork.Amsterdam`) (IN DEVELOPMENT)
+`parseGethGenesis()` explicitly rejects `blobSchedule`, including empty schedules and entries named `tron`. Other supported genesis fields can still be parsed as raw data.
 
-### Future Hardforks
+## Parameters
 
-The next upcoming HF `Hardfork.Amsterdam` is currently in development (started January 2026).
-
-### Parameter Access
-
-For hardfork-specific parameter access with the `param()` and `paramByBlock()` functions
-you can use the following `topics`:
-
-- `gasConfig`
-- `gasPrices`
-- `vm`
-- `pow`
-- `sharding`
-
-See one of the hardfork configurations in the `hardforks.ts` file
-for an overview. For consistency, the chain start (`chainstart`) is considered an own
-hardfork.
-
-## Supported EIPs
-
-EIPs are native citizens within the library and can be activated like this:
+Execution packages register their parameter dictionaries with Common. Parameters are merged in the explicit order in `tronExecutionProfile.eips`, followed by the `tron` parameter group and explicitly enabled EIPs.
 
 ```ts
-const common = new Common({ chain: Mainnet, hardfork: Hardfork.Cancun, eips: [7702] })
+import { Common, TronMainnet } from '@tvmjs/common'
+
+const common = new Common({
+  chain: TronMainnet,
+  params: { tron: { exampleLimit: 64 } },
+})
+console.log(common.param('exampleLimit')) // 64n
+common.updateParams({ tron: { exampleLimit: 128 } })
+console.log(common.paramByHardfork('exampleLimit', 'tron')) // 128n
 ```
 
-The following EIPs are currently supported:
+`updateParams()` merges dictionaries; `resetParams()` replaces them. `paramByEIP()` uses the same supported EIP set as `setEIPs()`. It can read parameters for a supported optional EIP before activation, and querying does not activate that EIP. Retired EIPs are rejected even if their parameter dictionaries were supplied. `paramByHardfork()` accepts the TRON profile, while `paramByBlock()` uses the same profile for the supplied context. Missing parameters throw.
 
-- [EIP-1153](https://eips.ethereum.org/EIPS/eip-1153) - Transient storage opcodes (Cancun)
-- [EIP-1559](https://eips.ethereum.org/EIPS/eip-1559) - Fee market change for ETH 1.0 chain
-- [EIP-2537](https://eips.ethereum.org/EIPS/eip-2537) - Precompile for BLS12-381 curve operations (Prague)
-- [EIP-2565](https://eips.ethereum.org/EIPS/eip-2565) - ModExp gas cost
-- [EIP-2718](https://eips.ethereum.org/EIPS/eip-2718) - Transaction Types
-- [EIP-2935](https://eips.ethereum.org/EIPS/eip-2935) - Serve historical block hashes in state (Prague)
-- [EIP-2929](https://eips.ethereum.org/EIPS/eip-2929) - gas cost increases for state access opcodes
-- [EIP-2930](https://eips.ethereum.org/EIPS/eip-2930) - Optional access list tx type
-- [EIP-3074](https://eips.ethereum.org/EIPS/eip-3074) - AUTH and AUTHCALL opcodes
-- [EIP-3198](https://eips.ethereum.org/EIPS/eip-3198) - Base fee Opcode
-- [EIP-3529](https://eips.ethereum.org/EIPS/eip-3529) - Reduction in refunds
-- [EIP-3541](https://eips.ethereum.org/EIPS/eip-3541) - Reject new contracts starting with the 0xEF byte
-- [EIP-3554](https://eips.ethereum.org/EIPS/eip-3554) - Difficulty Bomb Delay to December 2021 (only PoW networks)
-- [EIP-3607](https://eips.ethereum.org/EIPS/eip-3607) - Reject transactions from senders with deployed code
-- [EIP-3651](https://eips.ethereum.org/EIPS/eip-3651) - Warm COINBASE (Shanghai)
-- [EIP-3675](https://eips.ethereum.org/EIPS/eip-3675) - Upgrade consensus to Proof-of-Stake
-- [EIP-3855](https://eips.ethereum.org/EIPS/eip-3855) - Push0 opcode (Shanghai)
-- [EIP-3860](https://eips.ethereum.org/EIPS/eip-3860) - Limit and meter initcode (Shanghai)
-- [EIP-4345](https://eips.ethereum.org/EIPS/eip-4345) - Difficulty Bomb Delay to June 2022
-- [EIP-4399](https://eips.ethereum.org/EIPS/eip-4399) - Supplant DIFFICULTY opcode with PREVRANDAO (Merge)
-- [EIP-4788](https://eips.ethereum.org/EIPS/eip-4788) - Beacon block root in the TVM (Cancun)
-- [EIP-4844](https://eips.ethereum.org/EIPS/eip-4844) - Shard Blob Transactions (Cancun)
-- [EIP-4895](https://eips.ethereum.org/EIPS/eip-4895) - Beacon chain push withdrawals as operations (Shanghai)
-- [EIP-5133](https://eips.ethereum.org/EIPS/eip-5133) - Delaying Difficulty Bomb to mid-September 2022 (Gray Glacier)
-- [EIP-5656](https://eips.ethereum.org/EIPS/eip-5656) - MCOPY - Memory copying instruction (Cancun)
-- [EIP-6110](https://eips.ethereum.org/EIPS/eip-6110) - Supply validator deposits on chain (Prague)
-- [EIP-6780](https://eips.ethereum.org/EIPS/eip-6780) - SELFDESTRUCT only in same transaction (Cancun)
-- [EIP-7002](https://eips.ethereum.org/EIPS/eip-7002) - Execution layer triggerable exits (Prague)
-- [EIP-7251](https://eips.ethereum.org/EIPS/eip-7251) - Increase the MAX_EFFECTIVE_BALANCE (Prague)
-- [EIP-7516](https://eips.ethereum.org/EIPS/eip-7516) - BLOBBASEFEE opcode (Cancun)
-- [EIP-7623](https://eips.ethereum.org/EIPS/eip-7623) - Increase calldata cost (Prague)
-- [EIP-7685](https://eips.ethereum.org/EIPS/eip-7685) - General purpose execution layer requests (Prague)
-- [EIP-7691](https://eips.ethereum.org/EIPS/eip-7691) - Blob throughput increase (Prague)
-- [EIP-7692](https://eips.ethereum.org/EIPS/eip-7692) - TVM Object Format (EOF) v1 (`experimental`)
-- [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702) - Set EOA account code (Prague)
-- [EIP-7709](https://eips.ethereum.org/EIPS/eip-7709) - Read BLOCKHASH from storage and update cost (Verkle)
-- [EIP-7918](https://eips.ethereum.org/EIPS/eip-7918) - Blob base fee bounded by execution cost (Osaka)
-- [EIP-7928](https://eips.ethereum.org/EIPS/eip-7928) - Block Level Access Lists (Amsterdam) (IN DEVELOPMENT)
+## Custom networks and cryptography
+
+```ts
+import { TronMainnet, createCustomCommon } from '@tvmjs/common'
+
+const common = createCustomCommon({ name: 'private-tron', chainId: 123 }, TronMainnet)
+console.log(common.chainId()) // 123n
+```
+
+Custom networks use the TRON profile. Supply parameter overrides, supported explicit capabilities and governance flags through the corresponding options. Custom Ethereum hardfork dictionaries are rejected.
+
+`customCrypto` continues to support alternative hashing and signing primitives. See [the custom crypto example](./examples/customCrypto.ts). `copy()` isolates parameter dictionaries, proposal state, EIP selections and network metadata; crypto function references are preserved and event listeners are not copied.
+
+## VM/TVM configuration consistency
+
+When `common`, `tvmOpts.common` or `tvm.common` are supplied together, VM checks for conflicting network IDs, capabilities, proposals, crypto functions and supplied active parameter values. Equivalent configurations are accepted and the VM and TVM share the selected Common instance. Parameter defaults are checked again after initialization.
+
+## Builds and development
+
+ES modules, CommonJS and browser builds are supported. The repository validation environment is Node `20.20.0` and npm `10.8.2`.
+
+```sh
+npm run test:node --workspace @tvmjs/common
+npm run examples --workspace @tvmjs/common
+```
 
 ## Upstream
 
-This package is part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, a TypeScript implementation of the TRON Virtual Machine (TVM) forked from the [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo) monorepo. We gratefully acknowledge the EthereumJS team for building and maintaining the original implementation.
+This package is derived from EthereumJS Common and retains shared algorithms and parameter dictionaries needed by TVMJS.
 
-For development information, see the [developer docs](../../DEVELOPER.md) and our [code of conduct](../../CODE_OF_CONDUCT.md).
 ## License
 
-[MIT](https://opensource.org/licenses/MIT)
-
-This package is derived from the original [@ethereumjs](https://github.com/ethereumjs/ethereumjs-monorepo) implementation, licensed under MPL-2.0. All original source files retain their MPL-2.0 license.
+[MIT](./LICENSE)

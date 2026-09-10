@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Breaking Changes
+
+- Default transaction configuration to `TronMainnet` and use the TRON capability matrix for legacy signature and replay-protection behavior. Pass the intended network's Common explicitly when constructing and signing transactions.
+
 ### Fixes
 
 - Do not apply Ethereum EIP-3860 initcode-size validation or word metering when constructing transactions for a TRON chain profile, independently of the selected hardfork
