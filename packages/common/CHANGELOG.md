@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Change `StateManagerInterface.tokenIdExists()` to take an exact `bigint` TRC-10 token ID.
 - Disable EIP-2929 access pricing, EIP-3529 refunds and EIP-3651 warming in the TRON profile, including explicit reactivation attempts. Retain EIP-2930 for transaction encoding.
 - Restrict Common to the independent TRON execution profile and explicit capability matrix. Reject Ethereum presets, hardfork schedules, unsupported EIPs and the legacy implicit `Mainnet + tron` mapping.
 - Remove inherited Ethereum genesis, consensus and fork metadata from TRON presets. Add `TronExecutionChainConfig`, `NetworkChainConfig`, `hasGenesis()` and `hasConsensus()`; missing metadata queries and Ethereum fork-hash operations now throw.

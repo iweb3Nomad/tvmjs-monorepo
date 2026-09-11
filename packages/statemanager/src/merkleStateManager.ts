@@ -16,6 +16,7 @@ import {
   isDebugEnabled,
   short,
   toBytes,
+  tokenIdFromKey,
   unpadBytes,
   unprefixedHexToBytes,
   utf8ToBytes,
@@ -67,10 +68,10 @@ export class MerkleStateManager implements StateManagerInterface {
   protected readonly _prefixCodeHashes: boolean
   protected readonly _prefixStorageTrieKeys: boolean
 
-  // _tokenIds only update once
-  protected _tokenIds: Map<number, bigint>
-  protected _tokenIdsCache: Map<number, bigint>
-  protected _tokenIdsCacheStack: Map<number, bigint>[]
+  // _tokenIds only update once. Keys are exact TRC-10 token IDs.
+  protected _tokenIds: Map<bigint, bigint>
+  protected _tokenIdsCache: Map<bigint, bigint>
+  protected _tokenIdsCacheStack: Map<bigint, bigint>[]
 
   public readonly common: Common
 
@@ -153,9 +154,8 @@ export class MerkleStateManager implements StateManagerInterface {
       )
     }
     if (account !== undefined) {
-      for (const _ in account.asset) {
-        const tokenId = Number(_)
-        const value = account.asset[tokenId]
+      for (const [key, value] of Object.entries(account.asset)) {
+        const tokenId = tokenIdFromKey(key)
         if (!this._tokenIds.has(tokenId)) {
           const total = this._tokenIdsCache.get(tokenId) ?? BIGINT_0
           this._tokenIdsCache.set(tokenId, value + total)
@@ -199,9 +199,8 @@ export class MerkleStateManager implements StateManagerInterface {
     }
     const account = await this.getAccount(address)
     if (account) {
-      for (const _ in account.asset) {
-        const tokenId = Number(_)
-        const value = account.asset[tokenId]
+      for (const [key, value] of Object.entries(account.asset)) {
+        const tokenId = tokenIdFromKey(key)
         if (this._tokenIdsCache.has(tokenId)) {
           const total = this._tokenIdsCache.get(tokenId) ?? BIGINT_0
           const cur = total - value
@@ -775,9 +774,9 @@ export class MerkleStateManager implements StateManagerInterface {
 
   /**
    * Checks whether the token ID exists
-   * @param tokenId - tokenId to check
+   * @param tokenId - exact TRC-10 token ID to check
    */
-  async tokenIdExists(tokenId: number): Promise<boolean> {
+  async tokenIdExists(tokenId: bigint): Promise<boolean> {
     if (this._tokenIds.has(tokenId)) return true
 
     if (this._tokenIdsCache.has(tokenId)) return true

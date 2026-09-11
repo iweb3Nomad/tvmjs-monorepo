@@ -1401,15 +1401,11 @@ export class Interpreter {
       const originalBalance = toAccount.balance
       toAccount.balance += contractBalance
       const fromAccount = (await this._stateManager.getAccount(this._env.address)) ?? new Account()
-      Object.keys(fromAccount.asset!).forEach((tokenId: string) => {
-        const tokenIdNumber = Number(tokenId)
-        const tokenBalance = fromAccount.asset![tokenIdNumber]
-        if (tokenBalance <= BIGINT_0) {
-          return
-        }
-        toAccount.asset![tokenIdNumber] =
-          (toAccount.asset![tokenIdNumber] ?? BIGINT_0) + tokenBalance
-      })
+      // Asset keys are canonical token ID strings; copy each balance by its exact ID.
+      for (const [tokenId, tokenBalance] of Object.entries(fromAccount.asset)) {
+        if (tokenBalance <= BIGINT_0) continue
+        toAccount.asset[tokenId] = (toAccount.asset[tokenId] ?? BIGINT_0) + tokenBalance
+      }
       await this.journal.putAccount(toAddress, toAccount)
       if (this.common.isActivatedEIP(7928)) {
         this._tvm.blockLevelAccessList!.addBalanceChange(

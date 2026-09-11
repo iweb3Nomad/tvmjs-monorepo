@@ -27,6 +27,7 @@ import {
   equalsBytes,
   hexToBytes,
   short,
+  tokenIdToKey,
 } from '@tvmjs/util'
 import debugDefault from 'debug'
 
@@ -764,19 +765,20 @@ async function _runTx(
     }
 
     if (tokenId !== BIGINT_0 && tokenValue > BIGINT_0) {
-      const tokenExists = await state.tokenIdExists(Number(tokenId))
+      const tokenExists = await state.tokenIdExists(tokenId)
       if (!tokenExists) {
         throw EthereumJSErrorWithoutCode('No asset !')
       }
 
       if (fromAccount.asset && Object.keys(fromAccount.asset).length !== 0) {
-        if (fromAccount.asset[Number(tokenId)] === undefined) {
+        const senderTokenBalance = fromAccount.asset[tokenIdToKey(tokenId)]
+        if (senderTokenBalance === undefined) {
           throw EthereumJSErrorWithoutCode('assetBalance must greater than 0.')
         }
-        if (fromAccount.asset[Number(tokenId)] === BIGINT_0) {
+        if (senderTokenBalance === BIGINT_0) {
           throw EthereumJSErrorWithoutCode('assetBalance must greater than 0.')
         }
-        if (fromAccount.asset[Number(tokenId)] < tokenValue) {
+        if (senderTokenBalance < tokenValue) {
           throw EthereumJSErrorWithoutCode('assetBalance is not sufficient.')
         }
       } else {

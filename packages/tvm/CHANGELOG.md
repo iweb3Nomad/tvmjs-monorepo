@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Read and write TRC-10 balances by exact token ID in CALLTOKEN, TOKENBALANCE, message transfers and SELFDESTRUCT instead of converting IDs to `Number`, so adjacent IDs above `2^53 - 1` keep separate balances.
 - Charge new-account Energy only for missing CALL/CALLTOKEN recipients with nonzero value. Keep existing empty accounts across transactions and avoid creating recipients on zero-value calls, preserving the execution account for explicit `runCall({ code })` overrides.
 - Keep access reporting independent of warming and retain version-0 forwarding, checkpoint rollback and unused callee Energy handling.
 - Add pinned source vectors and VM/TVM, storage, transfer, insufficient Energy and revert regressions.

@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Validate transaction TRC-10 token existence and the sender balance by exact token ID instead of a `Number` conversion.
 - Verify equal execution Energy and state changes through VM and direct TVM calls, including CALLTOKEN rollback and empty-recipient handling across transactions.
 - Match the pinned java-tron ChargeTest deployment cost without an extra memory/copy base fee.
 - Remove the redundant TRON hardfork guard from transaction ID fallback selection. Move transaction ID policy regressions into a standalone TRON suite covering hash fallback, explicit IDs and strict mode.

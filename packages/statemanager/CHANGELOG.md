@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Change `tokenIdExists()` to take an exact `bigint` TRC-10 token ID and track the MerkleStateManager token registry by `bigint`. Custom `StateManagerInterface` implementations must update the signature.
 - Default MerkleStateManager and RPCStateManager configuration to `TronMainnet`, matching VM/TVM and transaction defaults. Supply Common explicitly for other TRON networks.
 
 ### Fixes

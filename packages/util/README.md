@@ -91,6 +91,18 @@ const account = createPartialAccount({
 console.log(`Partial account with nonce=${account.nonce} and balance=${account.balance} created`)
 ```
 
+### TRC-10 balances
+
+`Account.asset` maps canonical decimal token ID strings to `bigint` balances. Use `tokenIdToKey()` to build keys and pass token IDs as `bigint` so IDs above `2^53 - 1` stay exact; `number` inputs are accepted only when they are safe integers. Assets are RLP-encoded in ascending numeric ID order.
+
+```ts
+import { createAccount, tokenIdToKey } from '@tvmjs/util'
+
+const account = createAccount({ asset: { [tokenIdToKey(9007199254740993n)]: 100n } })
+console.log(account.getTokenBalance(9007199254740993n)) // 100n
+console.log(account.getTokenBalance(9007199254740992n)) // 0n
+```
+
 ## Module: [address](src/address.ts)
 
 Class representing a TRON-compatible `Address` with instantiation helpers and validation methods.

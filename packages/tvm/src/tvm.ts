@@ -18,6 +18,7 @@ import {
   generateTronCreateAddress,
   isDebugEnabled,
   short,
+  tokenIdToKey,
 } from '@tvmjs/util'
 import debugDefault from 'debug'
 import { EventEmitter } from 'eventemitter3'
@@ -1631,11 +1632,7 @@ export class TVM implements TVMInterface {
   }
 
   _getTokenBalance(account: Account, tokenId: bigint): bigint {
-    if (account.asset) {
-      return account.asset[Number(tokenId)] || BIGINT_0
-    }
-
-    return BIGINT_0
+    return account.getTokenBalance(tokenId)
   }
 
   protected async _reduceSenderTokenBalance(account: Account, message: Message): Promise<void> {
@@ -1644,7 +1641,7 @@ export class TVM implements TVMInterface {
       throw new TVMError(TVMError.errorMessages.INSUFFICIENT_TOKEN_BALANCE)
     }
     if (account.asset && message.tokenId !== BIGINT_0) {
-      account.asset[Number(message.tokenId)] = newBalance
+      account.asset[tokenIdToKey(message.tokenId)] = newBalance
     }
     const result = this.journal.putAccount(message.caller, account)
     debug(
@@ -1684,7 +1681,7 @@ export class TVM implements TVMInterface {
       throw new TVMError(TVMError.errorMessages.VALUE_OVERFLOW)
     }
     if (toAccount.asset && message.tokenId !== BIGINT_0) {
-      toAccount.asset[Number(message.tokenId)] = newBalance
+      toAccount.asset[tokenIdToKey(message.tokenId)] = newBalance
     }
     // putAccount as the nonce may have changed for contract creation
     await this.journal.putAccount(message.to, toAccount)

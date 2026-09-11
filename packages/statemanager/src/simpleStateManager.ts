@@ -159,7 +159,7 @@ export class SimpleStateManager implements StateManagerInterface {
   }
 
   // TODO TRON implement token in rpc state manager
-  async tokenIdExists(_tokenId: number): Promise<boolean> {
+  async tokenIdExists(_tokenId: bigint): Promise<boolean> {
     throw EthereumJSErrorWithoutCode('Method not implemented.')
   }
 }

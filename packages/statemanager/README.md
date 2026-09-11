@@ -167,6 +167,8 @@ void main()
 
 The `SimpleStateManager` is a dependency-minimized simple state manager implementation. While this state manager implementation lacks the implementations of some non-core functionality as well as proof related logic (e.g. `setStateRoot()`) it is suitable for a lot use cases where things like sophisticated caching or state root handling is not needed.
 
+TRC-10 token IDs are exact `bigint` values throughout the `StateManagerInterface`: `tokenIdExists(tokenId: bigint)` replaces the former `number` parameter, and `Account.asset` is keyed by canonical decimal ID strings (see `tokenIdToKey()` in `@tvmjs/util`). Custom state manager implementations must update the `tokenIdExists()` signature and must not convert token IDs to `Number`, which merges IDs above `2^53 - 1`.
+
 This state manager can be instantiated and used as follows:
 
 ```ts
