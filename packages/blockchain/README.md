@@ -1,5 +1,7 @@
 # @tvmjs/blockchain `1.0.1`
 
+v1.2.0 removes Blob validation and parent-header Blob accounting. Blob blocks are rejected by block construction; ordinary chain storage and fork choice keep their existing behavior. See [Blob migration and affected packages](../common/README.md#blob-removal-in-v120).
+
 | A module to store and interact with TRON-compatible blocks. Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |
 
@@ -23,7 +25,6 @@ To obtain the latest version, simply install the project using `npm`:
 npm install @tvmjs/blockchain
 ```
 
-**Note:** If you want to work with `EIP-4844` related functionality, you will have additional initialization steps for the **KZG setup**, see related section below.
 
 ## Getting Started
 
@@ -167,14 +168,6 @@ The genesis block from the initialized `Blockchain` can be retrieved via the `Bl
 ### EIP-1559 Support
 
 This library supports the handling of `EIP-1559` blocks and transactions.
-
-### EIP-4844 Shard Blob Transactions Support
-
-This library supports the blob transaction type introduced with [EIP-4844](https://eips.ethereum.org/EIPS/eip-4844).
-
-The blockchain library now allows for blob transactions to be validated and included in a chain where EIP-4844 activated either by hardfork or standalone EIP.
-
-**Note:** Working with blob transactions needs a manual KZG library installation and global initialization, see [KZG Setup](https://github.com/tronweb3/tvmjs-monorepo/tree/master/packages/tx/README.md#kzg-setup) for instructions.
 
 ### EIP-7685 Requests Support
 

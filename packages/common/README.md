@@ -68,7 +68,27 @@ console.log(common.hasConsensus()) // false
 
 Ethereum fork-hash operations and creating execution configuration from Geth genesis are unsupported. Legacy preset constants and raw parsing helpers may remain available during migration, but they do not enable Ethereum execution.
 
-`parseGethGenesis()` explicitly rejects `blobSchedule`, including empty schedules and entries named `tron`. Other supported genesis fields can still be parsed as raw data.
+`parseGethGenesis()` explicitly rejects `blobSchedule`, `blobGasUsed` and `excessBlobGas`, including empty schedules and entries named `tron`. Other supported genesis fields can still be parsed as raw data.
+
+## Blob removal in v1.2.0
+
+Blob support has been physically removed from this development branch. EIPs 4844, 7516, 7594, 7691, 7892 and 7918 cannot be activated. This is a breaking API change across the following packages:
+
+| Package | Removed APIs and behavior |
+| --- | --- |
+| `@tvmjs/common` | `getBlobGasSchedule()`, `BpoSchedule`, `GethGenesisBlobSchedule`, `CustomCrypto.kzg`, and Blob genesis fields. |
+| `@tvmjs/tx` | `Blob4844Tx`, `TransactionType.BlobEIP4844`, Blob constructors and type guards, network wrappers, `NetworkWrapperType`, and Blob data/JSON/RLP interfaces. |
+| `@tvmjs/block` | `blobGasUsed`, `excessBlobGas`, `getBlobGasPrice()`, `calcDataFee()`, `calcNextExcessBlobGas()`, `calcNextBlobGasPrice()`, and `validateBlobTransactions()`. |
+| `@tvmjs/blockchain` | Blob validation and parent-header Blob accounting. |
+| `@tvmjs/tvm` | BLOBHASH (`0x49`), BLOBBASEFEE (`0x4a`), `blobVersionedHashes` execution/message context, `blobGasUsed` results, `getBlobBaseFee()`, and KZG precompile errors. TRON's multi-sign precompile remains at `0x0a`. |
+| `@tvmjs/vm` | Blob fees/results/receipts, `EIP4844BlobTxReceipt`, `BlockBuilder.blobGasUsed`, `addTransaction({ allowNoBlobs })`, and the last two Blob arguments of `generateTxReceipt()` (now four arguments). |
+| `@tvmjs/util` | The `blobs` and `kzg` modules: `KZG`, `CELLS_PER_EXT_BLOB`, `getBlob`, `getBlobs`, `computeVersionedHash`, `commitmentsToVersionedHashes`, and all `blobsTo*` helpers. |
+
+Remove Blob options and KZG initialization from ordinary TRON execution calls. Explicitly supplied retired fields, including zero, empty arrays, `null` and `undefined`, now throw instead of being discarded. Transaction type `0x03` is rejected by object, RPC, RLP and block-body entry points; do not relabel a Blob transaction as another transaction type. Existing Legacy (`0x00`), EIP-2930 (`0x01`) and EIP-1559 (`0x02`) type numbers and encodings are unchanged.
+
+Ordinary TRON execution headers keep their existing 16-field RLP order. Old extended headers containing Blob positions are rejected rather than shifted into later Ethereum fields. The Beacon payload data converter remains available for supported fields and rejects both snake-case and camel-case Blob gas fields before conversion.
+
+The dedicated `kzg-wasm`, `micro-eth-signer` and `@paulmillr/trusted-setups` dependencies and their examples have been removed. Rebuild all affected workspaces together. When upgrading an existing checkout, use a clean build so obsolete Blob files from earlier builds are not included in package artifacts.
 
 ## Parameters
 

@@ -6,7 +6,7 @@ import {
   type TVM,
   createEIP7708SelfdestructLog,
 } from '@tvmjs/tvm'
-import { Capability, isBlob4844Tx } from '@tvmjs/tx'
+import { Capability } from '@tvmjs/tx'
 import {
   Account,
   Address,
@@ -49,7 +49,6 @@ import type {
 import type {
   AfterTxEvent,
   BaseTxReceipt,
-  EIP4844BlobTxReceipt,
   PostByzantiumTxReceipt,
   PreByzantiumTxReceipt,
   RunTxOpts,
@@ -368,6 +367,16 @@ async function updateMinerBalance(
  * @ignore
  */
 export async function runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
+  if (Number(opts.tx.type) === 3) {
+    throw EthereumJSErrorWithoutCode('Blob transaction type 0x03 is no longer supported')
+  }
+  if (opts.block) {
+    for (const field of ['blobGasUsed', 'excessBlobGas', 'getBlobGasPrice']) {
+      if (field in opts.block.header) {
+        throw EthereumJSErrorWithoutCode(`Blob block context field ${field} is no longer supported`)
+      }
+    }
+  }
   const tronTransactionIdPolicy = validateTronTransactionIdPolicy(opts.tronTransactionIdPolicy)
   const rootTransactionId =
     opts.rootTransactionId ??
@@ -680,39 +689,13 @@ async function _runTx(
     }
   }
 
-  // Check balance against max potential cost (for EIP 1559 and 4844)
+  // Check balance against max potential cost (for EIP-1559)
   let maxCost = tx.value
-  let blobGasPrice = BIGINT_0
-  let totalblobGas = BIGINT_0
   if (tx.supports(Capability.EIP1559FeeMarket)) {
     // EIP-1559 spec:
     // The signer must be able to afford the transaction
     // `assert balance >= gas_limit * max_fee_per_gas`
     maxCost += tx.gasLimit * (tx as FeeMarket1559Tx).maxFeePerGas
-  }
-
-  if (isBlob4844Tx(tx)) {
-    if (!vm.common.isActivatedEIP(4844)) {
-      const msg = _errorMsg('blob transactions are only valid with EIP4844 active', vm, block, tx)
-      throw EthereumJSErrorWithoutCode(msg)
-    }
-    // EIP-4844 spec
-    // the signer must be able to afford the transaction
-    // assert signer(tx).balance >= tx.message.gas * tx.message.max_fee_per_gas + get_total_data_gas(tx) * tx.message.max_fee_per_data_gas
-    totalblobGas = vm.common.param('blobGasPerBlob') * BigInt(tx.numBlobs())
-    maxCost += totalblobGas * tx.maxFeePerBlobGas
-
-    // 4844 minimum blobGas price check
-    blobGasPrice = opts.block?.header.getBlobGasPrice() ?? DEFAULT_HEADER.getBlobGasPrice()
-    if (tx.maxFeePerBlobGas < blobGasPrice) {
-      const msg = _errorMsg(
-        `Transaction's maxFeePerBlobGas ${tx.maxFeePerBlobGas}) is less than block blobGasPrice (${blobGasPrice}).`,
-        vm,
-        block,
-        tx,
-      )
-      throw EthereumJSErrorWithoutCode(msg)
-    }
   }
 
   if (fromAccount.balance < maxCost) {
@@ -819,20 +802,12 @@ async function _runTx(
     }
   }
 
-  // EIP-4844 tx
-  let blobVersionedHashes
-  if (isBlob4844Tx(tx)) {
-    blobVersionedHashes = tx.blobVersionedHashes
-  }
-
   // ===========================
   // STATE UPDATE: Deduct Costs
   // ===========================
   const txCost = tx.gasLimit * gasPrice
-  const blobGasCost = totalblobGas * blobGasPrice
   const senderOriginalBalance = fromAccount.balance
   fromAccount.balance -= txCost
-  fromAccount.balance -= blobGasCost
   if (opts.skipBalance === true && fromAccount.balance < BIGINT_0) {
     fromAccount.balance = BIGINT_0
   }
@@ -888,7 +863,6 @@ async function _runTx(
     tokenId,
     tokenValue,
     data,
-    blobVersionedHashes,
     accessWitness: txAccesses,
     rootTransactionId,
   })) as RunTxResult
@@ -928,11 +902,6 @@ async function _runTx(
   results.totalGasSpent = totalGasSpentBeforeRefund
   if (vm.DEBUG) {
     debugGas(`tx add baseFee ${intrinsicGas} to totalGasSpent (-> ${results.totalGasSpent})`)
-  }
-
-  // Add blob gas used to result
-  if (isBlob4844Tx(tx)) {
-    results.blobGasUsed = totalblobGas
   }
 
   // Process any gas refund
@@ -1072,14 +1041,7 @@ async function _runTx(
   // ===========================
   const gasUsed = opts.blockGasUsed ?? block?.header.gasUsed ?? DEFAULT_HEADER.gasUsed
   const cumulativeGasUsed = gasUsed + results.totalGasSpent
-  results.receipt = await generateTxReceipt(
-    vm,
-    tx,
-    results,
-    cumulativeGasUsed,
-    totalblobGas,
-    blobGasPrice,
-  )
+  results.receipt = await generateTxReceipt(vm, tx, results, cumulativeGasUsed)
 
   if (enableProfiler) {
     // eslint-disable-next-line no-console
@@ -1133,16 +1095,12 @@ function txLogsBloom(logs?: any[], common?: Common): Bloom {
  * @param tx The transaction
  * @param txResult The tx result
  * @param cumulativeGasUsed The gas used in the block including vm tx
- * @param blobGasUsed The blob gas used in the tx
- * @param blobGasPrice The blob gas price for the block including vm tx
  */
 export async function generateTxReceipt(
   vm: VM,
   tx: TypedTransaction,
   txResult: RunTxResult,
   cumulativeGasUsed: bigint,
-  blobGasUsed?: bigint,
-  blobGasPrice?: bigint,
 ): Promise<TxReceipt> {
   const baseReceipt: BaseTxReceipt = {
     cumulativeBlockGasUsed: cumulativeGasUsed,
@@ -1178,20 +1136,10 @@ export async function generateTxReceipt(
       } as PreByzantiumTxReceipt
     }
   } else {
-    // Typed EIP-2718 Transaction
-    if (isBlob4844Tx(tx)) {
-      receipt = {
-        blobGasUsed,
-        blobGasPrice,
-        status: txResult.execResult.exceptionError ? 0 : 1,
-        ...baseReceipt,
-      } as EIP4844BlobTxReceipt
-    } else {
-      receipt = {
-        status: txResult.execResult.exceptionError ? 0 : 1,
-        ...baseReceipt,
-      } as PostByzantiumTxReceipt
-    }
+    receipt = {
+      status: txResult.execResult.exceptionError ? 0 : 1,
+      ...baseReceipt,
+    } as PostByzantiumTxReceipt
   }
   return receipt
 }

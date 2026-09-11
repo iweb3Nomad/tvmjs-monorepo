@@ -329,12 +329,6 @@ const eipOpcodes: { eip: number; opcodes: OpcodeEntry }[] = [
     },
   },
   {
-    eip: 4844,
-    opcodes: {
-      0x49: defaultOp('BLOBHASH'),
-    },
-  },
-  {
     eip: 5656,
     opcodes: {
       0x5e: dynamicGasOp('MCOPY'),
@@ -362,12 +356,6 @@ const eipOpcodes: { eip: number; opcodes: OpcodeEntry }[] = [
       0xd1: defaultOp('DATALOADN'),
       0xd2: defaultOp('DATASIZE'),
       0xd3: dynamicGasOp('DATACOPY'),
-    },
-  },
-  {
-    eip: 7516,
-    opcodes: {
-      0x4a: defaultOp('BLOBBASEFEE'),
     },
   },
   {

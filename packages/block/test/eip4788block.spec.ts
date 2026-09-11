@@ -25,26 +25,9 @@ describe('EIP4788 header tests', () => {
       'should throw when setting parentBeaconBlockRoot with EIP4788 not being activated',
     )
 
-    assert.throws(
-      () => {
-        createBlockHeader(
-          {
-            blobGasUsed: 1n,
-          },
-          {
-            common: earlyCommon,
-          },
-        )
-      },
-      'blob gas used can only be provided with EIP4844 activated',
-      undefined,
-      'should throw when setting blobGasUsed with EIP4844 not being activated',
-    )
     assert.doesNotThrow(() => {
       createBlockHeader(
         {
-          excessBlobGas: 0n,
-          blobGasUsed: 0n,
           parentBeaconBlockRoot: new Uint8Array(32),
         },
         {
@@ -63,7 +46,7 @@ describe('EIP4788 header tests', () => {
     assert.strictEqual(
       block.toJSON().header?.parentBeaconBlockRoot,
       bytesToHex(new Uint8Array(32)),
-      'JSON output includes excessBlobGas',
+      'JSON output includes parentBeaconBlockRoot',
     )
   })
 })

@@ -59,9 +59,7 @@
     "@noble/hashes": "2.0.1"
   },
   "devDependencies": {
-    "@tvmjs/testdata": "1.0.0",
-    "@paulmillr/trusted-setups": "0.2.0",
-    "micro-eth-signer": "0.15.0"
+    "@tvmjs/testdata": "1.0.0"
   },
   "engines": {
     "node": ">=20"

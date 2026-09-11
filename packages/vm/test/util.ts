@@ -4,7 +4,6 @@ import { Common, Hardfork, Mainnet, createCustomCommon } from '@tvmjs/common'
 import { RLP } from '@tvmjs/rlp'
 import {
   createAccessList2930Tx,
-  createBlob4844Tx,
   createEOACode7702Tx,
   createFeeMarket1559Tx,
   createLegacyTx,
@@ -31,7 +30,6 @@ import type { BlockOptions } from '@tvmjs/block'
 import type { StateManagerInterface } from '@tvmjs/common'
 import type {
   AccessList2930Tx,
-  Blob4844Tx,
   EOACode7702Tx,
   FeeMarket1559Tx,
   LegacyTx,
@@ -206,12 +204,15 @@ export function dumpState(state: any, cb: Function) {
  * Make a tx using JSON from tests repo
  * @param {Object} txData The tx object from tests repo
  * @param {TxOptions} opts Tx opts that can include an @tvmjs/common object
- * @returns {Blob4844Tx | FeeMarket1559Tx | AccessList2930Transaction | LegacyTx} Transaction to be passed to runTx() function
+ * @returns {FeeMarket1559Tx | AccessList2930Transaction | LegacyTx} Transaction to be passed to runTx() function
  */
 export function makeTx(
   txData: any,
   opts?: TxOptions,
-): EOACode7702Tx | Blob4844Tx | FeeMarket1559Tx | AccessList2930Tx | LegacyTx {
+): EOACode7702Tx | FeeMarket1559Tx | AccessList2930Tx | LegacyTx {
+  if (Number(txData.type) === 3) {
+    throw new Error('Blob transactions are no longer supported')
+  }
   let tx
   if (txData.authorizationList !== undefined) {
     // Convert `v` keys to `yParity`
@@ -233,8 +234,6 @@ export function makeTx(
       }
     }
     tx = createEOACode7702Tx(txData, opts)
-  } else if (txData.blobVersionedHashes !== undefined) {
-    tx = createBlob4844Tx(txData, opts)
   } else if (txData.maxFeePerGas !== undefined) {
     tx = createFeeMarket1559Tx(txData, opts)
   } else if (txData.accessLists !== undefined) {
@@ -293,6 +292,14 @@ export async function verifyPostConditions(state: any, testData: any, t: typeof 
 }
 
 export function makeParentBlockHeader(data: any, opts: BlockOptions) {
+  for (const field of [
+    'parentBlobGasUsed',
+    'parentExcessBlobGas',
+    'currentExcessBlobGas',
+    'currentBlobGasUsed',
+  ]) {
+    if (field in data) throw new Error(`Blob environment field ${field} is no longer supported`)
+  }
   const {
     parentGasLimit,
     parentGasUsed,
@@ -300,8 +307,6 @@ export function makeParentBlockHeader(data: any, opts: BlockOptions) {
     parentDifficulty,
     parentTimestamp,
     parentUncleHash,
-    parentBlobGasUsed,
-    parentExcessBlobGas,
     parentBeaconBlockRoot,
   } = data
   return createBlockHeader(
@@ -312,8 +317,7 @@ export function makeParentBlockHeader(data: any, opts: BlockOptions) {
       difficulty: parentDifficulty,
       timestamp: parentTimestamp,
       uncleHash: parentUncleHash,
-      blobGasUsed: parentBlobGasUsed,
-      excessBlobGas: parentExcessBlobGas,
+
       parentBeaconBlockRoot,
     },
     { common: opts.common },
@@ -328,7 +332,6 @@ export function makeBlockHeader(data: any, opts?: BlockOptions) {
     parentHash,
     currentCoinbase,
     currentDifficulty,
-    currentExcessBlobGas,
     currentNumber,
     currentBaseFee,
     currentRandom,
@@ -355,12 +358,7 @@ export function makeBlockHeader(data: any, opts?: BlockOptions) {
     ) as Uint8Array
     headerData['difficulty'] = 0
   }
-  if (opts?.common && opts.common.gteHardfork('cancun')) {
-    headerData['excessBlobGas'] = currentExcessBlobGas
-    if (currentExcessBlobGas === undefined) {
-      headerData['excessBlobGas'] = parentBlockHeader.calcNextExcessBlobGas(opts.common)
-    }
-  }
+
   return createBlockHeader(headerData, opts)
 }
 

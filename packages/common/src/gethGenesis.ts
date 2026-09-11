@@ -48,7 +48,6 @@ export interface GethGenesisConfig {
     signers: string[]
     threshold: number
   }
-  blobSchedule?: GethGenesisBlobSchedule
   proofInBlocks?: boolean
 }
 
@@ -65,23 +64,11 @@ export interface GethGenesisAlloc {
 }
 
 /**
- * Interface for blob schedule in Geth Genesis (EIP-7840)
- */
-export interface GethGenesisBlobSchedule {
-  [fork: string]: {
-    target?: number
-    max?: number
-    baseFeeUpdateFraction?: number
-  }
-}
-
-/**
  * Interface for Geth Genesis object
  */
 export interface GethGenesis {
   config: GethGenesisConfig
   name?: string
-  excessBlobGas?: string
   requestsHash?: string
   nonce: string
   timestamp: string

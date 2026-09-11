@@ -27,7 +27,7 @@ import {
   CLIQUE_EXTRA_VANITY,
   cliqueIsEpochTransition,
 } from '../consensus/clique.ts'
-import { computeBlobGasPrice } from '../helpers.ts'
+import { rejectBlobFields } from '../helpers.ts'
 import { paramsBlock } from '../params.ts'
 
 import type { BlockHeaderBytes, BlockOptions, HeaderData, JSONHeader } from '../types.ts'
@@ -59,8 +59,6 @@ export class BlockHeader {
   public readonly nonce: Uint8Array
   public readonly baseFeePerGas?: bigint
   public readonly withdrawalsRoot?: Uint8Array
-  public readonly blobGasUsed?: bigint
-  public readonly excessBlobGas?: bigint
   public readonly parentBeaconBlockRoot?: Uint8Array
   public readonly requestsHash?: Uint8Array
   public readonly blockAccessListHash?: Uint8Array
@@ -95,6 +93,7 @@ export class BlockHeader {
    *
    */
   constructor(headerData: HeaderData, opts: BlockOptions = {}) {
+    rejectBlobFields(headerData)
     if (opts.common) {
       this.common = opts.common.copy()
     } else {
@@ -162,8 +161,6 @@ export class BlockHeader {
           : BIGINT_7
         : undefined,
       withdrawalsRoot: this.common.isActivatedEIP(4895) ? KECCAK256_RLP : undefined,
-      blobGasUsed: this.common.isActivatedEIP(4844) ? BIGINT_0 : undefined,
-      excessBlobGas: this.common.isActivatedEIP(4844) ? BIGINT_0 : undefined,
       parentBeaconBlockRoot: this.common.isActivatedEIP(4788) ? new Uint8Array(32) : undefined,
       // Note: as of devnet-4 we stub the null SHA256 hash, but for devnet5 this will actually
       // be the correct hash for empty requests.
@@ -176,10 +173,6 @@ export class BlockHeader {
       toType(headerData.baseFeePerGas, TypeOutput.BigInt) ?? hardforkDefaults.baseFeePerGas
     const withdrawalsRoot =
       toType(headerData.withdrawalsRoot, TypeOutput.Uint8Array) ?? hardforkDefaults.withdrawalsRoot
-    const blobGasUsed =
-      toType(headerData.blobGasUsed, TypeOutput.BigInt) ?? hardforkDefaults.blobGasUsed
-    const excessBlobGas =
-      toType(headerData.excessBlobGas, TypeOutput.BigInt) ?? hardforkDefaults.excessBlobGas
     const parentBeaconBlockRoot =
       toType(headerData.parentBeaconBlockRoot, TypeOutput.Uint8Array) ??
       hardforkDefaults.parentBeaconBlockRoot
@@ -201,20 +194,6 @@ export class BlockHeader {
       throw EthereumJSErrorWithoutCode(
         'A withdrawalsRoot for a header can only be provided with EIP4895 being activated',
       )
-    }
-
-    if (!this.common.isActivatedEIP(4844)) {
-      if (blobGasUsed !== undefined) {
-        throw EthereumJSErrorWithoutCode(
-          'blob gas used can only be provided with EIP4844 activated',
-        )
-      }
-
-      if (excessBlobGas !== undefined) {
-        throw EthereumJSErrorWithoutCode(
-          'excess blob gas can only be provided with EIP4844 activated',
-        )
-      }
     }
 
     if (!this.common.isActivatedEIP(4788) && parentBeaconBlockRoot !== undefined) {
@@ -254,8 +233,6 @@ export class BlockHeader {
     this.nonce = nonce
     this.baseFeePerGas = baseFeePerGas
     this.withdrawalsRoot = withdrawalsRoot
-    this.blobGasUsed = blobGasUsed
-    this.excessBlobGas = excessBlobGas
     this.parentBeaconBlockRoot = parentBeaconBlockRoot
     this.requestsHash = requestsHash
     this.blockAccessListHash = blockAccessListHash
@@ -574,71 +551,6 @@ export class BlockHeader {
   }
 
   /**
-   * Returns the price per unit of blob gas for a blob transaction in the current/pending block
-   * @returns the price in gwei per unit of blob gas spent
-   */
-  getBlobGasPrice(): bigint {
-    if (this.excessBlobGas === undefined) {
-      throw EthereumJSErrorWithoutCode('header must have excessBlobGas field populated')
-    }
-    return computeBlobGasPrice(this.excessBlobGas, this.common)
-  }
-
-  /**
-   * Returns the total fee for blob gas spent for including blobs in block.
-   *
-   * @param numBlobs number of blobs in the transaction/block
-   * @returns the total blob gas fee for numBlobs blobs
-   */
-  calcDataFee(numBlobs: number): bigint {
-    const blobGasPerBlob = this.common.param('blobGasPerBlob')
-    const blobGasUsed = blobGasPerBlob * BigInt(numBlobs)
-
-    const blobGasPrice = this.getBlobGasPrice()
-    return blobGasUsed * blobGasPrice
-  }
-
-  /**
-   * Calculates the excess blob gas for next (hopefully) post EIP 4844 block.
-   */
-  public calcNextExcessBlobGas(childCommon: Common): bigint {
-    const excessBlobGas = this.excessBlobGas ?? BIGINT_0
-    const blobGasUsed = this.blobGasUsed ?? BIGINT_0
-
-    const { targetBlobGasPerBlock: targetPerBlock, maxBlobGasPerBlock: maxPerBlock } =
-      childCommon.getBlobGasSchedule()
-
-    // Early exit (strictly < per spec)
-    if (excessBlobGas + blobGasUsed < targetPerBlock) {
-      return BIGINT_0
-    }
-
-    // EIP-7918 reserve price check
-    if (childCommon.isActivatedEIP(7918)) {
-      const blobBaseCost = childCommon.param('blobBaseCost')
-      const gasPerBlob = childCommon.param('blobGasPerBlob')
-      const baseFee = this.baseFeePerGas ?? BIGINT_0
-      const blobFee = computeBlobGasPrice(excessBlobGas, childCommon)
-
-      if (blobBaseCost * baseFee > gasPerBlob * blobFee) {
-        const increase = (blobGasUsed * (maxPerBlock - targetPerBlock)) / maxPerBlock
-        return excessBlobGas + increase
-      }
-    }
-
-    // Original 4844 path
-    return excessBlobGas + blobGasUsed - targetPerBlock
-  }
-
-  /**
-   * Calculate the blob gas price of the block built on top of this one
-   * @returns The blob gas price
-   */
-  public calcNextBlobGasPrice(childCommon: Common): bigint {
-    return computeBlobGasPrice(this.calcNextExcessBlobGas(childCommon), childCommon)
-  }
-
-  /**
    * Returns a Uint8Array Array of the raw Bytes in this header, in order.
    */
   raw(): BlockHeaderBytes {
@@ -666,11 +578,6 @@ export class BlockHeader {
 
     if (this.common.isActivatedEIP(4895)) {
       rawItems.push(this.withdrawalsRoot!)
-    }
-
-    if (this.common.isActivatedEIP(4844)) {
-      rawItems.push(bigIntToUnpaddedBytes(this.blobGasUsed!))
-      rawItems.push(bigIntToUnpaddedBytes(this.excessBlobGas!))
     }
     if (this.common.isActivatedEIP(4788)) {
       rawItems.push(this.parentBeaconBlockRoot!)
@@ -813,10 +720,6 @@ export class BlockHeader {
     }
     if (this.common.isActivatedEIP(1559)) {
       JSONDict.baseFeePerGas = bigIntToHex(this.baseFeePerGas!)
-    }
-    if (this.common.isActivatedEIP(4844)) {
-      JSONDict.blobGasUsed = bigIntToHex(this.blobGasUsed!)
-      JSONDict.excessBlobGas = bigIntToHex(this.excessBlobGas!)
     }
     if (this.common.isActivatedEIP(4788)) {
       JSONDict.parentBeaconBlockRoot = bytesToHex(this.parentBeaconBlockRoot!)

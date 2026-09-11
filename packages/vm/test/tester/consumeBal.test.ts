@@ -3,7 +3,7 @@ import { assert, describe, it } from 'vitest'
 import path from 'path'
 
 import { keccak_256 } from '@noble/hashes/sha3.js'
-import { trustedSetup } from '@paulmillr/trusted-setups/fast-peerdas.js'
+
 import { createBlock } from '@tvmjs/block'
 import { createBlockchain } from '@tvmjs/blockchain'
 import {
@@ -13,7 +13,7 @@ import {
   hexToBytes,
   setLengthLeft,
 } from '@tvmjs/util'
-import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
+
 import { consumeBal } from '../../src/consumeBal.ts'
 import { createVM } from '../../src/index.ts'
 import { setupPreConditions } from '../util.ts'
@@ -22,26 +22,19 @@ import { createCommonForFork, loadExecutionSpecFixtures } from './executionSpecT
 const fixturesPath = path.resolve(
   '../execution-spec-tests/dev/blockchain_tests/amsterdam/v510_mixed_with_other_eips/blockchain_tests/eip7928_block_level_access_lists',
 )
-// Create KZG instance once at the top level (expensive operation)
-const kzg = new microEthKZG(trustedSetup)
 
 const fixtures = loadExecutionSpecFixtures(fixturesPath, 'blockchain_tests')
 
 describe('consumeBal', () => {
   for (const { id, fork, data } of fixtures) {
     it(`${fork}: ${id}`, async () => {
-      await consumeBalTestCase(fork, data, assert, kzg)
+      await consumeBalTestCase(fork, data, assert)
     })
   }
 })
 
-export async function consumeBalTestCase(
-  fork: string,
-  testData: any,
-  t: typeof assert,
-  kzg: microEthKZG,
-) {
-  const common = createCommonForFork(fork, testData, kzg)
+export async function consumeBalTestCase(fork: string, testData: any, t: typeof assert) {
+  const common = createCommonForFork(fork, testData)
   const genesisBlockData = { header: testData.genesisBlockHeader }
   const genesisBlock = createBlock(genesisBlockData, { common, setHardfork: true })
   const blockchain = await createBlockchain({

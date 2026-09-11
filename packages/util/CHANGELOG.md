@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove `blobs.ts`, `kzg.ts`, their public Blob/KZG helpers and dedicated crypto dependencies. Retire Blob examples and tests while retaining generic crypto and TRON address utilities.
 - Key TRC-10 balances in `Account.asset` by the canonical decimal string of the token ID and reject non-canonical keys, non-`bigint` or negative balances. Token IDs above `2^53 - 1` no longer collide: RLP decoding keeps exact integers, assets are serialized in ascending numeric ID order (unchanged for ordinary IDs) and `getTokenBalance()` accepts a `bigint` or safe-integer `number`. Add `tokenIdToKey()`, `tokenIdFromKey()`, `AssetBalances` and `TokenIdLike`.
 
 ### Bug Fixes

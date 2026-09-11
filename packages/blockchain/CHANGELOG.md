@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove Blob parent-header and block transaction accounting; preserve ordinary header validation and canonical-chain selection.
 - Default to `TronMainnet` and require an explicit genesis block or network genesis metadata. Reject mismatched genesis chainIds and consensus validation without explicit network metadata.
 - Support local execution block storage without an implicit Ethereum consensus implementation.
 

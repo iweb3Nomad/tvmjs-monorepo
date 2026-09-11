@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove Blob header fields, fee helpers and transaction validation. Reject retired fields before RPC/payload mapping and reject old extended RLP headers without changing ordinary TRON field order.
 - Default execution blocks to `TronMainnet`. Do not require inherited Ethereum consensus metadata for execution headers, and reject uncle headers when using execution-only presets.
 
 ### Chores

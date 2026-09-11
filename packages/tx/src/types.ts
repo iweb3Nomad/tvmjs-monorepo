@@ -12,7 +12,6 @@ import type {
 } from '@tvmjs/util'
 import type { FeeMarket1559Tx } from './1559/tx.ts'
 import type { AccessList2930Tx } from './2930/tx.ts'
-import type { Blob4844Tx } from './4844/tx.ts'
 import type { EOACode7702Tx } from './7702/tx.ts'
 import type { LegacyTx } from './legacy/tx.ts'
 export type Capability = (typeof Capability)[keyof typeof Capability]
@@ -152,7 +151,6 @@ export const TransactionType = {
   Legacy: 0,
   AccessListEIP2930: 1,
   FeeMarketEIP1559: 2,
-  BlobEIP4844: 3,
   EOACodeEIP7702: 4,
 } as const
 
@@ -160,7 +158,6 @@ export interface Transaction {
   [TransactionType.Legacy]: LegacyTx
   [TransactionType.FeeMarketEIP1559]: FeeMarket1559Tx
   [TransactionType.AccessListEIP2930]: AccessList2930Tx
-  [TransactionType.BlobEIP4844]: Blob4844Tx
   [TransactionType.EOACodeEIP7702]: EOACode7702Tx
 }
 
@@ -191,15 +188,6 @@ export function isAccessList2930Tx(tx: TypedTransaction): tx is AccessList2930Tx
  */
 export function isFeeMarket1559Tx(tx: TypedTransaction): tx is FeeMarket1559Tx {
   return tx.type === TransactionType.FeeMarketEIP1559
-}
-
-/**
- * Type guard to check if transaction is a Blob EIP-4844 transaction
- * @param tx - The transaction to check
- * @returns true if transaction is Blob EIP-4844 type
- */
-export function isBlob4844Tx(tx: TypedTransaction): tx is Blob4844Tx {
-  return tx.type === TransactionType.BlobEIP4844
 }
 
 /**
@@ -275,17 +263,6 @@ export interface EIP1559CompatibleTx<T extends TransactionType = TransactionType
   readonly maxFeePerGas: bigint
 }
 
-export interface EIP4844CompatibleTx<T extends TransactionType = TransactionType>
-  extends EIP1559CompatibleTx<T> {
-  readonly maxFeePerBlobGas: bigint
-  blobVersionedHashes: Uint8Array[]
-  blobs?: Uint8Array[]
-  kzgCommitments?: Uint8Array[]
-  kzgProofs?: Uint8Array[]
-  serializeNetworkWrapper(): Uint8Array
-  numBlobs(): number
-}
-
 export interface EIP7702CompatibleTx<T extends TransactionType = TransactionType>
   extends EIP1559CompatibleTx<T> {
   // ChainID, Address, [nonce], y_parity, r, s
@@ -296,7 +273,6 @@ export interface TxData {
   [TransactionType.Legacy]: LegacyTxData
   [TransactionType.AccessListEIP2930]: AccessList2930TxData
   [TransactionType.FeeMarketEIP1559]: FeeMarketEIP1559TxData
-  [TransactionType.BlobEIP4844]: BlobEIP4844TxData
   [TransactionType.EOACodeEIP7702]: EOACode7702TxData
 }
 
@@ -330,16 +306,6 @@ export function isAccessList2930TxData(txData: TypedTxData): txData is AccessLis
 export function isFeeMarket1559TxData(txData: TypedTxData): txData is FeeMarketEIP1559TxData {
   const txType = Number(bytesToBigInt(toBytes(txData.type)))
   return txType === TransactionType.FeeMarketEIP1559
-}
-
-/**
- * Type guard to check if transaction data is Blob EIP-4844 transaction data
- * @param txData - The transaction data to check
- * @returns true if transaction data is Blob EIP-4844 type
- */
-export function isBlob4844TxData(txData: TypedTxData): txData is BlobEIP4844TxData {
-  const txType = Number(bytesToBigInt(toBytes(txData.type)))
-  return txType === TransactionType.BlobEIP4844
 }
 
 /**
@@ -446,40 +412,6 @@ export interface FeeMarketEIP1559TxData extends AccessList2930TxData {
 }
 
 /**
- * {@link Blob4844Tx} data.
- */
-export interface BlobEIP4844TxData extends FeeMarketEIP1559TxData {
-  /**
-   * Is this an EIP-4844 or EIP-7594 network wrapper transaction
-   */
-  networkWrapperVersion?: BigIntLike
-  /**
-   * The versioned hashes used to validate the blobs attached to a transaction
-   */
-  blobVersionedHashes?: BytesLike[]
-  /**
-   * The maximum fee per blob gas paid for the transaction
-   */
-  maxFeePerBlobGas?: BigIntLike
-  /**
-   * The blobs associated with a transaction
-   */
-  blobs?: BytesLike[]
-  /**
-   * The KZG commitments corresponding to the versioned hashes for each blob
-   */
-  kzgCommitments?: BytesLike[]
-  /**
-   * The KZG proofs associated with the transaction (EIP-4844: per-Blob proofs, EIP-7594: per-Cell proofs)
-   */
-  kzgProofs?: BytesLike[]
-  /**
-   * An array of arbitrary strings that blobs are to be constructed from
-   */
-  blobsData?: string[]
-}
-
-/**
  * {@link EOACode7702Tx} data.
  */
 export interface EOACode7702TxData extends FeeMarketEIP1559TxData {
@@ -490,7 +422,6 @@ export interface TxValuesArray {
   [TransactionType.Legacy]: LegacyTxValuesArray
   [TransactionType.AccessListEIP2930]: AccessList2930TxValuesArray
   [TransactionType.FeeMarketEIP1559]: FeeMarketEIP1559TxValuesArray
-  [TransactionType.BlobEIP4844]: BlobEIP4844TxValuesArray
   [TransactionType.EOACodeEIP7702]: EOACode7702TxValuesArray
 }
 
@@ -553,41 +484,6 @@ type EOACode7702TxValuesArray = [
   Uint8Array?,
 ]
 
-/**
- * Bytes values array for a {@link Blob4844Tx}
- */
-type BlobEIP4844TxValuesArray = [
-  Uint8Array,
-  Uint8Array,
-  Uint8Array,
-  Uint8Array,
-  Uint8Array,
-  Uint8Array,
-  Uint8Array,
-  Uint8Array,
-  AccessListBytes,
-  Uint8Array,
-  Uint8Array[],
-  Uint8Array?,
-  Uint8Array?,
-  Uint8Array?,
-]
-
-export type BlobEIP4844NetworkValuesArray = [
-  BlobEIP4844TxValuesArray,
-  Uint8Array[],
-  Uint8Array[],
-  Uint8Array[],
-]
-
-export type BlobEIP7594NetworkValuesArray = [
-  BlobEIP4844TxValuesArray,
-  Uint8Array,
-  Uint8Array[],
-  Uint8Array[],
-  Uint8Array[],
-]
-
 type JSONAccessListItem = { address: string; storageKeys: string[] }
 
 /**
@@ -614,16 +510,7 @@ export interface JSONTx {
   type?: PrefixedHexString
   maxPriorityFeePerGas?: PrefixedHexString
   maxFeePerGas?: PrefixedHexString
-  maxFeePerBlobGas?: PrefixedHexString
-  blobVersionedHashes?: PrefixedHexString[]
   yParity?: PrefixedHexString
-}
-
-export type JSONBlobTxNetworkWrapper = JSONTx & {
-  networkWrapperVersion: PrefixedHexString
-  blobs: PrefixedHexString[]
-  kzgCommitments: PrefixedHexString[]
-  kzgProofs: PrefixedHexString[]
 }
 
 /*
@@ -649,8 +536,6 @@ export interface JSONRPCTx {
   v: string // QUANTITY - ECDSA recovery id
   r: string // DATA, 32 Bytes - ECDSA signature r
   s: string // DATA, 32 Bytes - ECDSA signature s
-  maxFeePerBlobGas?: string // QUANTITY - max data fee for blob transactions
-  blobVersionedHashes?: string[] // DATA - array of 32 byte versioned hashes for blob transactions
   yParity?: string // DATA - parity of the y-coordinate of the public key
 }
 

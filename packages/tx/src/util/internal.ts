@@ -131,6 +131,26 @@ type Mutable<T> = {
   -readonly [P in keyof T]: T[P]
 }
 
+/** Validate the original input before constructors or RPC mapping discard fields. */
+export function validateNoBlobData(txData: TxData[TransactionType]) {
+  if (bytesToBigInt(toBytes(txData.type)) === 3n) {
+    throw EthereumJSErrorWithoutCode('Blob transaction type 0x03 is no longer supported')
+  }
+  for (const field of [
+    'maxFeePerBlobGas',
+    'blobVersionedHashes',
+    'blobs',
+    'blobsData',
+    'kzgCommitments',
+    'kzgProofs',
+    'networkWrapperVersion',
+  ]) {
+    if (field in txData) {
+      throw EthereumJSErrorWithoutCode(`Blob transaction field ${field} is no longer supported`)
+    }
+  }
+}
+
 /**
  * Shared constructor logic for all transaction types
  * Note: Uses Mutable type to write to readonly properties. Only call this in transaction constructors.
@@ -143,7 +163,7 @@ export function sharedConstructor(
   txData: TxData[TransactionType],
   opts: TxOptions = {},
 ) {
-  // LOAD base tx super({ ...txData, type: TransactionType.Legacy }, opts)
+  validateNoBlobData(txData)
   tx.common = getCommon(opts.common)
   tx.common.updateParams(opts.params ?? paramsTx, opts.params !== undefined)
 

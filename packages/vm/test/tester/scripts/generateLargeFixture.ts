@@ -10,7 +10,6 @@ import { Common, ConsensusType, Hardfork, Mainnet } from '@tvmjs/common'
 import { MerkleStateManager } from '@tvmjs/statemanager'
 import {
   createAccessList2930Tx,
-  createBlob4844Tx,
   createEOACode7702Tx,
   createFeeMarket1559Tx,
   createLegacyTx,
@@ -25,10 +24,7 @@ import {
   SHA256_NULL,
   bigIntToBytes,
   bigIntToHex,
-  blobsToCommitments,
-  blobsToProofs,
   bytesToHex,
-  commitmentsToVersionedHashes,
   concatBytes,
   createAddressFromPrivateKey,
   createAddressFromString,
@@ -36,15 +32,12 @@ import {
   eoaCode7702SignAuthorization,
   generateAddress,
   generateAddress2,
-  getBlobs,
   hexToBytes,
   setLengthLeft,
   type PrefixedHexString,
 } from '@tvmjs/util'
 import { buildBlock, createVM, runBlock } from '@tvmjs/vm'
 import { keccak_256 } from '@noble/hashes/sha3.js'
-import { trustedSetup } from '@paulmillr/trusted-setups/fast-peerdas.js'
-import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
 
 type Signer = {
   readonly privateKey: Uint8Array
@@ -385,18 +378,6 @@ function createAuthorization(authority: Signer, delegateTarget: Address, nonce: 
   )
 }
 
-function makeBlobCache(kzg: microEthKZG) {
-  return Array.from({ length: 8 }, (_, index) => {
-    const blobs = getBlobs(`bal-large-fixture-${index}`)
-    const commitments = blobsToCommitments(kzg, blobs)
-    return {
-      blobs,
-      blobVersionedHashes: commitmentsToVersionedHashes(commitments),
-      kzgCommitments: commitments,
-      kzgProofs: blobsToProofs(kzg, blobs, commitments),
-    }
-  })
-}
 
 function createContracts(reference: ReferenceFixture): { contracts: ContractSet; genesis: Map<string, GenesisAccount> } {
   const contracts: ContractSet = {
@@ -504,7 +485,6 @@ function createZeroScenario(
   contracts: ContractSet,
   recipients: Address[],
   baseFee: bigint,
-  blobCache: ReturnType<typeof makeBlobCache>,
   trackedAddresses: Set<string>,
   trackedSlots: Map<string, Set<string>>,
   currentBlock: bigint,
@@ -661,32 +641,6 @@ function createZeroScenario(
     ).sign(signer.privateKey)
   }
 
-  if (templateIndex < 74) {
-    const { signer, nonce } = nextSender(senders, senderCounter)
-    addTrackedAddress(trackedAddresses, signer.address)
-    addTrackedAddress(trackedAddresses, contracts.store)
-    addTrackedSlot(trackedSlots, contracts.store, zeroSlotHex)
-    const blob = blobCache[absoluteIndex % blobCache.length]
-    const to = templateIndex % 2 === 0 ? contracts.store : contracts.referenceHistory
-    addTrackedAddress(trackedAddresses, to)
-    return createBlob4844Tx(
-      {
-        nonce,
-        maxPriorityFeePerGas: 2n,
-        maxFeePerGas: baseFee + 6n,
-        maxFeePerBlobGas: 1_000_000_000n,
-        gasLimit: 250_000n,
-        to,
-        data: to.toString() === contracts.store.toString() ? payload : historyQuery,
-        accessList: accessListFor(contracts.store, zeroSlotHex),
-        blobs: blob.blobs,
-        blobVersionedHashes: blob.blobVersionedHashes,
-        kzgCommitments: blob.kzgCommitments,
-        kzgProofs: blob.kzgProofs,
-      },
-      { common },
-    ).sign(signer.privateKey)
-  }
 
   if (templateIndex < 77) {
     const { signer, nonce } = nextSender(senders, senderCounter)
@@ -1013,8 +967,6 @@ async function main() {
   const outputPath = values.output ? path.resolve(values.output) : defaultOutputPath
   const reference = loadReferenceFixture(values.reference ? path.resolve(values.reference) : referenceFixturePath)
 
-  const kzg = new microEthKZG(trustedSetup)
-  const blobCache = makeBlobCache(kzg)
   const common = new Common({
     chain: {
       ...Mainnet,
@@ -1026,7 +978,6 @@ async function main() {
       hardforks: activatedFromGenesisHardforks,
     },
     hardfork: Hardfork.Amsterdam,
-    customCrypto: { kzg },
   })
 
   const builderStateManager = new MerkleStateManager({ common })
@@ -1071,8 +1022,6 @@ async function main() {
         nonce: new Uint8Array(8),
         baseFeePerGas: 7n,
         withdrawalsRoot: KECCAK256_RLP,
-        blobGasUsed: BIGINT_0,
-        excessBlobGas: BIGINT_0,
         parentBeaconBlockRoot: new Uint8Array(32),
         requestsHash: SHA256_NULL,
         blockAccessListHash: KECCAK256_RLP_ARRAY,
@@ -1172,7 +1121,6 @@ async function main() {
           contracts,
           recipients,
           baseFee,
-          blobCache,
           trackedAddresses,
           trackedSlots,
           blockNumber,
@@ -1209,7 +1157,6 @@ async function main() {
           contracts,
           recipients,
           baseFee,
-          blobCache,
           trackedAddresses,
           trackedSlots,
           blockNumber,
@@ -1285,7 +1232,7 @@ async function main() {
   const description = [
     `Synthetic Amsterdam BAL stress fixture with ${blocks} blocks.`,
     `Each block targets a mean of ${txsPerBlock} transactions, 200 internal contract calls, and ${withdrawalsPerBlock} withdrawals.`,
-    'Scenarios include legacy, EIP-2930, EIP-1559, EIP-4844, and EIP-7702 transactions; access-list warming; contract storage writes; internal CALL/DELEGATECALL/STATICCALL/precompile fan out; CREATE/CREATE2; self-destruct calls; history/beacon-root queries; and EIP-7002 withdrawal requests.',
+    'Scenarios include legacy, EIP-2930, EIP-1559, and EIP-7702 transactions; access-list warming; contract storage writes; internal CALL/DELEGATECALL/STATICCALL/precompile fan out; CREATE/CREATE2; self-destruct calls; history/beacon-root queries; and EIP-7002 withdrawal requests.',
   ].join('\n')
   const fixtureInfoHash = bytesToHex(
     keccak_256(new TextEncoder().encode(`${fixtureId}:${blocks}:${txsPerBlock}:${withdrawalsPerBlock}`)),

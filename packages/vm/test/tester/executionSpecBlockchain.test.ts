@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 
 import { keccak_256 } from '@noble/hashes/sha3.js'
-import { trustedSetup } from '@paulmillr/trusted-setups/fast-peerdas.js'
+
 import type { Block } from '@tvmjs/block'
 import { createBlock, createBlockFromRLP } from '@tvmjs/block'
 import { createBlockchain } from '@tvmjs/blockchain'
@@ -16,7 +16,7 @@ import {
   hexToBytes,
   setLengthLeft,
 } from '@tvmjs/util'
-import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
+
 import { createVM, runBlock } from '../../src/index.ts'
 import { setupPreConditions } from '../util.ts'
 import { createCommonForFork, loadExecutionSpecFixtures } from './executionSpecTestLoader.ts'
@@ -44,9 +44,6 @@ if (testFile !== undefined) {
 if (testCase !== undefined) {
   console.log(`Filtering tests to case: ${testCase}`)
 }
-
-// Create KZG instance once at the top level (expensive operation)
-const kzg = new microEthKZG(trustedSetup)
 
 if (fs.existsSync(fixturesPath) === false) {
   describe('Execution-spec blockchain tests', () => {
@@ -79,19 +76,14 @@ if (fs.existsSync(fixturesPath) === false) {
 
     for (const { id, fork, data } of fixtures) {
       it(`${fork}: ${id}`, async () => {
-        await runBlockchainTestCase(fork, data, assert, kzg)
+        await runBlockchainTestCase(fork, data, assert)
       }, 360000) // 6 minutes
     }
   })
 }
 
-export async function runBlockchainTestCase(
-  fork: string,
-  testData: any,
-  t: typeof assert,
-  kzg: microEthKZG,
-) {
-  const common = createCommonForFork(fork, testData, kzg)
+export async function runBlockchainTestCase(fork: string, testData: any, t: typeof assert) {
+  const common = createCommonForFork(fork, testData)
   const genesisBlockData = { header: testData.genesisBlockHeader }
   const genesisBlock = createBlock(genesisBlockData, { common, setHardfork: true })
   const blockchain = await createBlockchain({
@@ -251,8 +243,7 @@ const exceptionMessages: Record<string, RegExp> = {
   'TransactionException.INITCODE_SIZE_EXCEEDED':
     /the initcode size of this transaction is too large/,
   'TransactionException.INSUFFICIENT_ACCOUNT_FUNDS': /sender doesn't have enough funds to send tx/,
-  'TransactionException.INSUFFICIENT_MAX_FEE_PER_BLOB_GAS':
-    /Transaction's maxFeePerBlobGas \d+\) is less than block blobGasPrice \(\d+\)/,
+
   'TransactionException.INSUFFICIENT_MAX_FEE_PER_GAS': /tx unable to pay base fee/,
   'TransactionException.INTRINSIC_GAS_BELOW_FLOOR_GAS_COST': /gasLimit is too low/,
   'TransactionException.INTRINSIC_GAS_TOO_LOW': /gasLimit is too low/,
@@ -266,17 +257,7 @@ const exceptionMessages: Record<string, RegExp> = {
     /gas limit \* gasPrice cannot exceed MAX_INTEGER/,
   'TransactionException.TYPE_1_TX_PRE_FORK': /^EIP-2930 not enabled on Common$/,
   'TransactionException.TYPE_2_TX_PRE_FORK': /^EIP-1559 not enabled on Common$/,
-  'TransactionException.TYPE_3_TX_BLOB_COUNT_EXCEEDED':
-    /^\d+ blobs exceeds max \d+ blobs per tx \(EIP-7594\)/,
-  'TransactionException.TYPE_3_TX_CONTRACT_CREATION':
-    /tx should have a "to" field and cannot be used to create contracts/,
-  'TransactionException.TYPE_3_TX_INVALID_BLOB_VERSIONED_HASH':
-    /versioned hash does not start with KZG commitment version/,
-  'TransactionException.TYPE_3_TX_MAX_BLOB_GAS_ALLOWANCE_EXCEEDED':
-    /^(?:invalid transactions: errors at tx \d+: )?tx causes total blob gas of \d+ to exceed maximum blob gas per block of \d+/,
-  'TransactionException.TYPE_3_TX_PRE_FORK': /^EIP-4844 not enabled on Common$/,
-  'TransactionException.TYPE_3_TX_WITH_FULL_BLOBS': /Invalid EIP-4844 transaction/,
-  'TransactionException.TYPE_3_TX_ZERO_BLOBS': /tx should contain at least one blob/,
+
   'TransactionException.TYPE_4_EMPTY_AUTHORIZATION_LIST': /authorization list is empty/,
   'TransactionException.TYPE_4_TX_CONTRACT_CREATION':
     /tx should have a "to" field and cannot be used to create contracts/,
@@ -284,10 +265,9 @@ const exceptionMessages: Record<string, RegExp> = {
 
   // BlockException entries
   'BlockException.GAS_USED_OVERFLOW': /tx has a higher gas limit than the block/,
-  'BlockException.INCORRECT_BLOB_GAS_USED': /invalid blobGasUsed/,
-  'BlockException.INCORRECT_BLOCK_FORMAT':
-    /(?:blob gas used can only be provided with EIP4844 activated|^invalid header.*)/,
-  'BlockException.INCORRECT_EXCESS_BLOB_GAS': /expected blob gas: \d+, got: \d+/,
+
+  'BlockException.INCORRECT_BLOCK_FORMAT': /^invalid header.*/,
+
   'BlockException.INVALID_BASEFEE_PER_GAS': /^Invalid block: base fee not correct .*$/,
   'BlockException.INVALID_DEPOSIT_EVENT_LAYOUT': /invalid deposit log: unsupported data layout/,
   'BlockException.INVALID_REQUESTS': /invalid requestsHash/,

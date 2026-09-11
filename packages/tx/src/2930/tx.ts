@@ -83,7 +83,7 @@ export class AccessList2930Tx
    * varying data types.
    */
   public constructor(txData: TxData, opts: TxOptions = {}) {
-    sharedConstructor(this, { ...txData, type: TransactionType.AccessListEIP2930 }, opts)
+    sharedConstructor(this, txData, opts)
     const { chainId, accessList: rawAccessList, gasPrice } = txData
     const accessList = rawAccessList ?? []
 

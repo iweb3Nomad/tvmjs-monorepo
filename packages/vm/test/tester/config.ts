@@ -11,10 +11,10 @@
  * (USE COMMON SENSE).
  */
 import * as path from 'path'
+
 import { Common, Hardfork, Mainnet, createCustomCommon } from '@tvmjs/common'
 
 import type { HardforkTransitionConfig } from '@tvmjs/common'
-import type { KZG } from '@tvmjs/util'
 
 /**
  * Default tests path (git submodule: ethereum-tests)
@@ -227,7 +227,7 @@ export function getTestDirs(network: string, testType: string) {
  * @param ttd If set: total terminal difficulty to switch to merge
  * @returns
  */
-function setupCommonWithNetworks(network: string, ttd?: number, timestamp?: number, kzg?: KZG) {
+function setupCommonWithNetworks(network: string, ttd?: number, timestamp?: number) {
   let networkLowercase: string // This only consists of the target hardfork, so without the EIPs
   if (network.includes('+')) {
     const index = network.indexOf('+')
@@ -280,7 +280,7 @@ function setupCommonWithNetworks(network: string, ttd?: number, timestamp?: numb
       defaultHardfork: hfName,
     },
     Mainnet,
-    { eips: [3607], customCrypto: { kzg } },
+    { eips: [3607] },
   )
   // Activate EIPs
   const eips = network.match(/(?<=\+)(.\d+)/g)
@@ -299,7 +299,7 @@ function setupCommonWithNetworks(network: string, ttd?: number, timestamp?: numb
  * For instance, "London+3855+3860" will also activate EIP-3855 and EIP-3860.
  * @returns the Common which should be used
  */
-export function getCommon(network: string, kzg?: KZG): Common {
+export function getCommon(network: string): Common {
   if (retestethAlias[network as keyof typeof retestethAlias] !== undefined) {
     network = retestethAlias[network as keyof typeof retestethAlias]
   }
@@ -311,7 +311,7 @@ export function getCommon(network: string, kzg?: KZG): Common {
   }
   if (normalHardforks.map((str) => str.toLowerCase()).includes(networkLowercase)) {
     // Case 1: normal network, such as "London" or "Byzantium" (without any EIPs enabled, and it is not a transition network)
-    return setupCommonWithNetworks(network, undefined, undefined, kzg)
+    return setupCommonWithNetworks(network, undefined, undefined)
   } else if (networkLowercase.match('tomergeatdiff')) {
     // Case 2: special case of a transition network, this setups the right common with the right Merge properties (TTD)
     // This is a HF -> Merge transition
@@ -319,11 +319,11 @@ export function getCommon(network: string, kzg?: KZG): Common {
     const end = start + 'tomergeatdiff'.length
     const startNetwork = network.substring(0, start) // HF before the merge
     const TTD = Number('0x' + network.substring(end)) // Total difficulty to transition to PoS
-    return setupCommonWithNetworks(startNetwork, TTD, undefined, kzg)
+    return setupCommonWithNetworks(startNetwork, TTD, undefined)
   } else if (networkLowercase === 'shanghaitocancunattime15k') {
-    return setupCommonWithNetworks('Shanghai', undefined, 15000, kzg)
+    return setupCommonWithNetworks('Shanghai', undefined, 15000)
   } else if (networkLowercase === 'cancuntopragueattime15k') {
-    return setupCommonWithNetworks('Cancun', undefined, 15000, kzg)
+    return setupCommonWithNetworks('Cancun', undefined, 15000)
   } else {
     // Case 3: this is not a "default fork" network, but it is a "transition" network. Test the VM if it transitions the right way
     const transitionForks =
@@ -368,7 +368,6 @@ export function getCommon(network: string, kzg?: KZG): Common {
       {
         hardfork: transitionForks.startFork,
         eips: [3607],
-        customCrypto: { kzg },
       },
     )
     return common

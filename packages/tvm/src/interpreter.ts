@@ -93,7 +93,6 @@ export interface Env {
   codeAddress: Address /* Different than address for DELEGATECALL and CALLCODE */
   gasRefund: bigint /* Current value (at begin of the frame) of the gas refund */
   eof?: EOFEnv /* Optional EOF environment in case of EOF execution */
-  blobVersionedHashes: PrefixedHexString[] /** Versioned hashes for blob transactions */
   createdAddresses?: Set<PrefixedHexString>
   accessWitness?: BinaryTreeAccessWitnessInterface
   chargeCodeAccesses?: boolean
@@ -1011,18 +1010,6 @@ export class Interpreter {
   }
 
   /**
-   * Returns the Blob Base Fee of the block as proposed in [EIP-7516](https://eips.ethereum.org/EIPS/eip-7516)
-   */
-  getBlobBaseFee(): bigint {
-    const blobBaseFee = this._env.block.header.getBlobGasPrice()
-    if (blobBaseFee === undefined) {
-      // Sanity check
-      throw EthereumJSErrorWithoutCode('Block has no Blob Base Fee')
-    }
-    return blobBaseFee
-  }
-
-  /**
    * Returns the chain ID for current chain. Introduced for the
    * CHAINID opcode proposed in [EIP-1344](https://eips.ethereum.org/EIPS/eip-1344).
    */
@@ -1042,7 +1029,6 @@ export class Interpreter {
       data,
       isStatic: this._env.isStatic,
       depth: this._env.depth + 1,
-      blobVersionedHashes: this._env.blobVersionedHashes,
       accessWitness: this._env.accessWitness,
     })
 
@@ -1067,7 +1053,6 @@ export class Interpreter {
       data,
       isStatic: this._env.isStatic,
       depth: this._env.depth + 1,
-      blobVersionedHashes: this._env.blobVersionedHashes,
       accessWitness: this._env.accessWitness,
     })
 
@@ -1093,7 +1078,6 @@ export class Interpreter {
       data,
       isStatic: true,
       depth: this._env.depth + 1,
-      blobVersionedHashes: this._env.blobVersionedHashes,
       accessWitness: this._env.accessWitness,
     })
 
@@ -1120,7 +1104,6 @@ export class Interpreter {
       isStatic: this._env.isStatic,
       delegatecall: true,
       depth: this._env.depth + 1,
-      blobVersionedHashes: this._env.blobVersionedHashes,
       accessWitness: this._env.accessWitness,
     })
 
@@ -1269,7 +1252,6 @@ export class Interpreter {
       depth,
       selfdestruct,
       gasRefund: this._runState.gasRefund,
-      blobVersionedHashes: this._env.blobVersionedHashes,
       accessWitness: this._env.accessWitness,
       tronTransactionContext: this._env.tronTransactionContext,
     })

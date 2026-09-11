@@ -3,9 +3,8 @@ import { keccak_256 } from '@noble/hashes/sha3.js'
 import { ConsensusType } from '@tvmjs/common'
 import { MerklePatriciaTrie } from '@tvmjs/mpt'
 import { RLP } from '@tvmjs/rlp'
-import { Blob4844Tx, Capability } from '@tvmjs/tx'
+import { Capability } from '@tvmjs/tx'
 import {
-  BIGINT_0,
   EthereumJSErrorWithoutCode,
   KECCAK256_RLP,
   KECCAK256_RLP_ARRAY,
@@ -80,6 +79,9 @@ export class Block {
     withdrawals?: Withdrawal[],
     opts: BlockOptions = {},
   ) {
+    if (transactions.some((tx) => Number(tx.type) === 3)) {
+      throw EthereumJSErrorWithoutCode('Blob transaction type 0x03 is no longer supported')
+    }
     this.header = header ?? new BlockHeader({}, opts)
     this.common = this.header.common
     this.keccakFunction = this.common.customCrypto.keccak256 ?? keccak_256
@@ -195,7 +197,6 @@ export class Block {
    */
   getTransactionsValidationErrors(): string[] {
     const errors: string[] = []
-    let blobGasUsed = BIGINT_0
 
     // eslint-disable-next-line prefer-const
     for (let [i, tx] of this.transactions.entries()) {
@@ -213,26 +214,8 @@ export class Block {
           }
         }
       }
-      if (this.common.isActivatedEIP(4844)) {
-        const blobGasLimit = this.common.getBlobGasSchedule().maxBlobGasPerBlock
-        const blobGasPerBlob = this.common.param('blobGasPerBlob')
-        if (tx instanceof Blob4844Tx) {
-          blobGasUsed += BigInt(tx.numBlobs()) * blobGasPerBlob
-          if (blobGasUsed > blobGasLimit) {
-            errs.push(
-              `tx causes total blob gas of ${blobGasUsed} to exceed maximum blob gas per block of ${blobGasLimit}`,
-            )
-          }
-        }
-      }
       if (errs.length > 0) {
         errors.push(`errors at tx ${i}: ${errs.join(', ')}`)
-      }
-    }
-
-    if (this.common.isActivatedEIP(4844)) {
-      if (blobGasUsed !== this.header.blobGasUsed) {
-        errors.push(`invalid blobGasUsed expected=${this.header.blobGasUsed} actual=${blobGasUsed}`)
       }
     }
 
@@ -314,56 +297,6 @@ export class Block {
     if (this.common.isActivatedEIP(4895) && !(await this.withdrawalsTrieIsValid())) {
       const msg = this._errorMsg('invalid withdrawals trie')
       throw EthereumJSErrorWithoutCode(msg)
-    }
-  }
-
-  /**
-   * Validates that blob gas fee for each transaction is greater than or equal to the
-   * blobGasPrice for the block and that total blob gas in block is less than maximum
-   * blob gas per block
-   * @param parentHeader header of parent block
-   */
-  validateBlobTransactions(parentHeader: BlockHeader) {
-    if (this.common.isActivatedEIP(4844)) {
-      const blobGasLimit = this.common.getBlobGasSchedule().maxBlobGasPerBlock
-      const blobGasPerBlob = this.common.param('blobGasPerBlob')
-      let blobGasUsed = BIGINT_0
-
-      const expectedExcessBlobGas = parentHeader.calcNextExcessBlobGas(this.common)
-      if (this.header.excessBlobGas !== expectedExcessBlobGas) {
-        throw EthereumJSErrorWithoutCode(
-          `block excessBlobGas mismatch: have ${this.header.excessBlobGas}, want ${expectedExcessBlobGas}`,
-        )
-      }
-
-      let blobGasPrice
-
-      for (const tx of this.transactions) {
-        if (tx instanceof Blob4844Tx) {
-          blobGasPrice = blobGasPrice ?? this.header.getBlobGasPrice()
-          if (tx.maxFeePerBlobGas < blobGasPrice) {
-            throw EthereumJSErrorWithoutCode(
-              `blob transaction maxFeePerBlobGas ${
-                tx.maxFeePerBlobGas
-              } < than block blob gas price ${blobGasPrice} - ${this.errorStr()}`,
-            )
-          }
-
-          blobGasUsed += BigInt(tx.blobVersionedHashes.length) * blobGasPerBlob
-
-          if (blobGasUsed > blobGasLimit) {
-            throw EthereumJSErrorWithoutCode(
-              `tx causes total blob gas of ${blobGasUsed} to exceed maximum blob gas per block of ${blobGasLimit}`,
-            )
-          }
-        }
-      }
-
-      if (this.header.blobGasUsed !== blobGasUsed) {
-        throw EthereumJSErrorWithoutCode(
-          `block blobGasUsed mismatch: have ${this.header.blobGasUsed}, want ${blobGasUsed}`,
-        )
-      }
     }
   }
 
@@ -484,8 +417,6 @@ export class Block {
       timestamp: header.timestamp!,
       extraData: header.extraData!,
       baseFeePerGas: header.baseFeePerGas!,
-      blobGasUsed: header.blobGasUsed,
-      excessBlobGas: header.excessBlobGas,
       blockHash: bytesToHex(this.hash()),
       prevRandao: header.mixHash!,
       transactions,

@@ -1,9 +1,7 @@
-import { trustedSetup } from '@paulmillr/trusted-setups/fast-peerdas.js'
-import { createBlock, createBlockHeader } from '@tvmjs/block'
-import { Blockchain, createBlockchain } from '@tvmjs/blockchain'
-import { Common, Hardfork, Mainnet, TronMainnet, createCommonFromGethGenesis } from '@tvmjs/common'
+import { createBlock } from '@tvmjs/block'
+import { createBlockchain } from '@tvmjs/blockchain'
+import { Common, Hardfork, Mainnet, TronMainnet } from '@tvmjs/common'
 import {
-  Blob4844Tx,
   EOACode7702Tx,
   FeeMarket1559Tx,
   TransactionType,
@@ -24,7 +22,7 @@ import {
   equalsBytes,
   hexToBytes,
 } from '@tvmjs/util'
-import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
+
 import { assert, describe, expect, it } from 'vitest'
 
 import { createVM, runTx } from '../../src/index.ts'
@@ -290,7 +288,7 @@ describe('runTx() -> successful API parameter usage', async () => {
       // calculate expected coinbase balance
       const baseFee = block.header.baseFeePerGas!
       const inclusionFeePerGas =
-        tx instanceof FeeMarket1559Tx || tx instanceof Blob4844Tx || tx instanceof EOACode7702Tx
+        tx instanceof FeeMarket1559Tx || tx instanceof EOACode7702Tx
           ? tx.maxPriorityFeePerGas < tx.maxFeePerGas - baseFee
             ? tx.maxPriorityFeePerGas
             : tx.maxFeePerGas - baseFee
@@ -922,70 +920,3 @@ it('Validate SELFDESTRUCT does not charge new account gas when calling CALLER an
     'did not charge callNewAccount',
   )
 })
-
-describe('EIP 4844 transaction tests', () => {
-  const kzg = new microEthKZG(trustedSetup)
-  it('should work', async () => {
-    const { eip4844GethGenesis } = await import('@tvmjs/testdata')
-    const common = createCommonFromGethGenesis(eip4844GethGenesis, {
-      chain: 'customChain',
-      hardfork: Hardfork.Cancun,
-      customCrypto: { kzg },
-    })
-
-    common.setHardfork(Hardfork.Cancun)
-    const oldGetBlockFunction = Blockchain.prototype.getBlock
-
-    // Stub getBlock to produce a valid parent header under EIP 4844
-    Blockchain.prototype.getBlock = async () => {
-      return createBlock(
-        {
-          header: createBlockHeader(
-            {
-              excessBlobGas: 0n,
-              number: 1,
-
-              parentHash: blockchain.genesisBlock.hash(),
-            },
-            {
-              common,
-              skipConsensusFormatValidation: true,
-            },
-          ),
-        },
-        {
-          common,
-          skipConsensusFormatValidation: true,
-        },
-      )
-    }
-    const blockchain = await createBlockchain({
-      validateBlocks: false,
-      validateConsensus: false,
-    })
-    const vm = await createVM({ common, blockchain })
-
-    const tx = getTransaction(common, 3, true) as Blob4844Tx
-
-    const block = createBlock(
-      {
-        header: createBlockHeader(
-          {
-            excessBlobGas: 1n,
-            number: 2,
-            parentHash: (await blockchain.getBlock(1n)).hash(), // Faking parent hash with getBlock stub
-          },
-          {
-            common,
-            skipConsensusFormatValidation: true,
-          },
-        ),
-      },
-      { common, skipConsensusFormatValidation: true },
-    )
-    const res = await runTx(vm, { tx, block, skipBalance: true })
-    assert.isTrue(res.execResult.exceptionError === undefined, 'simple blob tx run succeeds')
-    assert.strictEqual(res.blobGasUsed, 131072n, 'returns correct blob gas used for 1 blob')
-    Blockchain.prototype.getBlock = oldGetBlockFunction
-  })
-}, 20000)

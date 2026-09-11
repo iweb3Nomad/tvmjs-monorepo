@@ -1,16 +1,15 @@
 # @tvmjs/block `1.0.1`
 
+v1.2.0 removes Blob transaction support and Blob header fields and fee helpers. Object, RPC, payload and RLP inputs containing retired fields are rejected. Ordinary TRON header serialization is unchanged. See [Blob migration and affected packages](../common/README.md#blob-removal-in-v120).
+
 | Implements schema and functions related to TRON-compatible blocks. Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |
 
-- 🦄 All block features till **Osaka**
+- 🦄 TRON execution block contexts and serialization
 - 🌴 Tree-shakeable API
 - 👷🏼 Controlled dependency set (4 external + `@noble` crypto)
-- 🔮 `EIP-4844` Shard Blob Txs
-- 🔮 `EIP-7594` PeerDAS Blob Transactions
 - 💸 `EIP-4895` Beacon Chain Withdrawals
 - 📨 `EIP-7685` Consensus Layer Requests
-- 🛵 324KB bundle size (81KB gzipped)
 - 🏄🏾‍♂️ WASM-free default + Fully browser ready
 
 ## Table of Contents
@@ -33,7 +32,6 @@ To obtain the latest version, simply install the project using `npm`:
 npm install @tvmjs/block
 ```
 
-**Note:** If you want to work with `EIP-4844` related functionality, you will have additional initialization steps for the **KZG setup**, see related section below.
 
 ## Getting Started
 
@@ -200,62 +198,6 @@ console.log(`Block with ${block.withdrawals!.length} withdrawal(s) created`)
 ```
 
 Validation of the withdrawals trie can be manually triggered with the newly introduced async `Block.withdrawalsTrieIsValid()` method.
-
-### Blocks with EIP-4844 Shard Blob Transactions
-
-This library supports the blob transaction type introduced with [EIP-4844](https://eips.ethereum.org/EIPS/eip-4844) (`Hardfork.Cancun` or higher), see the following example:
-
-```ts
-// ./examples/4844.ts
-
-import { createBlock } from '@tvmjs/block'
-import { Common, Hardfork, Mainnet } from '@tvmjs/common'
-import { createBlob4844Tx } from '@tvmjs/tx'
-import { createAddressFromPrivateKey } from '@tvmjs/util'
-import { randomBytes } from '@noble/hashes/utils.js'
-import { trustedSetup } from '@paulmillr/trusted-setups/fast-peerdas.js'
-import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
-
-const main = async () => {
-  const kzg = new microEthKZG(trustedSetup)
-
-  const common = new Common({
-    chain: Mainnet,
-    customCrypto: {
-      kzg,
-    },
-    hardfork: Hardfork.Cancun,
-  })
-  const blobTx = createBlob4844Tx(
-    { blobsData: ['myFirstBlob'], to: createAddressFromPrivateKey(randomBytes(32)) },
-    { common },
-  )
-
-  const block = createBlock(
-    {
-      header: {
-        excessBlobGas: 0n,
-      },
-      transactions: [blobTx],
-    },
-    {
-      common,
-      skipConsensusFormatValidation: true,
-    },
-  )
-
-  console.log(
-    `4844 block header with excessBlobGas=${block.header.excessBlobGas} created and ${
-      block.transactions.filter((tx) => tx.type === 3).length
-    } blob transactions`,
-  )
-}
-
-void main()
-
-```
-
-**Note:** Working with blob transactions needs a manual KZG library installation and global initialization, see [KZG Setup](https://github.com/tronweb3/tvmjs-monorepo/tree/master/packages/tx/README.md#kzg-setup) for instructions.
 
 ### Blocks with EIP-7685 Consensus Layer Requests
 

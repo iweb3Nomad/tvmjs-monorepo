@@ -12,11 +12,8 @@
  */
 import { type Common, ConsensusAlgorithm } from '@tvmjs/common'
 
-import { trustedSetup } from '@paulmillr/trusted-setups/fast-peerdas.js'
 import * as mcl from 'mcl-wasm'
 import { assert, afterAll, describe, it } from 'vitest'
-
-import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
 
 import path from 'path'
 import {
@@ -125,7 +122,6 @@ if (argv.bn254 !== undefined && argv.bn254.toLowerCase() === 'mcl') {
   bn254 = new NobleBN254()
 }
 
-const kzg = new microEthKZG(trustedSetup)
 const runnerArgs: {
   forkConfigVM: string
   forkConfigTestSuite: string
@@ -140,7 +136,7 @@ const runnerArgs: {
 } = {
   forkConfigVM: FORK_CONFIG_VM,
   forkConfigTestSuite: FORK_CONFIG_TEST_SUITE,
-  common: getCommon(FORK_CONFIG_VM, kzg),
+  common: getCommon(FORK_CONFIG_VM),
   dist: argv.dist,
   debug: argv.debug,
   bls,

@@ -2,6 +2,8 @@
 
 # @tvmjs/vm
 
+v1.2.0 removes Blob fees, receipts and block-builder accounting. Remove `allowNoBlobs` from `addTransaction()` calls and use the four-argument `generateTxReceipt()` signature. Ordinary transaction execution and receipts are preserved. See [Blob migration and affected packages](../common/README.md#blob-removal-in-v120).
+
 | Execution context for the TVM (TRON Virtual Machine) implementation. Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |
 

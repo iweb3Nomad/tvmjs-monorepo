@@ -769,25 +769,6 @@ export const handlers: Map<number, OpHandler> = new Map([
       runState.stack.push(runState.interpreter.getBlockBaseFee())
     },
   ],
-  // 0x49: BLOBHASH
-  [
-    0x49,
-    function (runState) {
-      const index = runState.stack.pop()
-      if (runState.env.blobVersionedHashes.length > Number(index)) {
-        runState.stack.push(BigInt(runState.env.blobVersionedHashes[Number(index)]))
-      } else {
-        runState.stack.push(BIGINT_0)
-      }
-    },
-  ],
-  // 0x4a: BLOBBASEFEE
-  [
-    0x4a,
-    function (runState) {
-      runState.stack.push(runState.interpreter.getBlobBaseFee())
-    },
-  ],
   // 0x50 range - 'storage' and execution
   // 0x50: POP
   [

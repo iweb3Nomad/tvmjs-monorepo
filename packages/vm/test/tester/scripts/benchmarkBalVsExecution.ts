@@ -14,8 +14,6 @@ import {
   setLengthLeft,
 } from '@tvmjs/util'
 import { keccak_256 } from '@noble/hashes/sha3.js'
-import { trustedSetup } from '@paulmillr/trusted-setups/fast-peerdas.js'
-import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
 
 import { consumeBal } from '../../../src/consumeBal.ts'
 import { createVM, runBlock } from '../../../src/index.ts'
@@ -89,8 +87,8 @@ function expectedFinalStateRoot(testData: any) {
   return hexToBytes(stateRoot)
 }
 
-async function createBenchmarkContext(fork: string, testData: any, kzg: microEthKZG) {
-  const common = createCommonForFork(fork, testData, kzg)
+async function createBenchmarkContext(fork: string, testData: any) {
+  const common = createCommonForFork(fork, testData)
   const genesisBlock = createBlock(
     { header: testData.genesisBlockHeader },
     { common, setHardfork: true },
@@ -150,16 +148,9 @@ async function validatePostState(vm: Awaited<ReturnType<typeof createVM>>, testD
   }
 }
 
-async function benchmarkRunBlock(
-  fixture: ExecutionSpecFixture,
-  kzg: microEthKZG,
-): Promise<BenchmarkStats> {
+async function benchmarkRunBlock(fixture: ExecutionSpecFixture): Promise<BenchmarkStats> {
   const totalStart = hrtime.bigint()
-  const { blockchain, genesisBlock, vm } = await createBenchmarkContext(
-    fixture.fork,
-    fixture.data,
-    kzg,
-  )
+  const { blockchain, genesisBlock, vm } = await createBenchmarkContext(fixture.fork, fixture.data)
   const afterSetup = hrtime.bigint()
 
   let parentBlock = genesisBlock
@@ -196,12 +187,9 @@ async function benchmarkRunBlock(
   }
 }
 
-async function benchmarkConsumeBal(
-  fixture: ExecutionSpecFixture,
-  kzg: microEthKZG,
-): Promise<BenchmarkStats> {
+async function benchmarkConsumeBal(fixture: ExecutionSpecFixture): Promise<BenchmarkStats> {
   const totalStart = hrtime.bigint()
-  const { vm } = await createBenchmarkContext(fixture.fork, fixture.data, kzg)
+  const { vm } = await createBenchmarkContext(fixture.fork, fixture.data)
   const afterSetup = hrtime.bigint()
 
   for (const { blockAccessList, blockHeader, expectException } of fixture.data.blocks) {
@@ -330,12 +318,11 @@ async function main() {
   }
   console.log(`Benchmarking ${fixtures.length} fixture(s)`)
 
-  const kzg = new microEthKZG(trustedSetup)
   const results: FixtureBenchmarkResult[] = []
 
   for (const fixture of fixtures) {
-    const runBlockStats = await benchmarkRunBlock(fixture, kzg)
-    const consumeBalStats = await benchmarkConsumeBal(fixture, kzg)
+    const runBlockStats = await benchmarkRunBlock(fixture)
+    const consumeBalStats = await benchmarkConsumeBal(fixture)
     results.push({
       fixture,
       runBlock: runBlockStats,

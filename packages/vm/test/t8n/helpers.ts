@@ -112,15 +112,11 @@ export function normalizeNumbers(input: any) {
     'currentRandom',
     'currentDifficulty',
     'currentBaseFee',
-    'currentBlobGasUsed',
-    'currentExcessBlobGas',
     'parentDifficulty',
     'parentTimestamp',
     'parentBaseFee',
     'parentGasUsed',
     'parentGasLimit',
-    'parentBlobGasUsed',
-    'parentExcessBlobGas',
   ]
 
   for (const key of keys) {

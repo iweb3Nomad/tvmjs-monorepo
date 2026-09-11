@@ -610,15 +610,6 @@ export class Blockchain implements BlockchainInterface {
       }
     }
 
-    if (header.common.isActivatedEIP(4844)) {
-      const expectedExcessBlobGas = parentHeader.calcNextExcessBlobGas(header.common)
-      if (header.excessBlobGas !== expectedExcessBlobGas) {
-        throw EthereumJSErrorWithoutCode(
-          `expected blob gas: ${expectedExcessBlobGas}, got: ${header.excessBlobGas}`,
-        )
-      }
-    }
-
     if (header.common.isActivatedEIP(7685)) {
       if (header.requestsHash === undefined) {
         throw EthereumJSErrorWithoutCode(`requestsHash must be provided when EIP-7685 is active`)
@@ -635,10 +626,6 @@ export class Blockchain implements BlockchainInterface {
     await this.validateHeader(block.header)
     await this._validateUncleHeaders(block)
     await block.validateData(false)
-    // TODO: Rethink how validateHeader vs validateBlobTransactions works since the parentHeader is retrieved multiple times
-    // (one for each uncle header and then for validateBlobTxs).
-    const parentBlock = await this.getBlock(block.header.parentHash)
-    block.validateBlobTransactions(parentBlock.header)
   }
   /**
    * The following rules are checked in this method:

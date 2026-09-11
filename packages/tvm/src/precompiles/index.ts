@@ -1,7 +1,6 @@
 import { type Address, type PrefixedHexString, bytesToUnprefixedHex } from '@tvmjs/util'
 
 import { precompile0a } from './0a-validate-multi-sign.ts'
-// import { precompile0a } from './0a-kzg-point-evaluation.ts'
 import { precompile0b } from './0b-bls12-g1add.ts'
 import { precompile0c } from './0c-bls12-g1msm.ts'
 import { precompile0d } from './0d-bls12-g2add.ts'
@@ -23,7 +22,6 @@ import { MCLBLS, NobleBLS } from './bls12_381/index.ts'
 import { NobleBN254, RustBN254 } from './bn254/index.ts'
 
 // @TODO TRON  support more precompiles
-// 0a-kzg-point-evaluation is not supported yet
 
 import type { Common } from '@tvmjs/common'
 import type { PrecompileFunc, PrecompileInput } from './types.ts'
@@ -126,15 +124,6 @@ const precompileEntries: PrecompileEntry[] = [
     precompile: precompile08,
     name: 'BN254_PAIRING (0x08)',
   },
-  // {
-  //   address: BYTES_19 + '0a',
-  //   check: {
-  //     type: PrecompileAvailabilityCheck.EIP,
-  //     param: 4844,
-  //   },
-  //   precompile: precompile0a,
-  //   name: 'KZG_POINT_EVALUATION (0x0a)',
-  // },
   {
     address: BYTES_19 + '0b',
     check: {
@@ -326,15 +315,15 @@ function getPrecompileName(addressUnprefixedStr: string) {
 }
 
 export {
-  getActivePrecompiles,
-  getPrecompileName,
   MCLBLS,
   NobleBLS,
   NobleBN254,
+  RustBN254,
+  getActivePrecompiles,
+  getPrecompileName,
   precompileEntries,
   precompiles,
   ripemdPrecompileAddress,
-  RustBN254,
 }
 
 export type { AddPrecompile, CustomPrecompile, DeletePrecompile, PrecompileFunc, PrecompileInput }

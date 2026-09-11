@@ -3,9 +3,8 @@ import { assert, describe, it } from 'vitest'
 import fs from 'fs'
 import path from 'path'
 
-import { trustedSetup } from '@paulmillr/trusted-setups/fast-peerdas.js'
 import { Common, Mainnet } from '@tvmjs/common'
-import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
+
 import { toBytes } from 'viem'
 import { createVM } from '../../src/constructors.ts'
 import { runTx } from '../../src/runTx.ts'
@@ -24,9 +23,6 @@ if (testFile !== undefined) {
 if (testCase !== undefined) {
   console.log(`Filtering tests to case: ${testCase}`)
 }
-
-// Create KZG instance once at the top level (expensive operation)
-const kzg = new microEthKZG(trustedSetup)
 
 if (fs.existsSync(fixturesPath) === false) {
   describe('Execution-spec state tests', () => {
@@ -56,7 +52,7 @@ if (fs.existsSync(fixturesPath) === false) {
       it(`${fork}: ${id}`, async () => {
         const testCase = parseTest(fork, data)
         try {
-          await runStateTestCase(fork, testCase, assert, kzg)
+          await runStateTestCase(fork, testCase, assert)
         } catch (e: any) {
           assert.fail(e?.toString() + e.stack)
         }
@@ -65,12 +61,7 @@ if (fs.existsSync(fixturesPath) === false) {
   })
 }
 
-export async function runStateTestCase(
-  fork: string,
-  testData: any,
-  t: typeof assert,
-  kzg: microEthKZG,
-) {
+export async function runStateTestCase(fork: string, testData: any, t: typeof assert) {
   const common = new Common({
     chain: Mainnet,
     hardfork:
@@ -79,7 +70,6 @@ export async function runStateTestCase(
         : fork.toLowerCase() === 'constantinoplefix'
           ? 'petersburg'
           : fork.toLowerCase(),
-    customCrypto: { kzg },
   })
   const vm = await createVM({
     common,

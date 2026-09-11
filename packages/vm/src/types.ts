@@ -11,7 +11,7 @@ import type {
   WithdrawalData,
 } from '@tvmjs/util'
 import type { Bloom } from './bloom/index.ts'
-export type TxReceipt = PreByzantiumTxReceipt | PostByzantiumTxReceipt | EIP4844BlobTxReceipt
+export type TxReceipt = PreByzantiumTxReceipt | PostByzantiumTxReceipt
 
 /**
  * Controls how TRON execution obtains the transaction ID used for contract address derivation.
@@ -60,23 +60,6 @@ export interface PostByzantiumTxReceipt extends BaseTxReceipt {
    * Status of transaction, `1` if successful, `0` if an exception occurred
    */
   status: 0 | 1
-}
-
-export interface EIP4844BlobTxReceipt extends PostByzantiumTxReceipt {
-  /**
-   * blob gas consumed by a transaction
-   *
-   * Note: This value is not included in the receiptRLP used for encoding the receiptsRoot in a block
-   * and is only provided as part of receipt metadata.
-   */
-  blobGasUsed: bigint
-  /**
-   * blob gas price for block transaction was included in
-   *
-   * Note: This values is not included in the `receiptRLP` used for encoding the `receiptsRoot` in a block
-   * and is only provided as part of receipt metadata.
-   */
-  blobGasPrice: bigint
 }
 
 export type TVMProfilerOpts = {
@@ -522,11 +505,6 @@ export interface RunTxResult extends TVMResult {
    * The value that accrues to the miner by this transaction
    */
   minerValue: bigint
-
-  /**
-   * This is the blob gas units times the fee per blob gas for 4844 transactions
-   */
-  blobGasUsed?: bigint
 }
 
 export interface AfterTxEvent extends RunTxResult {

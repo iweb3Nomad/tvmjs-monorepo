@@ -1,16 +1,13 @@
 import fs from 'fs'
 import path from 'path'
-import { trustedSetup } from '@paulmillr/trusted-setups/fast-peerdas.js'
+
 import {
   type ChainConfig,
   Common,
   ConsensusType,
   type HardforkTransitionConfig,
-  type HardforksDict,
   Mainnet,
 } from '@tvmjs/common'
-import { TypeOutput, toType } from '@tvmjs/util'
-import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
 
 export type ExecutionSpecFixtureType = 'state_tests' | 'blockchain_tests'
 
@@ -151,12 +148,7 @@ function customHardforkHistory(fork: string): HardforkTransitionConfig[] {
   return hardforks
 }
 
-function buildTransitionChainConfig(
-  blobSchedule: any,
-  from: string,
-  to: string,
-  timestamp: number,
-): ChainConfig {
+function buildTransitionChainConfig(from: string, to: string, timestamp: number): ChainConfig {
   const hardforks: HardforkTransitionConfig[] = customHardforkHistory(from)
   // Add the "to" hardfork at the specified timestamp
   hardforks.push({
@@ -165,28 +157,10 @@ function buildTransitionChainConfig(
     timestamp,
   })
 
-  const customHardforks: HardforksDict = {}
-  // Extract BPO parameters from blobSchedule
-  if (blobSchedule !== undefined) {
-    for (const [hfName, params] of Object.entries(blobSchedule)) {
-      const hfNameLower = hfName.toLowerCase()
-      if (hfNameLower.startsWith('bpo')) {
-        const bpoParams = params as any
-        customHardforks[hfNameLower] = {
-          params: {
-            target: toType(bpoParams.target, TypeOutput.Number),
-            max: toType(bpoParams.max, TypeOutput.Number),
-            blobGasPriceUpdateFraction: toType(bpoParams.baseFeeUpdateFraction, TypeOutput.Number),
-          },
-        }
-      }
-    }
-  }
-
   // Build chain config with custom hardforks and additional hardforks in the hardforks list
   const chainConfig: ChainConfig = {
     ...Mainnet,
-    customHardforks,
+
     defaultHardfork: from,
     hardforks,
     consensus: preMergeForks.includes(from)
@@ -220,9 +194,7 @@ const preMergeForks = [
   'grayGlacier',
 ]
 
-export function createCommonForFork(fork: string, testData?: any, kzg?: microEthKZG) {
-  const kzgInstance = kzg ?? new microEthKZG(trustedSetup)
-
+export function createCommonForFork(fork: string, testData?: any) {
   try {
     let forkLower = fork.toLowerCase()
     if (forkLower === 'frontier') {
@@ -253,10 +225,9 @@ export function createCommonForFork(fork: string, testData?: any, kzg?: microEth
     return new Common({
       chain: chainConfig,
       hardfork: forkLower,
-      customCrypto: { kzg: kzgInstance },
     })
   } catch {
-    // Transition Fork (e.g. OsakaToBPO1AtTime15K)
+    // Transition fork
 
     // Check if this is a transition fork
     const transitionMatch = fork.match(/^([A-Za-z0-9]+)To([A-Za-z0-9]+)AtTime(\d+)([Kk])?$/)
@@ -273,11 +244,9 @@ export function createCommonForFork(fork: string, testData?: any, kzg?: microEth
       timestamp *= 1000
     }
 
-    const blobSchedule = testData.config.blobSchedule
+    // Build the transition chain configuration
+    const chainConfig = buildTransitionChainConfig(from, to, timestamp)
 
-    // Build chain config with custom hardforks and blob schedule
-    const chainConfig = buildTransitionChainConfig(blobSchedule, from, to, timestamp)
-
-    return new Common({ chain: chainConfig, hardfork: from, customCrypto: { kzg: kzgInstance } })
+    return new Common({ chain: chainConfig, hardfork: from })
   }
 }

@@ -2,7 +2,7 @@ import { createBlock } from '@tvmjs/block'
 import { createBlockchain } from '@tvmjs/blockchain'
 import { Common, TronMainnet } from '@tvmjs/common'
 import { TransactionType, createTx } from '@tvmjs/tx'
-import { Account, blobsToCommitments, computeVersionedHash, getBlobs } from '@tvmjs/util'
+import { Account } from '@tvmjs/util'
 import { MemoryLevel } from 'memory-level'
 
 import { createVM } from '../../src/index.ts'
@@ -11,7 +11,7 @@ import { LevelDB } from './level.ts'
 
 import type { Block } from '@tvmjs/block'
 import { SIGNER_G } from '@tvmjs/testdata'
-import type { Address, PrefixedHexString } from '@tvmjs/util'
+import type { Address } from '@tvmjs/util'
 import type { VMOpts } from '../../src/types.ts'
 import type { VM } from '../../src/vm.ts'
 
@@ -91,22 +91,6 @@ export function getTransaction(
     txParams['gasPrice'] = undefined
     txParams['maxFeePerGas'] = BigInt(100)
     txParams['maxPriorityFeePerGas'] = BigInt(10)
-  } else if (txType === TransactionType.BlobEIP4844) {
-    if (common.customCrypto?.kzg === undefined) {
-      throw new Error('kzg instance required to instantiate blob txs')
-    }
-    txParams['gasPrice'] = undefined
-    txParams['maxFeePerGas'] = BigInt(1000000000)
-    txParams['maxPriorityFeePerGas'] = BigInt(10)
-    txParams['maxFeePerBlobGas'] = BigInt(100)
-    txParams['blobs'] = getBlobs('hello world')
-    txParams['kzgCommitments'] = blobsToCommitments(common.customCrypto!.kzg!, txParams['blobs'])
-    txParams['kzgProofs'] = txParams['blobs'].map((blob: PrefixedHexString, ctx: number) =>
-      common.customCrypto!.kzg!.computeBlobProof(blob, txParams['kzgCommitments'][ctx]),
-    )
-    txParams['blobVersionedHashes'] = txParams['kzgCommitments'].map(
-      (commitment: PrefixedHexString) => computeVersionedHash(commitment, 0x1),
-    )
   }
 
   const tx = createTx(txParams, { common, freeze: false })

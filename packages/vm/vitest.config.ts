@@ -6,8 +6,5 @@ export default mergeConfig(
   baseConfig,
   defineConfig({
     plugins: [topLevelAwait()],
-    optimizeDeps: {
-      exclude: ['kzg-wasm'],
-    },
   }),
 )

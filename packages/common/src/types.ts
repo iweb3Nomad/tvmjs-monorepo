@@ -1,5 +1,5 @@
 import type { secp256k1 } from '@noble/curves/secp256k1.js'
-import type { BigIntLike, KZG, PrefixedHexString } from '@tvmjs/util'
+import type { BigIntLike, PrefixedHexString } from '@tvmjs/util'
 import type { ConsensusAlgorithm, ConsensusType, Hardfork } from './enums.ts'
 
 export interface ChainName {
@@ -67,7 +67,6 @@ export interface GenesisBlockConfig {
   nonce: PrefixedHexString
   extraData: PrefixedHexString
   baseFeePerGas?: PrefixedHexString
-  excessBlobGas?: PrefixedHexString
   requestsHash?: PrefixedHexString
 }
 
@@ -103,7 +102,6 @@ export interface CustomCrypto {
   sha256?: (msg: Uint8Array) => Uint8Array
   ecsign?: typeof secp256k1.sign
   ecdsaRecover?: (sig: Uint8Array, recId: number, hash: Uint8Array) => Uint8Array
-  kzg?: KZG
 }
 
 export interface BaseOpts {
@@ -217,10 +215,4 @@ export type TronProposalConfig = {
 
 export type TronProposalsDict = {
   readonly [proposalId: string]: TronProposalConfig
-}
-
-export type BpoSchedule = {
-  targetBlobGasPerBlock: bigint
-  maxBlobGasPerBlock: bigint
-  blobGasPriceUpdateFraction: bigint
 }

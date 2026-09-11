@@ -99,10 +99,6 @@ interface TVMRunOpts {
    */
   to?: Address
   /**
-   * Versioned hashes for each blob in a blob transaction
-   */
-  blobVersionedHashes?: PrefixedHexString[]
-  /**
    * The 32-byte root transaction ID used by java-tron to derive top-level
    * deployment and internal CREATE addresses. Required for TRON contract creation.
    */
@@ -427,10 +423,6 @@ export interface ExecResult {
    * The gas refund counter
    */
   gasRefund?: bigint
-  /**
-   * Amount of blob gas consumed by the transaction
-   */
-  blobGasUsed?: bigint
 }
 
 /**
@@ -473,7 +465,6 @@ export type Block = {
     gasLimit: bigint
     baseFeePerGas?: bigint
     slotNumber?: bigint
-    getBlobGasPrice(): bigint | undefined
   }
 }
 

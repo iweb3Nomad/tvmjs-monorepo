@@ -43,8 +43,7 @@ export type T8NEnv = {
   parentGasUsed: string
   parentGasLimit: string
   parentUncleHash: string
-  parentBlobGasUsed?: string
-  parentExcessBlobGas?: string
+
   parentBeaconBlockRoot?: string
   blockHashes: {
     [number: string]: string
@@ -66,8 +65,7 @@ export type T8NOutput = {
   gasUsed: string
   currentBaseFee?: string
   withdrawalsRoot?: string
-  blobGasUsed?: string
-  currentExcessBlobGas?: string
+
   requestsHash?: string
   requests?: string[]
   rejected?: T8NRejectedTx[]

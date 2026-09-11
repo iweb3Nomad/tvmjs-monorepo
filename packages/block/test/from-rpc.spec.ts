@@ -10,7 +10,6 @@ import {
 
 import { goerliChainConfig } from '@tvmjs/testdata'
 import { alchemy14151203Data } from './testdata/alchemy14151203.ts'
-import { infuraGoerliBlock10536893Data } from './testdata/infura-goerli-block-10536893.ts'
 import { infura2000004withTransactionsData } from './testdata/infura2000004withTransactions.ts'
 import { infura2000004withoutTransactionsData } from './testdata/infura2000004withoutTransactions.ts'
 import { infura15571241Data } from './testdata/infura15571241.ts'
@@ -169,13 +168,6 @@ describe('[fromRPC] - Alchemy/Infura API block responses', () => {
       infura15571241withTransactionsData.hash,
       'created post merge block with txns',
     )
-  })
-
-  it('should correctly parse a cancun block over rpc', () => {
-    const common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Cancun })
-    const block = createBlockHeaderFromRPC(infuraGoerliBlock10536893Data, { common }) // cspell:disable-line
-    const hash = hexToBytes(infuraGoerliBlock10536893Data.hash)
-    assert.isTrue(equalsBytes(block.hash(), hash))
   })
 })
 

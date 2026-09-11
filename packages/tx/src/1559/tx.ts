@@ -87,7 +87,7 @@ export class FeeMarket1559Tx
    * varying data types.
    */
   public constructor(txData: TxData, opts: TxOptions = {}) {
-    sharedConstructor(this, { ...txData, type: TransactionType.FeeMarketEIP1559 }, opts)
+    sharedConstructor(this, txData, opts)
     const { chainId, accessList: rawAccessList, maxFeePerGas, maxPriorityFeePerGas } = txData
     const accessList = rawAccessList ?? []
 

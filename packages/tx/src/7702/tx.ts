@@ -1,3 +1,4 @@
+import type { Address, EOACode7702AuthorizationListBytes } from '@tvmjs/util'
 import {
   BIGINT_0,
   EthereumJSErrorWithoutCode,
@@ -10,7 +11,6 @@ import {
   isEOACode7702AuthorizationList,
   toBytes,
 } from '@tvmjs/util'
-import type { Address, EOACode7702AuthorizationListBytes } from '@tvmjs/util'
 
 import * as EIP1559 from '../capabilities/eip1559.ts'
 import * as EIP2718 from '../capabilities/eip2718.ts'
@@ -95,7 +95,7 @@ export class EOACode7702Tx implements TransactionInterface<typeof TransactionTyp
    * varying data types.
    */
   public constructor(txData: TxData, opts: TxOptions = {}) {
-    sharedConstructor(this, { ...txData, type: TransactionType.EOACodeEIP7702 }, opts)
+    sharedConstructor(this, txData, opts)
     const {
       chainId,
       accessList: rawAccessList,

@@ -102,8 +102,6 @@ export interface HeaderData {
   nonce?: BytesLike
   baseFeePerGas?: BigIntLike
   withdrawalsRoot?: BytesLike
-  blobGasUsed?: BigIntLike
-  excessBlobGas?: BigIntLike
   parentBeaconBlockRoot?: BytesLike
   requestsHash?: BytesLike
   /**
@@ -178,8 +176,6 @@ export interface JSONHeader {
   nonce?: PrefixedHexString
   baseFeePerGas?: PrefixedHexString
   withdrawalsRoot?: PrefixedHexString
-  blobGasUsed?: PrefixedHexString
-  excessBlobGas?: PrefixedHexString
   parentBeaconBlockRoot?: PrefixedHexString
   requestsHash?: PrefixedHexString
   blockAccessListHash?: PrefixedHexString
@@ -213,8 +209,6 @@ export interface JSONRPCBlock {
   baseFeePerGas?: PrefixedHexString // If EIP-1559 is enabled for this block, returns the base fee per gas
   withdrawals?: Array<JSONRPCWithdrawal> // If EIP-4895 is enabled for this block, array of withdrawals
   withdrawalsRoot?: PrefixedHexString // If EIP-4895 is enabled for this block, the root of the withdrawal trie of the block.
-  blobGasUsed?: PrefixedHexString // If EIP-4844 is enabled for this block, returns the blob gas used for the block
-  excessBlobGas?: PrefixedHexString // If EIP-4844 is enabled for this block, returns the excess blob gas for the block
   parentBeaconBlockRoot?: PrefixedHexString // If EIP-4788 is enabled for this block, returns parent beacon block root
   requestsHash?: PrefixedHexString // If EIP-7685 is enabled for this block, returns the requests root
   blockAccessListHash?: PrefixedHexString // If EIP-7928 is enabled for this block, returns the hash of the block access list
@@ -245,8 +239,6 @@ export type ExecutionPayload = {
   blockHash: PrefixedHexString // DATA, 32 Bytes
   transactions: PrefixedHexString[] // Array of DATA - Array of transaction rlp strings,
   withdrawals?: WithdrawalV1[] // Array of withdrawal objects
-  blobGasUsed?: PrefixedHexString // QUANTITY, 64 Bits
-  excessBlobGas?: PrefixedHexString // QUANTITY, 64 Bits
   parentBeaconBlockRoot?: PrefixedHexString // QUANTITY, 64 Bits
   requestsHash?: PrefixedHexString
   blockAccessListHash?: PrefixedHexString // DATA, 32 Bytes

@@ -1,5 +1,7 @@
 import { bigIntToHex } from '@tvmjs/util'
 
+import { rejectBlobFields } from './helpers.ts'
+
 import type { NumericString, PrefixedHexString } from '@tvmjs/util'
 import type { ExecutionPayload } from './types.ts'
 
@@ -28,8 +30,6 @@ export type BeaconPayloadJSON = {
   block_hash: PrefixedHexString
   transactions: PrefixedHexString[]
   withdrawals?: BeaconWithdrawal[]
-  blob_gas_used?: NumericString
-  excess_blob_gas?: NumericString
   parent_beacon_block_root?: PrefixedHexString
   requests_hash?: PrefixedHexString
 }
@@ -39,6 +39,7 @@ export type BeaconPayloadJSON = {
  * The JSON data can be retrieved from a consensus layer (CL) client on this Beacon API `/eth/v2/beacon/blocks/[block number]`
  */
 export function executionPayloadFromBeaconPayload(payload: BeaconPayloadJSON): ExecutionPayload {
+  rejectBlobFields(payload)
   const executionPayload: ExecutionPayload = {
     parentHash: payload.parent_hash,
     feeRecipient: payload.fee_recipient,
@@ -63,13 +64,6 @@ export function executionPayloadFromBeaconPayload(payload: BeaconPayloadJSON): E
       address: wd.address,
       amount: bigIntToHex(BigInt(wd.amount)),
     }))
-  }
-
-  if (payload.blob_gas_used !== undefined && payload.blob_gas_used !== null) {
-    executionPayload.blobGasUsed = bigIntToHex(BigInt(payload.blob_gas_used))
-  }
-  if (payload.excess_blob_gas !== undefined && payload.excess_blob_gas !== null) {
-    executionPayload.excessBlobGas = bigIntToHex(BigInt(payload.excess_blob_gas))
   }
   if (payload.parent_beacon_block_root !== undefined && payload.parent_beacon_block_root !== null) {
     executionPayload.parentBeaconBlockRoot = payload.parent_beacon_block_root

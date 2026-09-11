@@ -1,13 +1,12 @@
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { keccak_256 } from '@noble/hashes/sha3.js'
-import { trustedSetup } from '@paulmillr/trusted-setups/fast-peerdas.js'
+
 import { createBlock } from '@tvmjs/block'
 import { RLP } from '@tvmjs/rlp'
 import { NobleBLS, TVMMockBlockchain } from '@tvmjs/tvm'
 import { createTx } from '@tvmjs/tx'
 import { bigIntToHex, bytesToHex, hexToBytes, toBytes } from '@tvmjs/util'
-import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
 
 import { buildBlock, createVM } from '../../src/index.ts'
 import { rewardAccount } from '../../src/runBlock.ts'
@@ -26,7 +25,6 @@ import type { PostByzantiumTxReceipt } from '../../dist/esm/types.ts'
 import type { BlockBuilder, VM } from '../../src/index.ts'
 import type { AfterTxEvent } from '../../src/types.ts'
 import type { T8NAlloc, T8NEnv, T8NOptions, T8NOutput, T8NReceipt, T8NRejectedTx } from './types.ts'
-const kzg = new microEthKZG(trustedSetup)
 
 // Helper methods
 
@@ -192,9 +190,7 @@ export class TransitionTool {
           if (!tx.isValid()) {
             throw new Error(tx.getValidationErrors().join(', '))
           }
-          // Set `allowNoBlobs` to `true`, since the test might not have the blob
-          // The 4844-tx at this should still be valid, since it has the `blobHashes` field
-          await builder.addTransaction(tx, { allowNoBlobs: true })
+          await builder.addTransaction(tx)
         } catch (e: any) {
           this.rejected.push({
             index,
@@ -229,9 +225,7 @@ export class TransitionTool {
         if (!tx.isValid()) {
           throw new Error(tx.getValidationErrors().join(', '))
         }
-        // Set `allowNoBlobs` to `true`, since the test might not have the blob
-        // The 4844-tx at this should still be valid, since it has the `blobHashes` field
-        await builder.addTransaction(tx, { allowNoBlobs: true })
+        await builder.addTransaction(tx)
       } catch (e: any) {
         this.rejected.push({
           index,
@@ -256,7 +250,7 @@ export class TransitionTool {
     this.writeOutput(args, convertedOutput, alloc)
   }
   private async setup(args: T8NOptions) {
-    this.common = getCommon(args.state.fork, kzg)
+    this.common = getCommon(args.state.fork)
 
     const blockchain = getBlockchain(this.inputEnv)
 
@@ -344,14 +338,6 @@ export class TransitionTool {
 
     if (block.header.withdrawalsRoot !== undefined) {
       output.withdrawalsRoot = bytesToHex(block.header.withdrawalsRoot)
-    }
-
-    if (block.header.blobGasUsed !== undefined) {
-      output.blobGasUsed = bigIntToHex(block.header.blobGasUsed)
-    }
-
-    if (block.header.excessBlobGas !== undefined) {
-      output.currentExcessBlobGas = bigIntToHex(block.header.excessBlobGas)
     }
 
     if (block.header.requestsHash !== undefined) {

@@ -9,7 +9,6 @@ import {
 import { ConsensusType, Hardfork } from '@tvmjs/common'
 import { MerklePatriciaTrie } from '@tvmjs/mpt'
 import { RLP } from '@tvmjs/rlp'
-import { Blob4844Tx, NetworkWrapperType, createMinimal4844TxFromNetworkWrapper } from '@tvmjs/tx'
 import {
   Address,
   BIGINT_0,
@@ -66,10 +65,6 @@ export class BlockBuilder {
    */
   gasUsed = BIGINT_0
   /**
-   *  The cumulative blob gas used by the blobs in a block
-   */
-  blobGasUsed = BIGINT_0
-  /**
    * Value of the block, represented by the final transaction fees
    * accruing to the miner.
    */
@@ -93,6 +88,13 @@ export class BlockBuilder {
   }
 
   constructor(vm: VM, opts: BuildBlockOpts) {
+    if (opts.headerData) {
+      for (const field of ['blobGasUsed', 'excessBlobGas', 'blob_gas_used', 'excess_blob_gas']) {
+        if (field in opts.headerData) {
+          throw EthereumJSErrorWithoutCode('Blob header fields are no longer supported')
+        }
+      }
+    }
     this.vm = vm
     this.blockOpts = { putBlockIntoBlockchain: true, ...opts.blockOpts, common: this.vm.common }
 
@@ -122,13 +124,6 @@ export class BlockBuilder {
       } else {
         this.headerData.gasLimit = opts.parentBlock.header.gasLimit
       }
-    }
-
-    if (
-      this.vm.common.isActivatedEIP(4844) &&
-      typeof this.headerData.excessBlobGas === 'undefined'
-    ) {
-      this.headerData.excessBlobGas = opts.parentBlock.header.calcNextExcessBlobGas(this.vm.common)
     }
   }
 
@@ -224,18 +219,19 @@ export class BlockBuilder {
    */
   async addTransaction(
     tx: TypedTransaction,
-    {
-      skipHardForkValidation,
-      allowNoBlobs,
-      rootTransactionId,
-      tronTransactionIdPolicy,
-    }: {
+    opts: {
       skipHardForkValidation?: boolean
-      allowNoBlobs?: boolean
       rootTransactionId?: Uint8Array
       tronTransactionIdPolicy?: TronTransactionIdPolicy
     } = {},
   ) {
+    if (Number(tx.type) === 3) {
+      throw EthereumJSErrorWithoutCode('Blob transaction type 0x03 is no longer supported')
+    }
+    if ('allowNoBlobs' in opts) {
+      throw EthereumJSErrorWithoutCode('allowNoBlobs is no longer supported')
+    }
+    const { skipHardForkValidation, rootTransactionId, tronTransactionIdPolicy } = opts
     this.checkStatus()
     validateTronTransactionIdPolicy(tronTransactionIdPolicy)
 
@@ -248,54 +244,15 @@ export class BlockBuilder {
     // cannot be greater than the remaining gas in the block
     const blockGasLimit = toType(this.headerData.gasLimit, TypeOutput.BigInt)
 
-    const blobGasPerBlob = this.vm.common.param('blobGasPerBlob')
-
     const blockGasRemaining = blockGasLimit - this.gasUsed
     if (tx.gasLimit > blockGasRemaining) {
       throw EthereumJSErrorWithoutCode(
         'tx has a higher gas limit than the remaining gas in the block',
       )
     }
-    let blobGasUsed = undefined
-    if (tx instanceof Blob4844Tx) {
-      const { maxBlobGasPerBlock: blobGasLimit } = this.vm.common.getBlobGasSchedule()
-      if (
-        tx.networkWrapperVersion === NetworkWrapperType.EIP4844 &&
-        this.vm.common.isActivatedEIP(7594)
-      ) {
-        throw Error('eip4844 blob transaction for eip7594 activated fork')
-      } else if (
-        tx.networkWrapperVersion === NetworkWrapperType.EIP7594 &&
-        !this.vm.common.isActivatedEIP(7594)
-      ) {
-        throw Error('eip7594 blob transaction but eip not yet activated')
-      }
-
-      if (this.blockOpts.common?.isActivatedEIP(4844) === false) {
-        throw Error('eip4844 not activated yet for adding a blob transaction')
-      }
-      const blobTx = tx as Blob4844Tx
-
-      // Guard against the case if a tx came into the pool without blobs i.e. network wrapper payload
-      if (blobTx.blobs === undefined) {
-        // TODO: verify if we want this, do we want to allow the block builder to accept blob txs without the actual blobs?
-        // (these must have at least one `blobVersionedHashes`, this is verified at tx-level)
-        if (allowNoBlobs !== true) {
-          throw EthereumJSErrorWithoutCode('blobs missing for 4844 transaction')
-        }
-      }
-
-      if (this.blobGasUsed + BigInt(blobTx.numBlobs()) * blobGasPerBlob > blobGasLimit) {
-        throw EthereumJSErrorWithoutCode('block blob gas limit reached')
-      }
-
-      blobGasUsed = this.blobGasUsed
-    }
     const header = {
       ...this.headerData,
       gasUsed: this.gasUsed,
-      // correct excessBlobGas should already part of headerData used above
-      blobGasUsed,
     }
 
     const blockData = { header, transactions: this.transactions }
@@ -308,15 +265,6 @@ export class BlockBuilder {
       rootTransactionId,
       tronTransactionIdPolicy,
     })
-
-    // If tx is a blob transaction, remove blobs/kzg commitments before adding to block per EIP-4844
-    if (tx instanceof Blob4844Tx) {
-      const txData = tx as Blob4844Tx
-      this.blobGasUsed += BigInt(txData.blobVersionedHashes.length) * blobGasPerBlob
-      tx = createMinimal4844TxFromNetworkWrapper(txData, {
-        common: this.blockOpts.common,
-      })
-    }
     this.transactions.push(tx)
     this.transactionResults.push(result)
     this.gasUsed += result.totalGasSpent
@@ -373,11 +321,6 @@ export class BlockBuilder {
     // timestamp should already be set in constructor
     const timestamp = this.headerData.timestamp ?? BIGINT_0
 
-    let blobGasUsed = undefined
-    if (this.vm.common.isActivatedEIP(4844)) {
-      blobGasUsed = this.blobGasUsed
-    }
-
     let requests
     let requestsHash
     if (this.vm.common.isActivatedEIP(7685)) {
@@ -397,8 +340,6 @@ export class BlockBuilder {
       logsBloom,
       gasUsed,
       timestamp,
-      // correct excessBlobGas should already be part of headerData used above
-      blobGasUsed,
       requestsHash,
     }
 

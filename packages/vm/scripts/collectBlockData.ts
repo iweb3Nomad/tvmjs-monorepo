@@ -16,8 +16,6 @@ import { Common, Mainnet } from '@tvmjs/common'
 import { RPCStateManager } from '@tvmjs/statemanager'
 import { bytesToHex, fetchFromProvider, intToHex } from '@tvmjs/util'
 import { createVM, runBlock } from '@tvmjs/vm'
-import { trustedSetup } from '@paulmillr/trusted-setups/fast-peerdas.js'
-import { KZG as microEthKZG } from 'micro-eth-signer/kzg.js'
 
 import type { Address } from '@tvmjs/util'
 
@@ -59,8 +57,7 @@ const main = async () => {
     process.exit(1)
   }
 
-  const kzg = new microEthKZG(trustedSetup)
-  const common = new Common({ chain: Mainnet, customCrypto: { kzg } })
+  const common = new Common({ chain: Mainnet })
   const outDir = path.resolve(import.meta.dirname, '..', 'examples', 'data')
 
   for (let blockNumber = startBlock; blockNumber <= endBlock; blockNumber++) {

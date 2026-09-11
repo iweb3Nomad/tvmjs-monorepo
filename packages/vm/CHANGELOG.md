@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove Blob fees, receipt metadata and block-builder options. Reject type `0x03` and `allowNoBlobs` before state checkpoints; `generateTxReceipt()` now takes four arguments.
 - Remove transaction prewarming and use the TVM's TRON Energy schedule. Access lists remain diagnostic metadata; transaction envelope overhead remains separate from execution Energy.
 - Use TRON-only configuration throughout VM execution and block construction. Execution presets no longer imply Ethereum consensus or block rewards.
 - Reject conflicting Common settings across VM and TVM initialization, including parameter overrides that would otherwise be discarded.

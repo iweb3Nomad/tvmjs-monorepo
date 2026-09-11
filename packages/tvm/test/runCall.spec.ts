@@ -1,27 +1,22 @@
 import { keccak_256 } from '@noble/hashes/sha3.js'
-import { Common, Hardfork, Mainnet, TronMainnet, createCommonFromGethGenesis } from '@tvmjs/common'
-import { SIGNER_G, eip4844GethGenesis } from '@tvmjs/testdata'
+import { Common, Hardfork, Mainnet, TronMainnet } from '@tvmjs/common'
+import { SIGNER_G } from '@tvmjs/testdata'
 import {
   Account,
   Address,
   MAX_UINT64,
   MIN_TOKEN_ID,
-  bytesToBigInt,
   bytesToHex,
   concatBytes,
   createAddressFromString,
   createZeroAddress,
   hexToBytes,
   padToEven,
-  unpadBytes,
 } from '@tvmjs/util'
 import { assert, describe, it } from 'vitest'
 
 import { TVMError } from '../src/errors.ts'
 import { createTVM } from '../src/index.ts'
-import { defaultBlock } from '../src/tvm.ts'
-
-import type { TVMRunCallOpts } from '../src/types.ts'
 
 // Non-protected Create2Address generator. Does not check if Uint8Arrays have the right padding.
 function create2address(sourceAddress: Address, codeHash: Uint8Array, salt: Uint8Array): Address {
@@ -701,80 +696,6 @@ describe('RunCall tests', () => {
       result.execResult.exceptionError?.error,
       TVMError.errorMessages.CODESIZE_EXCEEDS_MAXIMUM,
       'reported error is correct',
-    )
-  })
-  it('runCall() => use BLOBHASH opcode from EIP 4844', async () => {
-    // setup the tvm
-    const common = createCommonFromGethGenesis(eip4844GethGenesis, {
-      chain: 'custom',
-      hardfork: Hardfork.Cancun,
-    })
-    const tvm = await createTVM({ common })
-
-    // setup the call arguments
-    const runCallArgs: TVMRunCallOpts = {
-      gasLimit: BigInt(0xffffffffff),
-      // calldata -- retrieves the versioned hash at index 0 and returns it from memory
-      data: hexToBytes('0x60004960005260206000F3'),
-      blobVersionedHashes: ['0xab'],
-    }
-    const res = await tvm.runCall(runCallArgs)
-    assert.strictEqual(
-      bytesToHex(unpadBytes(res.execResult.returnValue)),
-      '0xab',
-      'retrieved correct versionedHash from runState',
-    )
-
-    // setup the call arguments
-    const runCall2Args: TVMRunCallOpts = {
-      gasLimit: BigInt(0xffffffffff),
-      // calldata -- tries to retrieve the versioned hash at index 1 and return it from memory
-      data: hexToBytes('0x60014960005260206000F3'),
-      blobVersionedHashes: ['0xab'],
-    }
-    const res2 = await tvm.runCall(runCall2Args)
-    assert.strictEqual(
-      bytesToHex(unpadBytes(res2.execResult.returnValue)),
-      '0x',
-      'retrieved no versionedHash when specified versionedHash does not exist in runState',
-    )
-  })
-
-  it('runCall() => use BLOBBASEFEE opcode from EIP 7516', async () => {
-    // setup the tvm
-    const common = createCommonFromGethGenesis(eip4844GethGenesis, {
-      chain: 'custom',
-      hardfork: Hardfork.Cancun,
-    })
-    const tvm = await createTVM({ common })
-
-    const BLOBBASEFEE_OPCODE = 0x4a
-    assert.strictEqual(
-      tvm.getActiveOpcodes().get(BLOBBASEFEE_OPCODE)!.name,
-      'BLOBBASEFEE',
-      'Opcode 0x4a named BLOBBASEFEE',
-    )
-
-    const block = defaultBlock()
-    block.header.getBlobGasPrice = () => BigInt(119)
-
-    // setup the call arguments
-    const runCallArgs: TVMRunCallOpts = {
-      gasLimit: BigInt(0xffffffffff),
-      // calldata -- retrieves the blobgas and returns it from memory
-      data: hexToBytes('0x4a60005260206000F3'),
-      block,
-    }
-    const res = await tvm.runCall(runCallArgs)
-    assert.strictEqual(
-      bytesToBigInt(unpadBytes(res.execResult.returnValue)),
-      BigInt(119),
-      'retrieved correct gas fee',
-    )
-    assert.strictEqual(
-      res.execResult.executionGasUsed,
-      BigInt(6417),
-      'correct blob gas fee (2) charged',
     )
   })
 

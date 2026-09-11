@@ -44,16 +44,20 @@ function parseGethParams(gethGenesis: GethGenesis) {
     gasLimit,
     coinbase,
     baseFeePerGas,
-    excessBlobGas,
     requestsHash,
     extraData: unparsedExtraData,
     nonce: unparsedNonce,
     timestamp: unparsedTimestamp,
   } = gethGenesis
+  if ('excessBlobGas' in gethGenesis || 'blobGasUsed' in gethGenesis) {
+    throw EthereumJSErrorWithoutCode(
+      'Blob gas fields are not supported by TRON configuration parsing',
+    )
+  }
   const genesisTimestamp = Number(unparsedTimestamp)
   const { chainId, depositContractAddress } = config
 
-  if (config.blobSchedule !== undefined) {
+  if ('blobSchedule' in config) {
     throw EthereumJSErrorWithoutCode('blobSchedule is not supported by TRON configuration parsing')
   }
 
@@ -90,7 +94,6 @@ function parseGethParams(gethGenesis: GethGenesis) {
       mixHash,
       coinbase,
       baseFeePerGas,
-      excessBlobGas,
       requestsHash,
     },
     hardfork: undefined as string | undefined,
