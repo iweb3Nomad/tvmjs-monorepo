@@ -493,8 +493,12 @@ export class MerkleStateManager implements StateManagerInterface {
     }
 
     this._tokenIdsCacheStack.pop()
-    this._tokenIdsCache.forEach((v, k) => this._tokenIds.set(k, v))
-    this._tokenIdsCache = new Map()
+    if (this._checkpointCount === 0) {
+      // Only the outermost commit makes registrations permanent. Nested commits
+      // keep them in the cache so an enclosing revert can still discard them.
+      this._tokenIdsCache.forEach((v, k) => this._tokenIds.set(k, v))
+      this._tokenIdsCache = new Map()
+    }
 
     if (this.DEBUG) {
       this._debug(`state checkpoint committed`)
