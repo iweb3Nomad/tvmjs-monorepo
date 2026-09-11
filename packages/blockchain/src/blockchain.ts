@@ -452,13 +452,22 @@ export class Blockchain implements BlockchainInterface {
 
         let commonAncestor: undefined | BlockHeader
         let ancestorHeaders: undefined | BlockHeader[]
-        // if total difficulty is higher than current, add it to canonical chain
-        if (
-          block.isGenesis() ||
-          td > currentTd.header ||
-          (block.common.hasConsensus() &&
-            block.common.consensusType() === ConsensusType.ProofOfStake)
-        ) {
+        // Chains without consensus metadata (TRON execution presets) keep every
+        // header at difficulty 0, so total difficulty cannot order blocks. Order
+        // by block number instead: a higher block extends the canonical head,
+        // while re-put or lower blocks are stored without moving the head.
+        const numberBasedForkChoice = !this.common.hasConsensus()
+        let extendsCanonicalHead: boolean
+        if (numberBasedForkChoice) {
+          extendsCanonicalHead = blockNumber > (await this._headNumber(this._headHeaderHash))
+        } else {
+          // if total difficulty is higher than current, add it to canonical chain
+          extendsCanonicalHead =
+            td > currentTd.header ||
+            (block.common.hasConsensus() &&
+              block.common.consensusType() === ConsensusType.ProofOfStake)
+        }
+        if (block.isGenesis() || extendsCanonicalHead) {
           const foundCommon = await this.findCommonAncestor(header)
           commonAncestor = foundCommon.commonAncestor
           ancestorHeaders = foundCommon.ancestorHeaders
@@ -479,9 +488,21 @@ export class Blockchain implements BlockchainInterface {
           // heads are stale in `_heads` and `_headBlockHash`
           await this._rebuildCanonical(header, dbOps)
         } else {
-          // the TD is lower than the current highest TD so we will add the block
-          // to the DB, but will not mark it as the canonical chain.
-          if (td > currentTd.block && item instanceof Block) {
+          // The block is not the new canonical head: store it, and only advance
+          // the head block when the item fills in a canonical position.
+          let advancesHeadBlock: boolean
+          if (numberBasedForkChoice) {
+            const canonicalHash = await this.safeNumberToHash(blockNumber)
+            advancesHeadBlock =
+              canonicalHash !== false &&
+              equalsBytes(canonicalHash, blockHash) &&
+              blockNumber > (await this._headNumber(this._headBlockHash))
+          } else {
+            // the TD is lower than the current highest TD so we will add the block
+            // to the DB, but will not mark it as the canonical chain.
+            advancesHeadBlock = td > currentTd.block
+          }
+          if (advancesHeadBlock && item instanceof Block) {
             this._headBlockHash = blockHash
           }
           // save hash to number lookup info even if rebuild not needed
@@ -740,6 +761,15 @@ export class Blockchain implements BlockchainInterface {
       }
     }
     return this.dbManager.getTotalDifficulty(hash, number)
+  }
+
+  /**
+   * Block number behind a head hash, or -1 when no head is known. Used for the
+   * number-based fork choice of chains without consensus metadata.
+   */
+  private async _headNumber(hash: Uint8Array | undefined): Promise<bigint> {
+    if (hash === undefined) return -BIGINT_1
+    return (await this.dbManager.hashToNumber(hash)) ?? -BIGINT_1
   }
 
   /**
