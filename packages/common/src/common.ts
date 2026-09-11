@@ -34,6 +34,19 @@ function assertSupportedEIP(eip: number): void {
   }
 }
 
+/** JSON with object keys sorted at every level, so equal metadata compares equal regardless of key order. */
+function stableStringify(value: unknown): string {
+  return JSON.stringify(value, (_key, item) =>
+    item !== null && typeof item === 'object' && !Array.isArray(item)
+      ? Object.fromEntries(
+          Object.keys(item)
+            .sort()
+            .map((key) => [key, (item as Record<string, unknown>)[key]]),
+        )
+      : item,
+  )
+}
+
 /**
  * Common class to access chain and hardfork parameters and to provide
  * a unified and shared view on the network and hardfork state.
@@ -543,7 +556,10 @@ export class Common {
       this.hardfork() !== other.hardfork() ||
       !sameIds(this._activatedEIPsCache, other._activatedEIPsCache) ||
       !sameIds(this._activatedProposals, other._activatedProposals) ||
-      JSON.stringify(this._chainParams.consensus) !== JSON.stringify(other._chainParams.consensus)
+      stableStringify(this._chainParams.consensus) !==
+        stableStringify(other._chainParams.consensus) ||
+      // Network genesis metadata must not be replaced by an execution-only instance.
+      stableStringify(this._chainParams.genesis) !== stableStringify(other._chainParams.genesis)
     )
       return false
 

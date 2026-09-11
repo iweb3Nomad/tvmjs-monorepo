@@ -1,6 +1,6 @@
 import { createBlock } from '@tvmjs/block'
 import { createBlockchain } from '@tvmjs/blockchain'
-import { Common, TronMainnet, TronNile, TronShasta } from '@tvmjs/common'
+import { Common, TronMainnet, TronNile, TronShasta, createCustomCommon } from '@tvmjs/common'
 import { MerkleStateManager } from '@tvmjs/statemanager'
 import { createTVM, getActivePrecompiles } from '@tvmjs/tvm'
 import { createLegacyTx } from '@tvmjs/tx'
@@ -79,6 +79,58 @@ describe('TRON configuration across execution entry points', () => {
     )
     const vm = await createVM({ common, tvmOpts: { common: common.copy() } })
     assert.strictEqual(vm.common.param('balanceGas'), 21n)
+  })
+
+  it('does not discard supplied genesis metadata behind an execution-only tvmOpts.common', async () => {
+    const genesis = {
+      gasLimit: 1000000,
+      difficulty: 0,
+      nonce: '0x0000000000000000',
+      extraData: '0x',
+    } as const
+    const common = createCustomCommon({ genesis }, TronMainnet)
+    assert.isTrue(common.hasGenesis())
+    await assertRejected(
+      createVM({ common, tvmOpts: { common: new Common({ chain: TronMainnet }) } }),
+      /Conflicting Common/,
+    )
+    await assertRejected(
+      createVM({ common: new Common({ chain: TronMainnet }), tvmOpts: { common } }),
+      /Conflicting Common/,
+    )
+    const vm = await createVM({ common, tvmOpts: { common: common.copy() } })
+    assert.isTrue(vm.common.hasGenesis())
+    assert.deepEqual(vm.common.genesis(), genesis)
+  })
+
+  it('accepts equivalent genesis and consensus metadata regardless of key order', async () => {
+    const genesis = {
+      gasLimit: 1000000,
+      difficulty: 0,
+      nonce: '0x0000000000000000',
+      extraData: '0x',
+    } as const
+    const reorderedGenesis = {
+      extraData: '0x',
+      nonce: '0x0000000000000000',
+      difficulty: 0,
+      gasLimit: 1000000,
+    } as const
+    const common = createCustomCommon({ genesis }, TronMainnet)
+    const equivalent = createCustomCommon({ genesis: reorderedGenesis }, TronMainnet)
+    assert.isTrue(common.isCompatibleWith(equivalent))
+    assert.isTrue(equivalent.isCompatibleWith(common))
+    const vm = await createVM({ common, tvmOpts: { common: equivalent } })
+    assert.deepEqual(vm.common.genesis(), genesis)
+
+    const consensus = { type: 'custom', algorithm: 'fibonacci' } as const
+    const withConsensus = createCustomCommon({ consensus }, TronMainnet)
+    const reorderedConsensus = createCustomCommon(
+      { consensus: { algorithm: 'fibonacci', type: 'custom' } },
+      TronMainnet,
+    )
+    assert.isTrue(withConsensus.isCompatibleWith(reorderedConsensus))
+    assert.isFalse(withConsensus.isCompatibleWith(common))
   })
 
   it('runs a default signed transaction and rejects a different chainId', async () => {
