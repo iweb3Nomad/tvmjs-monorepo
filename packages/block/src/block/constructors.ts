@@ -16,7 +16,11 @@ import {
 } from '@tvmjs/util'
 
 import { generateCliqueBlockExtraData } from '../consensus/clique.ts'
-import { genTransactionsTrieRoot, genWithdrawalsTrieRoot, rejectBlobFields } from '../helpers.ts'
+import {
+  genTransactionsTrieRoot,
+  genWithdrawalsTrieRoot,
+  rejectRemovedHeaderFields,
+} from '../helpers.ts'
 import {
   Block,
   createBlockHeader,
@@ -302,7 +306,7 @@ export async function createBlockFromExecutionPayload(
   payload: ExecutionPayload,
   opts?: BlockOptions,
 ): Promise<Block> {
-  rejectBlobFields(payload)
+  rejectRemovedHeaderFields(payload)
   const {
     blockNumber: number,
     receiptsRoot: receiptTrie,

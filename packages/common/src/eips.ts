@@ -260,14 +260,6 @@ export const eipsDict: EIPsDict = {
     requiredEIPs: [3540, 3670, 5450],
   },
   /**
-   * Description : Beacon block root in the TVM
-   * URL         : https://eips.ethereum.org/EIPS/eip-4788
-   * Status      : Final
-   */
-  4788: {
-    minimumHardfork: Hardfork.Cancun,
-  },
-  /**
    * Description : Beacon chain push withdrawals as operations
    * URL         : https://eips.ethereum.org/EIPS/eip-4895
    * Status      : Final
@@ -520,6 +512,7 @@ export const eipsDict: EIPsDict = {
    */
   7708: {
     minimumHardfork: Hardfork.Chainstart,
+    // Original Ethereum prerequisites; EIP-7708 is unavailable in the TRON profile.
     requiredEIPs: [1559, 4788, 6780],
   },
   /**
@@ -757,14 +750,6 @@ export const tipsDict: EIPsDict = {
   4750: {
     minimumHardfork: Hardfork.London,
     requiredEIPs: [3540, 3670, 5450],
-  },
-  /**
-   * Description : Beacon block root in the TVM
-   * URL         : https://eips.ethereum.org/EIPS/eip-4788
-   * Status      : Final
-   */
-  4788: {
-    minimumHardfork: Hardfork.Cancun,
   },
   /**
    * Description : Beacon chain push withdrawals as operations

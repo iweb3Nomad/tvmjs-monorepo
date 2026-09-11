@@ -115,7 +115,6 @@ describe('EIP-7002 tests', () => {
       {
         header: {
           number: 2,
-          parentBeaconBlockRoot: new Uint8Array(32),
         },
       },
       { common },
@@ -136,7 +135,6 @@ describe('EIP-7002 tests', () => {
       {
         header: {
           number: 3,
-          parentBeaconBlockRoot: new Uint8Array(32),
         },
         transactions: [tx],
       },
@@ -192,7 +190,6 @@ describe('EIP-7002 tests', () => {
       {
         header: {
           number: 3,
-          parentBeaconBlockRoot: new Uint8Array(32),
         },
         transactions: [tx2, tx3],
       },

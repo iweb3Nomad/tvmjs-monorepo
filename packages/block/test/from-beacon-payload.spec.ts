@@ -34,6 +34,8 @@ describe('Beacon execution payload data conversion', () => {
     expect(converted.blockNumber).toBe('0x20000000000001')
     expect(converted).not.toHaveProperty('blobGasUsed')
     expect(converted).not.toHaveProperty('excessBlobGas')
+    expect(converted).not.toHaveProperty('parentBeaconBlockRoot')
+    expect(converted).not.toHaveProperty('parent_beacon_block_root')
     expect((await createBlockFromBeaconPayloadJSON(payload)).hash()).toEqual(block.hash())
   })
 
@@ -51,6 +53,21 @@ describe('Beacon execution payload data conversion', () => {
         expect(() => executionPayloadFromBeaconPayload(input)).toThrow(`Blob header field ${field}`)
         await expect(createBlockFromBeaconPayloadJSON(input)).rejects.toThrow(
           `Blob header field ${field}`,
+        )
+      }
+    },
+  )
+
+  it.each(['parentBeaconBlockRoot', 'parent_beacon_block_root'])(
+    'rejects %s before Beacon payload conversion can discard it',
+    async (field) => {
+      for (const value of [undefined, null, '0', 0, '', `0x${'00'.repeat(32)}`]) {
+        const input = { ...payload, [field]: value }
+        expect(() => executionPayloadFromBeaconPayload(input)).toThrow(
+          `Beacon root header field ${field}`,
+        )
+        await expect(createBlockFromBeaconPayloadJSON(input)).rejects.toThrow(
+          `Beacon root header field ${field}`,
         )
       }
     },

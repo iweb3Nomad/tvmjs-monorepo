@@ -30,7 +30,7 @@ import { TVMError } from './errors.ts'
 import { Interpreter } from './interpreter.ts'
 import { Journal } from './journal.ts'
 import { TVMPerformanceLogger } from './logger.ts'
-import { Message, createTronTransactionContext, rejectBlobExecutionOptions } from './message.ts'
+import { Message, createTronTransactionContext, rejectRemovedExecutionOptions } from './message.ts'
 import { getOpcodesForHF } from './opcodes/index.ts'
 import { paramsTVM } from './params.ts'
 import { NobleBLS, getActivePrecompiles, getPrecompileName } from './precompiles/index.ts'
@@ -288,8 +288,8 @@ export class TVM implements TVMInterface {
     // Supported EIPs
     const supportedEIPs = [
       1153, 1559, 2537, 2565, 2718, 2930, 2935, 3198, 3540, 3541, 3607, 3670, 3855, 3860, 4200,
-      4399, 4750, 4788, 4895, 5133, 5450, 5656, 6110, 6206, 6780, 7002, 7069, 7251, 7620, 7685,
-      7692, 7698, 7702, 7709, 7823, 7825, 7934, 7939, 7951, 8024,
+      4399, 4750, 4895, 5133, 5450, 5656, 6110, 6206, 6780, 7002, 7069, 7251, 7620, 7685, 7692,
+      7698, 7702, 7709, 7823, 7825, 7934, 7939, 7951, 8024,
     ]
 
     for (const eip of this.common.eips()) {
@@ -1086,8 +1086,8 @@ export class TVM implements TVMInterface {
    * point; every overlapping public invocation is rejected regardless of its supplied depth.
    */
   async runCall(opts: TVMRunCallOpts): Promise<TVMResult> {
-    rejectBlobExecutionOptions(opts)
-    if (opts.message) rejectBlobExecutionOptions(opts.message)
+    rejectRemovedExecutionOptions(opts)
+    if (opts.message) rejectRemovedExecutionOptions(opts.message)
     const messageDepth = opts.message?.depth ?? opts.depth ?? 0
     this._acquireExecutionLock()
     try {
@@ -1475,7 +1475,7 @@ export class TVM implements TVMInterface {
    * not subject to this public execution lock.
    */
   async runCode(opts: TVMRunCodeOpts): Promise<ExecResult> {
-    rejectBlobExecutionOptions(opts)
+    rejectRemovedExecutionOptions(opts)
     this._acquireExecutionLock()
     try {
       this._block = opts.block ?? defaultBlock()

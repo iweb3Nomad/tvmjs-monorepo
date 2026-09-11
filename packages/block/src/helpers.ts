@@ -163,10 +163,15 @@ export function genRequestsRoot(
 }
 
 /** Reject removed header fields before RPC or payload normalization can discard them. */
-export function rejectBlobFields(data: object) {
+export function rejectRemovedHeaderFields(data: object) {
   for (const field of ['blobGasUsed', 'excessBlobGas', 'blob_gas_used', 'excess_blob_gas']) {
     if (field in data) {
       throw EthereumJSErrorWithoutCode(`Blob header field ${field} is no longer supported`)
+    }
+  }
+  for (const field of ['parentBeaconBlockRoot', 'parent_beacon_block_root']) {
+    if (field in data) {
+      throw EthereumJSErrorWithoutCode(`Beacon root header field ${field} is no longer supported`)
     }
   }
 }

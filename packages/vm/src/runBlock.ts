@@ -18,7 +18,6 @@ import {
   bigIntToBytes,
   bytesToHex,
   concatBytes,
-  createAddressFromString,
   createBlockLevelAccessList,
   equalsBytes,
   hexToBytes,
@@ -29,6 +28,7 @@ import {
 } from '@tvmjs/util'
 import debugDefault from 'debug'
 
+import { validateBlockContext } from './blockContext.ts'
 import { Bloom } from './bloom/index.ts'
 import { emitTVMProfile } from './emitTVMProfile.ts'
 import { accumulateRequests } from './requests.ts'
@@ -52,10 +52,6 @@ import type { VM } from './vm.ts'
 
 const debug = debugDefault('vm:block')
 
-const parentBeaconBlockRootAddress = createAddressFromString(
-  '0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02',
-)
-
 let enableProfiler = false
 const stateRootCPLabel = 'New state root, DAO HF, checkpoints, block validation'
 const processTxsLabel = 'Tx processing [ use per-tx profiler for more details ]'
@@ -73,6 +69,7 @@ const entireBlockLabel = 'Entire block'
  *  - `generate`: false
  */
 export async function runBlock(vm: VM, opts: RunBlockOpts): Promise<RunBlockResult> {
+  validateBlockContext(opts.block.header)
   validateTronTransactionIdPolicy(opts.tronTransactionIdPolicy)
 
   if (vm['_opts'].profilerOpts?.reportAfterBlock === true) {
@@ -396,16 +393,6 @@ async function applyBlock(vm: VM, block: Block, opts: RunBlockOpts): Promise<App
       await block.validateData(false, true, opts.validateBlockSize ?? false)
     }
   }
-  if (vm.common.isActivatedEIP(4788)) {
-    if (vm.DEBUG) {
-      debug(`accumulate parentBeaconBlockRoot`)
-    }
-    await accumulateParentBeaconBlockRoot(
-      vm,
-      block.header.parentBeaconBlockRoot!,
-      block.header.timestamp,
-    )
-  }
   if (vm.common.isActivatedEIP(2935)) {
     if (vm.DEBUG) {
       debug(`accumulate parentBlockHash `)
@@ -536,60 +523,6 @@ export async function accumulateParentBlockHash(
     await vm.stateManager.putStorage(historyAddress, key, hash)
   }
   await putBlockHash(vm, parentHash, currentBlockNumber - BIGINT_1)
-
-  // do cleanup if the code was not deployed
-  await vm.tvm.journal.cleanup()
-}
-
-export async function accumulateParentBeaconBlockRoot(vm: VM, root: Uint8Array, timestamp: bigint) {
-  if (!vm.common.isActivatedEIP(4788)) {
-    throw EthereumJSErrorWithoutCode(
-      'Cannot call `accumulateParentBeaconBlockRoot`: EIP 4788 is not active',
-    )
-  }
-  // Save the parentBeaconBlockRoot to the beaconroot stateful precompile ring buffers
-  const historicalRootsLength = BigInt(vm.common.param('historicalRootsLength'))
-  const timestampIndex = timestamp % historicalRootsLength
-  const timestampExtended = timestampIndex + historicalRootsLength
-
-  /**
-   * Note: (by Gabriel)
-   * Get account will throw an error in stateless execution b/c witnesses are not bundled
-   * But we do need an account so we are able to put the storage
-   */
-  const code = await vm.stateManager.getCode(parentBeaconBlockRootAddress)
-
-  if (code.length === 0) {
-    // Exit early, system contract has no code so no storage is written
-    // TODO: verify with Gabriel that this is fine regarding binary trees (should we put an empty account?)
-    return
-  }
-  if (vm.common.isActivatedEIP(7928)) {
-    vm.tvm.blockLevelAccessList!.addStorageWrite(
-      parentBeaconBlockRootAddress.toString(),
-      setLengthLeft(bigIntToBytes(timestampIndex), 32),
-      bigIntToBytes(timestamp),
-      vm.tvm.blockLevelAccessList!.blockAccessIndex,
-    )
-  }
-  await vm.stateManager.putStorage(
-    parentBeaconBlockRootAddress,
-    setLengthLeft(bigIntToBytes(timestampIndex), 32),
-    bigIntToBytes(timestamp),
-  )
-  if (vm.common.isActivatedEIP(7928)) {
-    vm.tvm.blockLevelAccessList!.addStorageWrite(
-      parentBeaconBlockRootAddress.toString(),
-      setLengthLeft(bigIntToBytes(timestampExtended), 32),
-      root,
-      vm.tvm.blockLevelAccessList!.blockAccessIndex,
-    )
-  }
-  await vm.stateManager.putStorage(
-    parentBeaconBlockRootAddress,
-    setLengthLeft(bigIntToBytes(timestampExtended), 32),
-    root,
-  )
 
   // do cleanup if the code was not deployed
   await vm.tvm.journal.cleanup()

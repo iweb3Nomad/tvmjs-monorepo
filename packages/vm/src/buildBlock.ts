@@ -24,10 +24,10 @@ import {
   toType,
 } from '@tvmjs/util'
 
+import { validateBlockContext } from './blockContext.ts'
 import { Bloom } from './bloom/index.ts'
 import { accumulateRequests } from './requests.ts'
 import {
-  accumulateParentBeaconBlockRoot,
   accumulateParentBlockHash,
   calculateMinerReward,
   encodeReceipt,
@@ -88,10 +88,18 @@ export class BlockBuilder {
   }
 
   constructor(vm: VM, opts: BuildBlockOpts) {
+    validateBlockContext(opts.parentBlock.header)
     if (opts.headerData) {
       for (const field of ['blobGasUsed', 'excessBlobGas', 'blob_gas_used', 'excess_blob_gas']) {
         if (field in opts.headerData) {
           throw EthereumJSErrorWithoutCode('Blob header fields are no longer supported')
+        }
+      }
+      for (const field of ['parentBeaconBlockRoot', 'parent_beacon_block_root']) {
+        if (field in opts.headerData) {
+          throw EthereumJSErrorWithoutCode(
+            `Beacon root header field ${field} is no longer supported`,
+          )
         }
       }
     }
@@ -376,20 +384,6 @@ export class BlockBuilder {
   }
 
   async initState() {
-    if (this.vm.common.isActivatedEIP(4788)) {
-      if (!this.checkpointed) {
-        await this.vm.tvm.journal.checkpoint()
-        this.checkpointed = true
-      }
-
-      const { parentBeaconBlockRoot, timestamp } = this.headerData
-      // timestamp should already be set in constructor
-      const timestampBigInt = toType(timestamp ?? 0, TypeOutput.BigInt)
-      const parentBeaconBlockRootBuf =
-        toType(parentBeaconBlockRoot!, TypeOutput.Uint8Array) ?? new Uint8Array(32)
-
-      await accumulateParentBeaconBlockRoot(this.vm, parentBeaconBlockRootBuf, timestampBigInt)
-    }
     if (this.vm.common.isActivatedEIP(2935)) {
       if (!this.checkpointed) {
         await this.vm.tvm.journal.checkpoint()

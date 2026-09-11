@@ -27,7 +27,7 @@ import {
   CLIQUE_EXTRA_VANITY,
   cliqueIsEpochTransition,
 } from '../consensus/clique.ts'
-import { rejectBlobFields } from '../helpers.ts'
+import { rejectRemovedHeaderFields } from '../helpers.ts'
 import { paramsBlock } from '../params.ts'
 
 import type { BlockHeaderBytes, BlockOptions, HeaderData, JSONHeader } from '../types.ts'
@@ -59,7 +59,6 @@ export class BlockHeader {
   public readonly nonce: Uint8Array
   public readonly baseFeePerGas?: bigint
   public readonly withdrawalsRoot?: Uint8Array
-  public readonly parentBeaconBlockRoot?: Uint8Array
   public readonly requestsHash?: Uint8Array
   public readonly blockAccessListHash?: Uint8Array
   public readonly slotNumber?: bigint
@@ -93,7 +92,7 @@ export class BlockHeader {
    *
    */
   constructor(headerData: HeaderData, opts: BlockOptions = {}) {
-    rejectBlobFields(headerData)
+    rejectRemovedHeaderFields(headerData)
     if (opts.common) {
       this.common = opts.common.copy()
     } else {
@@ -161,7 +160,6 @@ export class BlockHeader {
           : BIGINT_7
         : undefined,
       withdrawalsRoot: this.common.isActivatedEIP(4895) ? KECCAK256_RLP : undefined,
-      parentBeaconBlockRoot: this.common.isActivatedEIP(4788) ? new Uint8Array(32) : undefined,
       // Note: as of devnet-4 we stub the null SHA256 hash, but for devnet5 this will actually
       // be the correct hash for empty requests.
       requestsHash: this.common.isActivatedEIP(7685) ? SHA256_NULL : undefined,
@@ -173,9 +171,6 @@ export class BlockHeader {
       toType(headerData.baseFeePerGas, TypeOutput.BigInt) ?? hardforkDefaults.baseFeePerGas
     const withdrawalsRoot =
       toType(headerData.withdrawalsRoot, TypeOutput.Uint8Array) ?? hardforkDefaults.withdrawalsRoot
-    const parentBeaconBlockRoot =
-      toType(headerData.parentBeaconBlockRoot, TypeOutput.Uint8Array) ??
-      hardforkDefaults.parentBeaconBlockRoot
     const requestsHash =
       toType(headerData.requestsHash, TypeOutput.Uint8Array) ?? hardforkDefaults.requestsHash
     const blockAccessListHash =
@@ -193,12 +188,6 @@ export class BlockHeader {
     if (!this.common.isActivatedEIP(4895) && withdrawalsRoot !== undefined) {
       throw EthereumJSErrorWithoutCode(
         'A withdrawalsRoot for a header can only be provided with EIP4895 being activated',
-      )
-    }
-
-    if (!this.common.isActivatedEIP(4788) && parentBeaconBlockRoot !== undefined) {
-      throw EthereumJSErrorWithoutCode(
-        'A parentBeaconBlockRoot for a header can only be provided with EIP4788 being activated',
       )
     }
 
@@ -233,7 +222,6 @@ export class BlockHeader {
     this.nonce = nonce
     this.baseFeePerGas = baseFeePerGas
     this.withdrawalsRoot = withdrawalsRoot
-    this.parentBeaconBlockRoot = parentBeaconBlockRoot
     this.requestsHash = requestsHash
     this.blockAccessListHash = blockAccessListHash
     this.slotNumber = slotNumber
@@ -331,21 +319,6 @@ export class BlockHeader {
       if (this.withdrawalsRoot?.length !== 32) {
         const msg = this._errorMsg(
           `withdrawalsRoot must be 32 bytes, received ${this.withdrawalsRoot!.length} bytes`,
-        )
-        throw EthereumJSErrorWithoutCode(msg)
-      }
-    }
-
-    if (this.common.isActivatedEIP(4788)) {
-      if (this.parentBeaconBlockRoot === undefined) {
-        const msg = this._errorMsg('EIP4788 block has no parentBeaconBlockRoot field')
-        throw EthereumJSErrorWithoutCode(msg)
-      }
-      if (this.parentBeaconBlockRoot?.length !== 32) {
-        const msg = this._errorMsg(
-          `parentBeaconBlockRoot must be 32 bytes, received ${
-            this.parentBeaconBlockRoot!.length
-          } bytes`,
         )
         throw EthereumJSErrorWithoutCode(msg)
       }
@@ -579,9 +552,6 @@ export class BlockHeader {
     if (this.common.isActivatedEIP(4895)) {
       rawItems.push(this.withdrawalsRoot!)
     }
-    if (this.common.isActivatedEIP(4788)) {
-      rawItems.push(this.parentBeaconBlockRoot!)
-    }
     if (this.common.isActivatedEIP(7685)) {
       rawItems.push(this.requestsHash!)
     }
@@ -720,9 +690,6 @@ export class BlockHeader {
     }
     if (this.common.isActivatedEIP(1559)) {
       JSONDict.baseFeePerGas = bigIntToHex(this.baseFeePerGas!)
-    }
-    if (this.common.isActivatedEIP(4788)) {
-      JSONDict.parentBeaconBlockRoot = bytesToHex(this.parentBeaconBlockRoot!)
     }
     if (this.common.isActivatedEIP(7685)) {
       JSONDict.requestsHash = bytesToHex(this.requestsHash!)

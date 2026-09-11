@@ -12,6 +12,8 @@ import {
   equalsBytes,
 } from '@tvmjs/util'
 
+import { rejectRemovedHeaderFields } from '../helpers.ts'
+
 import type { Common } from '@tvmjs/common'
 import type { FeeMarket1559Tx, LegacyTx, TypedTransaction } from '@tvmjs/tx'
 import type { Withdrawal } from '@tvmjs/util'
@@ -79,6 +81,7 @@ export class Block {
     withdrawals?: Withdrawal[],
     opts: BlockOptions = {},
   ) {
+    if (header) rejectRemovedHeaderFields(header)
     if (transactions.some((tx) => Number(tx.type) === 3)) {
       throw EthereumJSErrorWithoutCode('Blob transaction type 0x03 is no longer supported')
     }
@@ -421,7 +424,6 @@ export class Block {
       prevRandao: header.mixHash!,
       transactions,
       ...withdrawalsArr,
-      parentBeaconBlockRoot: header.parentBeaconBlockRoot,
       requestsHash: header.requestsHash,
     }
 

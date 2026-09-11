@@ -31,6 +31,7 @@ import {
 } from '@tvmjs/util'
 import debugDefault from 'debug'
 
+import { validateBlockContext } from './blockContext.ts'
 import { Bloom } from './bloom/index.ts'
 import { emitTVMProfile } from './emitTVMProfile.ts'
 import { validateTronTransactionIdPolicy } from './tronTransactionId.ts'
@@ -370,13 +371,7 @@ export async function runTx(vm: VM, opts: RunTxOpts): Promise<RunTxResult> {
   if (Number(opts.tx.type) === 3) {
     throw EthereumJSErrorWithoutCode('Blob transaction type 0x03 is no longer supported')
   }
-  if (opts.block) {
-    for (const field of ['blobGasUsed', 'excessBlobGas', 'getBlobGasPrice']) {
-      if (field in opts.block.header) {
-        throw EthereumJSErrorWithoutCode(`Blob block context field ${field} is no longer supported`)
-      }
-    }
-  }
+  if (opts.block) validateBlockContext(opts.block.header)
   const tronTransactionIdPolicy = validateTronTransactionIdPolicy(opts.tronTransactionIdPolicy)
   const rootTransactionId =
     opts.rootTransactionId ??

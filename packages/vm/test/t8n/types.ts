@@ -44,7 +44,6 @@ export type T8NEnv = {
   parentGasLimit: string
   parentUncleHash: string
 
-  parentBeaconBlockRoot?: string
   blockHashes: {
     [number: string]: string
   }

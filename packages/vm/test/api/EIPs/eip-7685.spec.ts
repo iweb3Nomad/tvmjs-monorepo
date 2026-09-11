@@ -77,7 +77,7 @@ describe('EIP 7685 buildBlock tests', () => {
     const common = new Common({
       chain: Mainnet,
       hardfork: Hardfork.Cancun,
-      eips: [7685, 1559, 4895, 4844, 4788],
+      eips: [7685, 1559, 4895, 4844],
     })
     const genesisBlock = createBlock(
       { header: { gasLimit: 50000, baseFeePerGas: 100 } },

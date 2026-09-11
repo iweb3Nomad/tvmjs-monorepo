@@ -50,13 +50,6 @@ export const paramsVM: ParamsDict = {
     maxRefundQuotient: 5, // Maximum refund quotient; max tx refund is min(tx.gasUsed/maxRefundQuotient, tx.gasRefund)
   },
   /**
-.  * Beacon block root in the TVM
-.  */
-  4788: {
-    // config
-    historicalRootsLength: 8191, // The modulo parameter of the beaconroot ring buffer in the beaconroot stateful precompile
-  },
-  /**
    * Execution layer triggerable withdrawals (experimental)
    */
   7002: {

@@ -68,7 +68,6 @@ type ContractSet = {
   referenceWithdrawals: Address
   referenceConsolidations: Address
   referenceHistory: Address
-  referenceBeaconRoots: Address
 }
 
 type ReferenceFixture = {
@@ -257,7 +256,6 @@ function loadReferenceFixture(referencePath: string): ReferenceFixture {
     '0x00000961ef480eb55e80d19ad83579a64c007002',
     '0x0000bbddc7ce488642fb579f8b00f3a590007251',
     '0x0000f90827f1c53a10cb7a02335b175320002935',
-    '0x000f3df6d732807ef1319fb7b8bb8522d0beac02',
   ]
 
   const codes = new Map<string, Uint8Array>()
@@ -396,7 +394,6 @@ function createContracts(reference: ReferenceFixture): { contracts: ContractSet;
     referenceWithdrawals: createAddressFromString('0x00000961ef480eb55e80d19ad83579a64c007002'),
     referenceConsolidations: createAddressFromString('0x0000bbddc7ce488642fb579f8b00f3a590007251'),
     referenceHistory: createAddressFromString('0x0000f90827f1c53a10cb7a02335b175320002935'),
-    referenceBeaconRoots: createAddressFromString('0x000f3df6d732807ef1319fb7b8bb8522d0beac02'),
   }
 
   const genesis = new Map<string, GenesisAccount>([
@@ -461,14 +458,6 @@ function createContracts(reference: ReferenceFixture): { contracts: ContractSet;
         reference.codes.get(contracts.referenceHistory.toString()) ?? new Uint8Array(),
       ),
     ],
-    [
-      contracts.referenceBeaconRoots.toString(),
-      createGenesisAccount(
-        0n,
-        1n,
-        reference.codes.get(contracts.referenceBeaconRoots.toString()) ?? new Uint8Array(),
-      ),
-    ],
   ])
 
   return { contracts, genesis }
@@ -488,12 +477,10 @@ function createZeroScenario(
   trackedAddresses: Set<string>,
   trackedSlots: Map<string, Set<string>>,
   currentBlock: bigint,
-  timestamp: bigint,
 ) {
   const payload = wordHex((currentBlock << 32n) + BigInt(templateIndex + 1))
   const transferRecipient = recipients[absoluteIndex % recipients.length]
   const historyQuery = wordHex(currentBlock > 1n ? currentBlock - 2n : 0n)
-  const beaconQuery = wordHex(timestamp)
 
   if (templateIndex < 10) {
     const { signer, nonce } = nextSender(senders, senderCounter)
@@ -607,7 +594,7 @@ function createZeroScenario(
 
   if (templateIndex < 65) {
     const { signer, nonce } = nextSender(senders, senderCounter)
-    const to = templateIndex % 2 === 0 ? contracts.referenceHistory : contracts.referenceBeaconRoots
+    const to = contracts.referenceHistory
     addTrackedAddress(trackedAddresses, signer.address)
     addTrackedAddress(trackedAddresses, to)
     return createFeeMarket1559Tx(
@@ -617,7 +604,7 @@ function createZeroScenario(
         maxFeePerGas: baseFee + 4n,
         gasLimit: 150_000n,
         to,
-        data: to.toString() === contracts.referenceHistory.toString() ? historyQuery : beaconQuery,
+        data: historyQuery,
       },
       { common },
     ).sign(signer.privateKey)
@@ -1022,7 +1009,6 @@ async function main() {
         nonce: new Uint8Array(8),
         baseFeePerGas: 7n,
         withdrawalsRoot: KECCAK256_RLP,
-        parentBeaconBlockRoot: new Uint8Array(32),
         requestsHash: SHA256_NULL,
         blockAccessListHash: KECCAK256_RLP_ARRAY,
         slotNumber: BIGINT_0,
@@ -1078,7 +1064,6 @@ async function main() {
     const timestamp = blockNumber * blockSpacing
     const coinbase = coinbaseArray[blockIndex % coinbaseArray.length]
     const baseFee = parentBlock.header.calcNextBaseFee()
-    const parentBeaconBlockRoot = keccak_256(setLengthLeft(bigIntToBytes(blockNumber), 32))
     const withdrawals = createWithdrawals(
       withdrawalsPerBlock,
       blockNumber,
@@ -1095,7 +1080,6 @@ async function main() {
         coinbase,
         gasLimit,
         timestamp,
-        parentBeaconBlockRoot,
         slotNumber: blockNumber - 1n,
       },
       blockOpts: {
@@ -1124,7 +1108,6 @@ async function main() {
           trackedAddresses,
           trackedSlots,
           blockNumber,
-          timestamp,
         ),
       )
       await blockBuilder.addTransaction(
@@ -1160,7 +1143,6 @@ async function main() {
           trackedAddresses,
           trackedSlots,
           blockNumber,
-          timestamp,
         ),
       )
     }
@@ -1208,8 +1190,6 @@ async function main() {
 
     addTrackedAddress(trackedAddresses, coinbase)
     addTrackedSlot(trackedSlots, contracts.referenceHistory, wordHex(blockNumber - 1n))
-    addTrackedSlot(trackedSlots, contracts.referenceBeaconRoots, wordHex(timestamp))
-    addTrackedSlot(trackedSlots, contracts.referenceBeaconRoots, wordHex(timestamp + 8191n))
 
     if ((blockIndex + 1) % 10 === 0 || blockIndex === blocks - 1) {
       console.log(
@@ -1232,7 +1212,7 @@ async function main() {
   const description = [
     `Synthetic Amsterdam BAL stress fixture with ${blocks} blocks.`,
     `Each block targets a mean of ${txsPerBlock} transactions, 200 internal contract calls, and ${withdrawalsPerBlock} withdrawals.`,
-    'Scenarios include legacy, EIP-2930, EIP-1559, and EIP-7702 transactions; access-list warming; contract storage writes; internal CALL/DELEGATECALL/STATICCALL/precompile fan out; CREATE/CREATE2; self-destruct calls; history/beacon-root queries; and EIP-7002 withdrawal requests.',
+    'Scenarios include legacy, EIP-2930, EIP-1559, and EIP-7702 transactions; access-list warming; contract storage writes; internal CALL/DELEGATECALL/STATICCALL/precompile fan out; CREATE/CREATE2; self-destruct calls; history queries; and EIP-7002 withdrawal requests.',
   ].join('\n')
   const fixtureInfoHash = bytesToHex(
     keccak_256(new TextEncoder().encode(`${fixtureId}:${blocks}:${txsPerBlock}:${withdrawalsPerBlock}`)),

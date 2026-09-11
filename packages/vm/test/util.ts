@@ -300,6 +300,11 @@ export function makeParentBlockHeader(data: any, opts: BlockOptions) {
   ]) {
     if (field in data) throw new Error(`Blob environment field ${field} is no longer supported`)
   }
+  for (const field of ['parentBeaconBlockRoot', 'parent_beacon_block_root']) {
+    if (field in data) {
+      throw new Error(`Beacon root environment field ${field} is no longer supported`)
+    }
+  }
   const {
     parentGasLimit,
     parentGasUsed,
@@ -307,7 +312,6 @@ export function makeParentBlockHeader(data: any, opts: BlockOptions) {
     parentDifficulty,
     parentTimestamp,
     parentUncleHash,
-    parentBeaconBlockRoot,
   } = data
   return createBlockHeader(
     {
@@ -317,8 +321,6 @@ export function makeParentBlockHeader(data: any, opts: BlockOptions) {
       difficulty: parentDifficulty,
       timestamp: parentTimestamp,
       uncleHash: parentUncleHash,
-
-      parentBeaconBlockRoot,
     },
     { common: opts.common },
   )

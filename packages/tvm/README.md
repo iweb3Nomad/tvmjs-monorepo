@@ -4,6 +4,8 @@
 
 v1.2.0 removes Blob execution context and BLOBHASH/BLOBBASEFEE implementations. Passing `blobVersionedHashes` to a Message, `runCall()` or `runCode()` now throws. TRON Token opcodes and the multi-sign precompile at `0x0a` are preserved. See [Blob migration and affected packages](../common/README.md#blob-removal-in-v120).
 
+Caller-supplied block contexts with `parentBeaconBlockRoot` or `parent_beacon_block_root` are rejected before execution. EIP-4788 cannot be activated. See [Beacon root migration](../common/README.md#beacon-root-removal-in-v120).
+
 | TypeScript implementation of the TRON Virtual Machine (TVM). Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |
 

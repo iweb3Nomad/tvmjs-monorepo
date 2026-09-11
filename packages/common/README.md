@@ -90,6 +90,21 @@ Ordinary TRON execution headers keep their existing 16-field RLP order. Old exte
 
 The dedicated `kzg-wasm`, `micro-eth-signer` and `@paulmillr/trusted-setups` dependencies and their examples have been removed. Rebuild all affected workspaces together. When upgrading an existing checkout, use a clean build so obsolete Blob files from earlier builds are not included in package artifacts.
 
+## Beacon root removal in v1.2.0
+
+EIP-4788 Beacon root support has been physically removed. It remains unavailable on TronMainnet, TronNile and TronShasta; construction, `setEIPs()` and `paramByEIP()` reject EIP-4788.
+
+| Package | Removed APIs and behavior |
+| --- | --- |
+| `@tvmjs/common` | EIP-4788 metadata entry. |
+| `@tvmjs/block` | `BlockHeader.parentBeaconBlockRoot` and the corresponding HeaderData, JSONHeader, JSONRPCBlock, ExecutionPayload and BeaconPayloadJSON fields; header serialization and input/output mappings. |
+| `@tvmjs/tvm` | EIP-4788 support declaration; caller-supplied block contexts containing Beacon root fields are rejected before execution. |
+| `@tvmjs/vm` | Beacon root initialization and ring-buffer writes in `runBlock()` and `buildBlock()`, the internal `accumulateParentBeaconBlockRoot()` helper, and the `historicalRootsLength` parameter. |
+
+Omit `parentBeaconBlockRoot` and `parent_beacon_block_root` when creating ordinary TRON block contexts. Both names are rejected by presence, including explicit `undefined`, `null`, zero and empty values. VM block/transaction entry points and builders validate these fields before events, checkpoints or state-root changes. Ethereum Beacon-era blocks remain unsupported; dropping their fields would change the block identity.
+
+Ordinary TRON headers retain their 16-field RLP order and hashes. The Beacon payload converter remains a data tool for ordinary fields and the retained withdrawals/requests mappings; those Ethereum execution features cannot be activated in the TRON profile. EIP-2935 history handling and other inactive extensions remain outside this removal.
+
 ## Parameters
 
 Execution packages register their parameter dictionaries with Common. Parameters are merged in the explicit order in `tronExecutionProfile.eips`, followed by the `tron` parameter group and explicitly enabled optional EIPs. Selecting an already active baseline EIP does not override the TRON parameter group.

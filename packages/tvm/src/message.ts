@@ -104,7 +104,7 @@ export class Message {
   tronTransactionContext?: TronTransactionContext
 
   constructor(opts: MessageOpts) {
-    rejectBlobExecutionOptions(opts)
+    rejectRemovedExecutionOptions(opts)
     this.to = opts.to
     this.value = opts.value ?? defaults.value
     this.tokenId = opts.tokenId ?? defaults.tokenId
@@ -160,7 +160,7 @@ export class Message {
 export type MessageWithTo = Message & Pick<Required<MessageOpts>, 'to'>
 
 /** Reject removed execution context fields, including explicitly empty inputs. */
-export function rejectBlobExecutionOptions(opts: object) {
+export function rejectRemovedExecutionOptions(opts: object) {
   if ('blobVersionedHashes' in opts) {
     throw EthereumJSErrorWithoutCode('blobVersionedHashes is no longer supported')
   }
@@ -169,6 +169,13 @@ export function rejectBlobExecutionOptions(opts: object) {
     for (const field of ['blobGasUsed', 'excessBlobGas', 'getBlobGasPrice']) {
       if (field in header) {
         throw EthereumJSErrorWithoutCode(`Blob block context field ${field} is no longer supported`)
+      }
+    }
+    for (const field of ['parentBeaconBlockRoot', 'parent_beacon_block_root']) {
+      if (field in header) {
+        throw EthereumJSErrorWithoutCode(
+          `Beacon root block context field ${field} is no longer supported`,
+        )
       }
     }
   }
