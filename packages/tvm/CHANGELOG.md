@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove EIP-7702 delegation lookup, its dedicated warm/BAL tracking, the support declaration and `DELEGATION_7702_FLAG`. Former delegation code fails as invalid bytecode; ordinary CALL/DELEGATECALL and rollback behavior remain unchanged.
 - Remove the EIP-4788 support declaration and reject Beacon root fields in caller-supplied block contexts before state changes or execution locks.
 - Remove BLOBHASH/BLOBBASEFEE, Blob execution/message/result fields and the Ethereum KZG precompile implementation. Reject removed execution options and retain TRON multi-sign at `0x0a` and Token opcodes at `0xd0`–`0xd3`.
 - Replace Ethereum cold/warm access and storage refunds with the documented java-tron 4.8.2 Energy schedule. Align account access, SLOAD/SSTORE, CALL/CALLTOKEN, SELFDESTRUCT, EXP and memory/copy instruction costs.

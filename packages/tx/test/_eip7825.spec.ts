@@ -15,7 +15,7 @@ const txTypes = [
   TransactionType.Legacy,
   TransactionType.AccessListEIP2930,
   TransactionType.FeeMarketEIP1559,
-  // Do not test 4844 + 7702 txs to keep test setup simple +
+  // Limit this test to ordinary transaction formats to keep test setup simple +
   // no specific logic touched
 ]
 

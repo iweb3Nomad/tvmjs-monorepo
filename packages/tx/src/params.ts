@@ -49,15 +49,6 @@ export const paramsTx: ParamsDict = {
     totalCostFloorPerToken: 10,
   },
   /**
-.  * Set EOA account code for one transaction
-.  */
-  7702: {
-    // TODO: Set correct minimum hardfork
-    // gasPrices
-    perAuthBaseGas: 12500, // Gas cost of each authority item, provided the authority exists in the trie
-    perEmptyAccountCost: 25000, // Gas cost of each authority item, in case the authority does not exist in the trie
-  },
-  /**
    * Transaction Gas Limit Cap
    */
   7825: {

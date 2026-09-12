@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove EIP-7702 authorization processing, authority nonce/code updates, authorization refunds and the delegated-sender exception. Reject retired transaction contexts before events/checkpoints in transaction, block and builder entry points; retain ordinary execution, sender-code validation and rollback.
 - Remove EIP-4788 Beacon root initialization, ring-buffer writes and `historicalRootsLength`. Reject retired header fields in `runTx()`, `runBlock()` and block builders before events, checkpoints or state-root changes.
 - Remove Blob fees, receipt metadata and block-builder options. Reject type `0x03` and `allowNoBlobs` before state checkpoints; `generateTxReceipt()` now takes four arguments.
 - Remove transaction prewarming and use the TVM's TRON Energy schedule. Access lists remain diagnostic metadata; transaction envelope overhead remains separate from execution Energy.

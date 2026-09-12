@@ -132,9 +132,18 @@ type Mutable<T> = {
 }
 
 /** Validate the original input before constructors or RPC mapping discard fields. */
-export function validateNoBlobData(txData: TxData[TransactionType]) {
-  if (bytesToBigInt(toBytes(txData.type)) === 3n) {
+export function rejectRemovedTransactionData(txData: TxData[TransactionType]) {
+  const type = bytesToBigInt(toBytes(txData.type))
+  if (type === 3n) {
     throw EthereumJSErrorWithoutCode('Blob transaction type 0x03 is no longer supported')
+  }
+  if (type === 4n) {
+    throw EthereumJSErrorWithoutCode('EIP-7702 transaction type 0x04 is no longer supported')
+  }
+  for (const field of ['authorizationList', 'authorization_list']) {
+    if (field in txData) {
+      throw EthereumJSErrorWithoutCode(`EIP-7702 transaction field ${field} is no longer supported`)
+    }
   }
   for (const field of [
     'maxFeePerBlobGas',
@@ -163,7 +172,7 @@ export function sharedConstructor(
   txData: TxData[TransactionType],
   opts: TxOptions = {},
 ) {
-  validateNoBlobData(txData)
+  rejectRemovedTransactionData(txData)
   tx.common = getCommon(opts.common)
   tx.common.updateParams(opts.params ?? paramsTx, opts.params !== undefined)
 

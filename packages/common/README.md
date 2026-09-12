@@ -105,6 +105,27 @@ Omit `parentBeaconBlockRoot` and `parent_beacon_block_root` when creating ordina
 
 Ordinary TRON headers retain their 16-field RLP order and hashes. The Beacon payload converter remains a data tool for ordinary fields and the retained withdrawals/requests mappings; those Ethereum execution features cannot be activated in the TRON profile. EIP-2935 history handling and other inactive extensions remain outside this removal.
 
+## EIP-7702 removal in v1.2.0
+
+EIP-7702 transactions, authorization signing and code delegation have been physically removed. All three TRON presets continue to reject EIP-7702 activation and parameter queries.
+
+| Package | Removed APIs and behavior |
+| --- | --- |
+| `@tvmjs/common` | EIP-7702 metadata entry. |
+| `@tvmjs/tx` | `EOACode7702Tx`, `createEOACode7702Tx*`, `isEOACode7702Tx*`, `TransactionType.EOACodeEIP7702`, `Capability.EIP7702EOACode`, `EIP7702CompatibleTx`, and authorization transaction data/JSON/RLP types. |
+| `@tvmjs/util` | The `authorization` module, `eoaCode7702*` signing/recovery/conversion helpers, `EOA_CODE_7702_AUTHORITY_SIGNING_MAGIC`, and `EOACode7702AuthorizationList*` types and guards. |
+| `@tvmjs/block` | Acceptance of type `0x04` or authorization fields in object, RPC, binary and payload transactions, including transactions supplied directly to `new Block()`. |
+| `@tvmjs/tvm` | Delegation target lookup, its dedicated access tracking, the EIP-7702 support declaration and `DELEGATION_7702_FLAG`. |
+| `@tvmjs/vm` | Authorization processing, authority nonce/code updates, authorization refunds and the delegated-sender exception. |
+
+Type `0x04` is rejected at transaction and block input boundaries. Both `authorizationList` and `authorization_list` are rejected by field presence, including `undefined`, `null` and empty lists on ordinary transactions. `runTx()`, `runBlock()` and `BlockBuilder.addTransaction()` validate supplied transaction objects before events or state changes; a retired transaction later in a block is rejected before the first transaction executes.
+
+For ordinary TRON transactions, remove obsolete authorization options from the application code and use types `0x00`, `0x01` or `0x02`. Their signing payloads, type numbers, chain IDs and TRC-10 validation rules are unchanged. There is no replacement for Ethereum delegation: relabeling a signed `0x04` transaction or dropping its authorization list would change its meaning and signature.
+
+Stored code beginning with `0xef0100` is executed as ordinary bytecode and fails with an invalid opcode; it no longer redirects execution. Transaction senders with any deployed code remain rejected. Ordinary CALL/DELEGATECALL storage contexts, execution refunds and state rollback are preserved. Generic signature and address utilities remain available; their shared crypto dependencies are still required.
+
+Rebuild the affected packages together from clean outputs. Incremental TypeScript builds can leave obsolete `tx/7702`, `tx/capabilities/eip7702` and `util/authorization` files in `dist`; they must not be included in release artifacts. EOF, BAL, history and requests implementations remain subject to the existing TRON capability restrictions and are outside this removal.
+
 ## Parameters
 
 Execution packages register their parameter dictionaries with Common. Parameters are merged in the explicit order in `tronExecutionProfile.eips`, followed by the `tron` parameter group and explicitly enabled optional EIPs. Selecting an already active baseline EIP does not override the TRON parameter group.

@@ -33,6 +33,7 @@ import { Bloom } from './bloom/index.ts'
 import { emitTVMProfile } from './emitTVMProfile.ts'
 import { accumulateRequests } from './requests.ts'
 import { runTx } from './runTx.ts'
+import { validateTransactionContext } from './transactionContext.ts'
 import { validateTronTransactionIdPolicy } from './tronTransactionId.ts'
 
 import type { Block } from '@tvmjs/block'
@@ -70,6 +71,7 @@ const entireBlockLabel = 'Entire block'
  */
 export async function runBlock(vm: VM, opts: RunBlockOpts): Promise<RunBlockResult> {
   validateBlockContext(opts.block.header)
+  for (const tx of opts.block.transactions) validateTransactionContext(tx)
   validateTronTransactionIdPolicy(opts.tronTransactionIdPolicy)
 
   if (vm['_opts'].profilerOpts?.reportAfterBlock === true) {

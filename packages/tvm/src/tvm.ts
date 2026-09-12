@@ -38,7 +38,6 @@ import { TransientStorage } from './transientStorage.ts'
 import {
   type Block,
   type CustomOpcode,
-  DELEGATION_7702_FLAG,
   type ExecResult,
   type Log,
   type TVMBLSInterface,
@@ -289,7 +288,7 @@ export class TVM implements TVMInterface {
     const supportedEIPs = [
       1153, 1559, 2537, 2565, 2718, 2930, 2935, 3198, 3540, 3541, 3607, 3670, 3855, 3860, 4200,
       4399, 4750, 4895, 5133, 5450, 5656, 6110, 6206, 6780, 7002, 7069, 7251, 7620, 7685, 7692,
-      7698, 7702, 7709, 7823, 7825, 7934, 7939, 7951, 8024,
+      7698, 7709, 7823, 7825, 7934, 7939, 7951, 8024,
     ]
 
     for (const eip of this.common.eips()) {
@@ -1562,22 +1561,6 @@ export class TVM implements TVMInterface {
         message.isCompiled = true
       } else {
         message.code = await this.stateManager.getCode(message.codeAddress)
-
-        // EIP-7702 delegation check
-        if (
-          this.common.isActivatedEIP(7702) &&
-          equalsBytes(message.code.slice(0, 3), DELEGATION_7702_FLAG)
-        ) {
-          const address = new Address(message.code.slice(3, 24))
-          message.code = await this.stateManager.getCode(address)
-          // EIP-7928: Track delegation target access in BAL
-          if (this.common.isActivatedEIP(7928)) {
-            this.blockLevelAccessList?.addAddress(address.toString())
-          }
-          if (message.depth === 0) {
-            this.journal.addAlwaysWarmAddress(address.toString())
-          }
-        }
 
         message.isCompiled = false
         message.chargeCodeAccesses = true

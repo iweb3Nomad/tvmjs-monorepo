@@ -409,16 +409,6 @@ export const eipsDict: EIPsDict = {
     requiredEIPs: [3540, 7620],
   },
   /**
-   * Description : Set EOA account code for one transaction
-   * URL         : https://github.com/ethereum/EIPs/blob/62419ca3f45375db00b04a368ea37c0bfb05386a/EIPS/eip-7702.md
-   * Status      : Review
-   */
-  7702: {
-    // TODO: Set correct minimum hardfork
-    minimumHardfork: Hardfork.Cancun,
-    requiredEIPs: [2718, 2929, 2930],
-  },
-  /**
    * Description : Set upper bounds for MODEXP
    * URL         : https://eips.ethereum.org/EIPS/eip-7823
    * Status      : Review
@@ -873,16 +863,6 @@ export const tipsDict: EIPsDict = {
   7698: {
     minimumHardfork: Hardfork.London,
     requiredEIPs: [3540, 7620],
-  },
-  /**
-   * Description : Set EOA account code for one transaction
-   * URL         : https://github.com/ethereum/EIPs/blob/62419ca3f45375db00b04a368ea37c0bfb05386a/EIPS/eip-7702.md
-   * Status      : Review
-   */
-  7702: {
-    // TODO: Set correct minimum hardfork
-    minimumHardfork: Hardfork.Cancun,
-    requiredEIPs: [2718, 2929, 2930],
   },
   /**
    * Description : SLOTNUM opcode

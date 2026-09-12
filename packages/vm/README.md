@@ -6,6 +6,8 @@ v1.2.0 removes Blob fees, receipts and block-builder accounting. Remove `allowNo
 
 Beacon root initialization, system-account writes and the `historicalRootsLength` parameter are removed. `runTx()`, `runBlock()` and block builders reject retired Beacon root fields before events or state changes. Ordinary contract storage and rollback remain available. See [Beacon root migration](../common/README.md#beacon-root-removal-in-v120).
 
+EIP-7702 authorization processing, refunds and sender-code exceptions are removed. `runTx()`, `runBlock()` and block builders reject type `0x04` and authorization fields before events or state changes. Senders with deployed code remain invalid, including former delegation code. See [EIP-7702 migration](../common/README.md#eip-7702-removal-in-v120).
+
 | Execution context for the TVM (TRON Virtual Machine) implementation. Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |
 

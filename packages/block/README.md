@@ -4,6 +4,8 @@ v1.2.0 removes Blob transaction support and Blob header fields and fee helpers. 
 
 EIP-4788 Beacon root fields and their serialization are also removed. Inputs containing `parentBeaconBlockRoot` or `parent_beacon_block_root` are rejected even when their values are empty. Ordinary Beacon payload data conversion remains available. See [Beacon root migration](../common/README.md#beacon-root-removal-in-v120).
 
+EIP-7702 transactions (`0x04`) and both authorization field spellings are rejected, including on transactions passed directly to `new Block()`. Ordinary transaction types and block round trips are preserved. See [EIP-7702 migration](../common/README.md#eip-7702-removal-in-v120).
+
 | Implements schema and functions related to TRON-compatible blocks. Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |
 

@@ -1,5 +1,3 @@
-import { secp256k1 } from '@noble/curves/secp256k1.js'
-import { keccak_256 } from '@noble/hashes/sha3.js'
 import {
   createBlock,
   createBlockFromBytesArray,
@@ -15,25 +13,18 @@ import {
   Capability,
   LegacyTx,
   createAccessList2930Tx,
-  createEOACode7702Tx,
   createFeeMarket1559Tx,
   createLegacyTx,
 } from '@tvmjs/tx'
 import {
   Account,
   Address,
-  BIGINT_1,
   KECCAK256_RLP,
-  bigIntToUnpaddedBytes,
   bytesToHex,
-  concatBytes,
   createAddressFromString,
   createZeroAddress,
-  equalsBytes,
   generateTronContractAddress,
   hexToBytes,
-  privateToAddress,
-  unpadBytes,
   utf8ToBytes,
 } from '@tvmjs/util'
 import { assert, describe, expect, it } from 'vitest'
@@ -46,11 +37,7 @@ import { createAccountWithDefaults, setBalance, setupVM } from './utils.ts'
 
 import type { Block, BlockBytes } from '@tvmjs/block'
 import type { TypedTransaction } from '@tvmjs/tx'
-import type {
-  EOACode7702AuthorizationListBytesItem,
-  NestedUint8Array,
-  PrefixedHexString,
-} from '@tvmjs/util'
+import type { NestedUint8Array, PrefixedHexString } from '@tvmjs/util'
 import type { VM } from '../../src/index.ts'
 import type {
   AfterBlockEvent,
@@ -741,131 +728,5 @@ describe('runBlock() -> tx types', async () => {
     }
 
     await simpleRun(vm, [tx])
-  })
-
-  it('eip7702 txs', async () => {
-    /**
-     * This test setups a block with 2 7702-txs. There are two codes:
-     * Code1: stores "1" in slot 0
-     * Code2: stores "2" in slot 0
-     * The first tx will send from address A into address B. Address B will authorize Code1
-     * -> So, after this tx, "1" is stored in address B key 0
-     * The second tx will send from address A into address B. Address B will authorize Code2
-     * -> So, after this tx, "2" is stored in address B key 0
-     * After the block is ran, it is verified that "2" is stored in key 0 of address B
-     */
-    const defaultAuthPkey = hexToBytes(`0x${'20'.repeat(32)}`)
-    const defaultAuthAddr = new Address(privateToAddress(defaultAuthPkey))
-
-    const defaultSenderPkey = hexToBytes(`0x${'40'.repeat(32)}`)
-    const defaultSenderAddr = new Address(privateToAddress(defaultSenderPkey))
-
-    const code1Addr = createAddressFromString(`0x${'01'.repeat(20)}`)
-    const code2Addr = createAddressFromString(`0x${'02'.repeat(20)}`)
-
-    type GetAuthListOpts = {
-      chainId?: number
-      nonce?: number
-      address: Address
-      pkey?: Uint8Array
-    }
-
-    function getAuthorizationListItem(
-      opts: GetAuthListOpts,
-    ): EOACode7702AuthorizationListBytesItem {
-      const actualOpts = {
-        ...{ chainId: 0, pkey: defaultAuthPkey },
-        ...opts,
-      }
-
-      const { chainId, nonce, address, pkey } = actualOpts
-
-      const chainIdBytes = unpadBytes(hexToBytes(`0x${chainId.toString(16)}`))
-      const nonceBytes =
-        nonce !== undefined ? unpadBytes(hexToBytes(`0x${nonce.toString(16)}`)) : new Uint8Array()
-      const addressBytes = address.toBytes()
-
-      const rlpdMsg = RLP.encode([chainIdBytes, addressBytes, nonceBytes])
-      const msgToSign = keccak_256(concatBytes(new Uint8Array([5]), rlpdMsg))
-      const signed = secp256k1.sign(msgToSign, pkey, { format: 'recovered', prehash: false })
-
-      const { recovery, r, s } = secp256k1.Signature.fromBytes(signed, 'recovered')
-      if (recovery === undefined) {
-        throw new Error('Recovery is undefined')
-      }
-
-      const yParity = recovery === 0 ? new Uint8Array() : new Uint8Array([1])
-
-      return [
-        chainIdBytes,
-        addressBytes,
-        nonceBytes,
-        yParity,
-        bigIntToUnpaddedBytes(r),
-        bigIntToUnpaddedBytes(s),
-      ]
-    }
-
-    const common = new Common({
-      chain: Mainnet,
-      hardfork: Hardfork.Cancun,
-      eips: [7702],
-    })
-    const vm = await setupVM({ common })
-
-    await setBalance(vm, defaultSenderAddr, 0xfffffffffffffn)
-
-    const code1 = hexToBytes('0x600160005500')
-    await vm.stateManager.putCode(code1Addr, code1)
-
-    const code2 = hexToBytes('0x600260005500')
-    await vm.stateManager.putCode(code2Addr, code2)
-    const authorizationListOpts = [
-      {
-        address: code1Addr,
-      },
-    ]
-    const authorizationListOpts2 = [
-      {
-        address: code2Addr,
-        nonce: 1,
-      },
-    ]
-
-    const authList = authorizationListOpts.map((opt) => getAuthorizationListItem(opt))
-    const authList2 = authorizationListOpts2.map((opt) => getAuthorizationListItem(opt))
-    const tx1 = createEOACode7702Tx(
-      {
-        gasLimit: 1000000000,
-        maxFeePerGas: 100000,
-        maxPriorityFeePerGas: 100,
-        authorizationList: authList,
-        to: defaultAuthAddr,
-        value: BIGINT_1,
-      },
-      { common },
-    ).sign(defaultSenderPkey)
-    const tx2 = createEOACode7702Tx(
-      {
-        gasLimit: 1000000000,
-        maxFeePerGas: 100000,
-        maxPriorityFeePerGas: 100,
-        authorizationList: authList2,
-        to: defaultAuthAddr,
-        value: BIGINT_1,
-        nonce: 1,
-      },
-      { common },
-    ).sign(defaultSenderPkey)
-    const block = createBlock(
-      {
-        transactions: [tx1, tx2],
-      },
-      { common, setHardfork: false, skipConsensusFormatValidation: true },
-    )
-
-    await runBlock(vm, { block, skipBlockValidation: true, generate: true })
-    const storage = await vm.stateManager.getStorage(defaultAuthAddr, new Uint8Array(32))
-    assert.isTrue(equalsBytes(storage, new Uint8Array([2])))
   })
 })

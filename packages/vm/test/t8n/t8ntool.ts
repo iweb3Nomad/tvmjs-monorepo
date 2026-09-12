@@ -64,6 +64,14 @@ function getBlockchain(inputEnv: T8NEnv) {
  */
 function normalizeTxData(txData: TypedTxData[]) {
   return txData.map((data: any) => {
+    if (Number(data.type) === 4) {
+      throw new Error('EIP-7702 transaction type 0x04 is no longer supported')
+    }
+    for (const field of ['authorizationList', 'authorization_list']) {
+      if (field in data) {
+        throw new Error(`EIP-7702 transaction field ${field} is no longer supported`)
+      }
+    }
     if (data.v !== undefined) {
       data.yParity = data.v
     }
@@ -71,28 +79,6 @@ function normalizeTxData(txData: TypedTxData[]) {
       data.gasLimit = data.gas
     }
 
-    if (data.authorizationList !== undefined) {
-      data.authorizationList.map((e: any) => {
-        if (e.yParity === undefined) {
-          e.yParity = e.v
-        }
-        if (e.yParity === '0x0') {
-          e.yParity = '0x'
-        }
-        if (e.nonce === '0x0') {
-          e.nonce = '0x'
-        }
-        if (e.chainId === '0x0') {
-          e.chainId = '0x'
-        }
-        if (e.r === '0x0') {
-          e.r = '0x'
-        }
-        if (e.s === '0x0') {
-          e.s = '0x'
-        }
-      })
-    }
     if (data.input !== undefined) {
       data.data = data.input
     }

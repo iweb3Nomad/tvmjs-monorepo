@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove the EIP-7702 metadata entry. Authorization activation and parameter queries remain rejected; document the coordinated transaction, delegation and authorization API removal.
 - Remove the EIP-4788 metadata entry. Beacon root activation and parameter queries remain rejected on all TRON presets.
 - Remove Blob gas schedules, Blob EIP metadata, KZG configuration and Blob genesis types. Reject removed fields before configuration data is copied or parsed.
 - Change `StateManagerInterface.tokenIdExists()` to take an exact `bigint` TRC-10 token ID.

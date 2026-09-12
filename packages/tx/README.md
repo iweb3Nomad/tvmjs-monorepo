@@ -2,6 +2,8 @@
 
 Blob transactions, their public constructors/types and network wrappers have been removed in v1.2.0. Type `0x03` and retired Blob fields are rejected, including zero or empty values. Legacy, EIP-2930 and EIP-1559 encodings keep their original type numbers. See [Blob migration and affected packages](../common/README.md#blob-removal-in-v120).
 
+EIP-7702 transaction classes, constructors, types and guards are also removed. Type `0x04`, `authorizationList` and `authorization_list` are rejected at input boundaries, including explicitly empty fields. Ordinary transaction signing is unchanged. See [EIP-7702 migration](../common/README.md#eip-7702-removal-in-v120).
+
 | Implements schema and functions for TRON-compatible transaction types (including TRC-10 token transfers). Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |
 
@@ -9,7 +11,6 @@ Blob transactions, their public constructors/types and network wrappers have bee
 - 🌴 Tree-shakeable API
 - 👷🏼 Controlled dependency set (1 external + `@Noble` crypto)
 - 🎼 Unified tx type API
-- 📲 New type for **EIP-7702** account abstraction
 - 🏄🏾‍♂️ WASM-free default + Fully browser ready
 
 ## Table of Contents
@@ -20,7 +21,6 @@ Blob transactions, their public constructors/types and network wrappers have bee
 - [Transaction Types](#transaction-types)
   - [Gas Fee Market Transactions (EIP-1559)](#gas-fee-market-transactions-eip-1559)
   - [Access List Transactions (EIP-2930)](#access-list-transactions-eip-2930)
-  - [EOA Code Transaction (EIP-7702)](#eoa-code-transaction-eip-7702)
   - [Legacy Transactions](#legacy-transactions)
 - [Transaction Factory](#transaction-factory)
 - [Sending a Transaction](#sending-a-transaction)
@@ -58,21 +58,9 @@ This library by default uses JavaScript implementations for the basic standard c
 
 ## Chain and Hardfork Support
 
-To use a chain other than the default Mainnet chain, or a different hardfork than the default [`@tvmjs/common`](https://github.com/tronweb3/tvmjs-monorepo/blob/master/packages/common) hardfork (`Hardfork.Prague`), provide a `common` object in the constructor of the tx.
+Transactions default to `TronMainnet`. Supply a `Common` configured with `TronNile` or `TronShasta` for the other supported networks. The `tron` execution profile controls capabilities; Ethereum presets and hardfork schedules cannot be selected. See [TRON configuration](../common/README.md#tron-networks).
 
-Base default HF (determined by `Common`): `Hardfork.Prague`
-
-Hardforks adding features and/or tx types:
-
-| Hardfork         | Introduced | Description                                                                                             |
-| ---------------- | ---------- | ------------------------------------------------------------------------------------------------------- |
-| `spuriousDragon` |  `v2.0.0`  |  `EIP-155` replay protection (disable by setting HF pre-`spuriousDragon`)                               |
-| `istanbul`       |  `v2.1.1`  | Support for reduced non-zero call blob gas prices ([EIP-2028](https://eips.ethereum.org/EIPS/eip-2028)) |
-| `muirGlacier`    |  `v2.1.2`  |  -                                                                                                      |
-| `berlin`         | `v3.1.0`   |  `EIP-2718` Typed Transactions, Optional Access Lists Tx Type `EIP-2930`                                |
-| `london`         | `v3.2.0`   | `EIP-1559` Transactions                                                                                 |
-| `cancun`         | `v5.0.0`   | `EIP-4844` Transactions                                                                                 |
-| `prague`         | `v10.0.0`  | `EIP-7702` Transactions                                                                                 |
+Legacy, EIP-2930 and EIP-1559 envelopes retain their existing type numbers and signing rules. Blob (`0x03`) and EIP-7702 (`0x04`) transactions are unsupported.
 
 ## Transaction Types
 
@@ -82,7 +70,6 @@ This library supports the following transaction types ([EIP-2718](https://eips.e
 
 - [Gas Fee Market Transactions (EIP-1559)](#gas-fee-market-transactions-eip-1559)
 - [Access List Transactions (EIP-2930)](#access-list-transactions-eip-2930)
-- [EOA Code Transaction (EIP-7702)](#eoa-code-transaction-eip-7702)
 - [Legacy Transactions](#legacy-transactions) (original Ethereum txs)
 
 ### Gas Fee Market Transactions (EIP-1559)
@@ -174,49 +161,6 @@ console.log(bytesToHex(tx.hash())) // 0x9150cdebad74e88b038e6c6b964d99af705f9c08
 
 For generating access lists from tx data based on a certain network state there is a `reportAccessList` option
 on the `VM.runTx()` method of the `@tvmjs/vm` `TypeScript` VM implementation.
-
-### EOA Code Transaction (EIP-7702)
-
-- Class: `EOACodeEIP7702Tx`
-- EIP: [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702)
-- Activation: `prague`
-- Type: `4`
-
-This tx type lets you run code in the context of an EOA, extending the functionality available to an otherwise limited account.
-
-The following is a simple example how to use an `EOACodeEIP7702Tx` with one authorization list item:
-
-```ts
-// ./examples/EOACodeTx.ts
-
-import { Common, Hardfork, Mainnet } from '@tvmjs/common'
-import { createEOACode7702Tx } from '@tvmjs/tx'
-import { type PrefixedHexString, createAddressFromPrivateKey, randomBytes } from '@tvmjs/util'
-
-const ones32 = `0x${'01'.repeat(32)}` as PrefixedHexString
-
-const common = new Common({ chain: Mainnet, hardfork: Hardfork.Cancun, eips: [7702] })
-const tx = createEOACode7702Tx(
-  {
-    authorizationList: [
-      {
-        chainId: '0x2',
-        address: `0x${'20'.repeat(20)}`,
-        nonce: '0x1',
-        yParity: '0x1',
-        r: ones32,
-        s: ones32,
-      },
-    ],
-    to: createAddressFromPrivateKey(randomBytes(32)),
-  },
-  { common },
-)
-
-console.log(
-  `EIP-7702 EOA code tx created with ${tx.authorizationList.length} authorization list item(s).`,
-)
-```
 
 ### Legacy Transactions
 

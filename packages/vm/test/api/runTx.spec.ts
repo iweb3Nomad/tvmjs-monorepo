@@ -2,7 +2,6 @@ import { createBlock } from '@tvmjs/block'
 import { createBlockchain } from '@tvmjs/blockchain'
 import { Common, Hardfork, Mainnet, TronMainnet } from '@tvmjs/common'
 import {
-  EOACode7702Tx,
   FeeMarket1559Tx,
   TransactionType,
   createFeeMarket1559Tx,
@@ -288,7 +287,7 @@ describe('runTx() -> successful API parameter usage', async () => {
       // calculate expected coinbase balance
       const baseFee = block.header.baseFeePerGas!
       const inclusionFeePerGas =
-        tx instanceof FeeMarket1559Tx || tx instanceof EOACode7702Tx
+        tx instanceof FeeMarket1559Tx
           ? tx.maxPriorityFeePerGas < tx.maxFeePerGas - baseFee
             ? tx.maxPriorityFeePerGas
             : tx.maxFeePerGas - baseFee

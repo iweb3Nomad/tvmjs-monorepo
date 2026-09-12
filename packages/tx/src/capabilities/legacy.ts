@@ -82,7 +82,7 @@ export function getDataGas(tx: LegacyTxInterface): bigint {
  * The minimum gas limit which the tx to have to be valid.
  * This covers costs as the standard fee (21000 gas), the data fee (paid for each calldata byte),
  * the optional creation fee (if the transaction creates a contract), and if relevant the gas
- * to be paid for access lists (EIP-2930) and authority lists (EIP-7702).
+ * to be paid for access lists (EIP-2930).
  */
 export function getIntrinsicGas(tx: LegacyTxInterface): bigint {
   const txFee = tx.common.param('txGas')

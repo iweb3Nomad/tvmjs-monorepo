@@ -34,6 +34,7 @@ import {
   rewardAccount,
 } from './runBlock.ts'
 import { runTx } from './runTx.ts'
+import { validateTransactionContext } from './transactionContext.ts'
 import { validateTronTransactionIdPolicy } from './tronTransactionId.ts'
 
 import type { Block, HeaderData } from '@tvmjs/block'
@@ -233,9 +234,7 @@ export class BlockBuilder {
       tronTransactionIdPolicy?: TronTransactionIdPolicy
     } = {},
   ) {
-    if (Number(tx.type) === 3) {
-      throw EthereumJSErrorWithoutCode('Blob transaction type 0x03 is no longer supported')
-    }
+    validateTransactionContext(tx)
     if ('allowNoBlobs' in opts) {
       throw EthereumJSErrorWithoutCode('allowNoBlobs is no longer supported')
     }

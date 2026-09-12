@@ -2,12 +2,7 @@ import { keccak_256 } from '@noble/hashes/sha3.js'
 import { Block, createBlockHeader } from '@tvmjs/block'
 import { Common, Hardfork, Mainnet, createCustomCommon } from '@tvmjs/common'
 import { RLP } from '@tvmjs/rlp'
-import {
-  createAccessList2930Tx,
-  createEOACode7702Tx,
-  createFeeMarket1559Tx,
-  createLegacyTx,
-} from '@tvmjs/tx'
+import { createAccessList2930Tx, createFeeMarket1559Tx, createLegacyTx } from '@tvmjs/tx'
 import {
   Account,
   Address,
@@ -23,18 +18,11 @@ import {
   setLengthLeft,
   toBytes,
   toType,
-  unpadBytes,
 } from '@tvmjs/util'
 
 import type { BlockOptions } from '@tvmjs/block'
 import type { StateManagerInterface } from '@tvmjs/common'
-import type {
-  AccessList2930Tx,
-  EOACode7702Tx,
-  FeeMarket1559Tx,
-  LegacyTx,
-  TxOptions,
-} from '@tvmjs/tx'
+import type { AccessList2930Tx, FeeMarket1559Tx, LegacyTx, TxOptions } from '@tvmjs/tx'
 import type { assert } from 'vitest'
 
 // Use Vitest assert type directly
@@ -209,32 +197,12 @@ export function dumpState(state: any, cb: Function) {
 export function makeTx(
   txData: any,
   opts?: TxOptions,
-): EOACode7702Tx | FeeMarket1559Tx | AccessList2930Tx | LegacyTx {
+): FeeMarket1559Tx | AccessList2930Tx | LegacyTx {
   if (Number(txData.type) === 3) {
     throw new Error('Blob transactions are no longer supported')
   }
   let tx
-  if (txData.authorizationList !== undefined) {
-    // Convert `v` keys to `yParity`
-    for (const signature of txData.authorizationList) {
-      if (signature.v !== undefined) {
-        signature.yParity = bytesToHex(unpadBytes(hexToBytes(signature.v)))
-      }
-      if (signature.r !== undefined) {
-        signature.r = bytesToHex(unpadBytes(hexToBytes(signature.r)))
-      }
-      if (signature.s !== undefined) {
-        signature.s = bytesToHex(unpadBytes(hexToBytes(signature.s)))
-      }
-      if (signature.chainId !== undefined) {
-        signature.chainId = bytesToHex(unpadBytes(hexToBytes(signature.chainId)))
-      }
-      if (signature.nonce !== undefined && signature.nonce === '0x00') {
-        signature.nonce = '0x'
-      }
-    }
-    tx = createEOACode7702Tx(txData, opts)
-  } else if (txData.maxFeePerGas !== undefined) {
+  if (txData.maxFeePerGas !== undefined) {
     tx = createFeeMarket1559Tx(txData, opts)
   } else if (txData.accessLists !== undefined) {
     tx = createAccessList2930Tx(txData, opts)

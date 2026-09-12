@@ -85,6 +85,18 @@ export class Block {
     if (transactions.some((tx) => Number(tx.type) === 3)) {
       throw EthereumJSErrorWithoutCode('Blob transaction type 0x03 is no longer supported')
     }
+    if (transactions.some((tx) => Number(tx.type) === 4)) {
+      throw EthereumJSErrorWithoutCode('EIP-7702 transaction type 0x04 is no longer supported')
+    }
+    for (const tx of transactions) {
+      for (const field of ['authorizationList', 'authorization_list']) {
+        if (field in tx) {
+          throw EthereumJSErrorWithoutCode(
+            `EIP-7702 transaction field ${field} is no longer supported`,
+          )
+        }
+      }
+    }
     this.header = header ?? new BlockHeader({}, opts)
     this.common = this.header.common
     this.keccakFunction = this.common.customCrypto.keccak256 ?? keccak_256

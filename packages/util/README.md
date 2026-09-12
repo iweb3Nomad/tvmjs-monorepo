@@ -2,6 +2,8 @@
 
 v1.2.0 removes the Blob and KZG modules, their public helpers and dedicated dependencies. Generic hashes, signatures, bytes and TRON address tools remain available. See [Blob migration and affected packages](../common/README.md#blob-removal-in-v120).
 
+The EIP-7702 `authorization` module, signing/recovery helpers, constants, list types and guards are also removed. Generic signature utilities remain available. See [EIP-7702 migration](../common/README.md#eip-7702-removal-in-v120).
+
 | A collection of utility functions for TRON/TVM. Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |
 
@@ -12,7 +14,6 @@ v1.2.0 removes the Blob and KZG modules, their public helpers and dedicated depe
   - [CREATE2 migration in 1.1.0](#create2-migration-in-110)
 - [Module: [account]](#module-account)
 - [Module: [address]](#module-address)
-- [Module: [authorization]](#module-authorization)
 - [Module: [bytes]](#module-bytes)
 - [Module: [constants]](#module-constants)
 - [Module: [db]](#module-db)
@@ -115,10 +116,6 @@ import { createAddressFromString } from '@tvmjs/util'
 const address = createAddressFromString('0x2f015c60e0be116b1f0cd534704db9c92118fb6a')
 console.log(`Address ${address.toString()} created`)
 ```
-
-## Module: [authorization](src/authorization.ts)
-
-Module with `EIP-7702` authorization list signing utilities.
 
 ## Module: [bytes](src/bytes.ts)
 

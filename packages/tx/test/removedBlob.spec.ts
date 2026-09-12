@@ -6,7 +6,6 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   TransactionType,
   createAccessList2930Tx,
-  createEOACode7702Tx,
   createFeeMarket1559Tx,
   createLegacyTx,
   createTx,
@@ -18,13 +17,7 @@ import {
   normalizeTxParams,
 } from '../src/index.ts'
 
-const constructors = [
-  createTx,
-  createLegacyTx,
-  createAccessList2930Tx,
-  createFeeMarket1559Tx,
-  createEOACode7702Tx,
-]
+const constructors = [createTx, createLegacyTx, createAccessList2930Tx, createFeeMarket1559Tx]
 const privateKey = hexToBytes(`0x${'11'.repeat(32)}`)
 const to = '0x0000000000000000000000000000000000000100'
 

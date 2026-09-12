@@ -258,11 +258,6 @@ const exceptionMessages: Record<string, RegExp> = {
   'TransactionException.TYPE_1_TX_PRE_FORK': /^EIP-2930 not enabled on Common$/,
   'TransactionException.TYPE_2_TX_PRE_FORK': /^EIP-1559 not enabled on Common$/,
 
-  'TransactionException.TYPE_4_EMPTY_AUTHORIZATION_LIST': /authorization list is empty/,
-  'TransactionException.TYPE_4_TX_CONTRACT_CREATION':
-    /tx should have a "to" field and cannot be used to create contracts/,
-  'TransactionException.TYPE_4_TX_PRE_FORK': /^EIP-7702 not enabled on Common$/,
-
   // BlockException entries
   'BlockException.GAS_USED_OVERFLOW': /tx has a higher gas limit than the block/,
 

@@ -10,7 +10,6 @@ import { Common, ConsensusType, Hardfork, Mainnet } from '@tvmjs/common'
 import { MerkleStateManager } from '@tvmjs/statemanager'
 import {
   createAccessList2930Tx,
-  createEOACode7702Tx,
   createFeeMarket1559Tx,
   createLegacyTx,
   type AccessList,
@@ -29,7 +28,6 @@ import {
   createAddressFromPrivateKey,
   createAddressFromString,
   createPartialAccount,
-  eoaCode7702SignAuthorization,
   generateAddress,
   generateAddress2,
   hexToBytes,
@@ -100,7 +98,6 @@ const blockSpacing = 12n
 const defaultBlocks = 250
 const defaultTxsPerBlock = 200
 const defaultWithdrawalsPerBlock = 15
-const authorityCount = 128
 const baseSenderBalance = 10n ** 21n
 const zeroSlotHex: PrefixedHexString = `0x${'00'.repeat(32)}`
 const create2Salt = 0x42n
@@ -351,31 +348,11 @@ function nextSender(senders: Signer[], counter: { value: number }) {
   return { signer, nonce }
 }
 
-function nextAuthority(authorities: Signer[], counter: { value: number }) {
-  const authority = authorities[counter.value % authorities.length]
-  counter.value += 1
-  const nonce = authority.nonce
-  authority.nonce += 1n
-  return { authority, nonce }
-}
-
 function withdrawalRequestData(seed: bigint): Uint8Array {
   const pubkey = new Uint8Array(48).fill(Number(seed % 251n))
   const amount = setLengthLeft(bigIntToBytes((seed % 1_000_000n) + 1n), 8)
   return concatBytes(pubkey, amount)
 }
-
-function createAuthorization(authority: Signer, delegateTarget: Address, nonce: bigint) {
-  return eoaCode7702SignAuthorization(
-    {
-      chainId: quantityHex(1n),
-      address: delegateTarget.toString(),
-      nonce: quantityHex(nonce),
-    },
-    authority.privateKey,
-  )
-}
-
 
 function createContracts(reference: ReferenceFixture): { contracts: ContractSet; genesis: Map<string, GenesisAccount> } {
   const contracts: ContractSet = {
@@ -469,8 +446,6 @@ function createZeroScenario(
   common: Common,
   senders: Signer[],
   senderCounter: { value: number },
-  authorities: Signer[],
-  authorityCounter: { value: number },
   contracts: ContractSet,
   recipients: Address[],
   baseFee: bigint,
@@ -629,27 +604,6 @@ function createZeroScenario(
   }
 
 
-  if (templateIndex < 77) {
-    const { signer, nonce } = nextSender(senders, senderCounter)
-    const { authority, nonce: authorityNonce } = nextAuthority(authorities, authorityCounter)
-    addTrackedAddress(trackedAddresses, signer.address)
-    addTrackedAddress(trackedAddresses, authority.address)
-    addTrackedSlot(trackedSlots, authority.address, zeroSlotHex)
-    return createEOACode7702Tx(
-      {
-        nonce,
-        maxPriorityFeePerGas: 2n,
-        maxFeePerGas: baseFee + 5n,
-        gasLimit: 220_000n,
-        to: authority.address,
-        data: payload,
-        accessList: accessListFor(authority.address, zeroSlotHex),
-        authorizationList: [createAuthorization(authority, contracts.store, authorityNonce)],
-      },
-      { common },
-    ).sign(signer.privateKey)
-  }
-
   if (templateIndex < 87) {
     const { signer, nonce } = nextSender(senders, senderCounter)
     addTrackedAddress(trackedAddresses, signer.address)
@@ -709,8 +663,6 @@ function createInternalScenario(
   common: Common,
   senders: Signer[],
   senderCounter: { value: number },
-  authorities: Signer[],
-  authorityCounter: { value: number },
   contracts: ContractSet,
   baseFee: bigint,
   trackedAddresses: Set<string>,
@@ -839,22 +791,9 @@ function createInternalScenario(
     ).sign(signer.privateKey)
   }
 
-  const { signer, nonce } = nextSender(senders, senderCounter)
-  const { authority, nonce: authorityNonce } = nextAuthority(authorities, authorityCounter)
-  addTrackedAddress(trackedAddresses, signer.address)
-  addTrackedAddress(trackedAddresses, authority.address)
-  return createEOACode7702Tx(
-    {
-      nonce,
-      maxPriorityFeePerGas: 2n,
-      maxFeePerGas: baseFee + 5n,
-      gasLimit: 260_000n,
-      to: authority.address,
-      data: payload,
-      authorizationList: [createAuthorization(authority, contracts.callTwice, authorityNonce)],
-    },
-    { common },
-  ).sign(signer.privateKey)
+  addTrackedAddress(trackedAddresses, contracts.store)
+  addTrackedSlot(trackedSlots, contracts.store, zeroSlotHex)
+  return makeCallTx('1559', contracts.callTwice)
 }
 
 function createWithdrawals(
@@ -946,11 +885,7 @@ async function main() {
     ? Number(values['withdrawals-per-block'])
     : defaultWithdrawalsPerBlock
   const requiredSenders = Math.max(384, Math.ceil((blocks * txsPerBlock) / 128))
-  const totalSigners = Math.max(
-    requiredSenders + authorityCount,
-    values.signers ? Number(values.signers) : 0,
-  )
-  const senderCount = totalSigners - authorityCount
+  const senderCount = Math.max(requiredSenders, values.signers ? Number(values.signers) : 0)
   const outputPath = values.output ? path.resolve(values.output) : defaultOutputPath
   const reference = loadReferenceFixture(values.reference ? path.resolve(values.reference) : referenceFixturePath)
 
@@ -970,9 +905,6 @@ async function main() {
   const builderStateManager = new MerkleStateManager({ common })
   const executionStateManager = new MerkleStateManager({ common })
   const senders = Array.from({ length: senderCount }, (_, index) => makeDeterministicSigner(index))
-  const authorities = Array.from({ length: authorityCount }, (_, index) =>
-    makeDeterministicSigner(senderCount + index),
-  )
   const recipients = Array.from({ length: 128 }, (_, index) =>
     makeAddress(0x2000000000000000000000000000000000000000n + BigInt(index + 1)),
   )
@@ -1042,21 +974,15 @@ async function main() {
 
   const trackedAddresses = new Set<string>([
     ...contractAccounts.keys(),
-    ...authorities.map((authority) => authority.address.toString()),
     ...recipients.map((recipient) => recipient.toString()),
     ...coinbaseArray.map((coinbase) => coinbase.toString()),
   ])
   const trackedSlots = new Map<string, Set<string>>()
   addTrackedSlot(trackedSlots, contracts.store, zeroSlotHex)
   addTrackedSlot(trackedSlots, contracts.delegateAndCall, zeroSlotHex)
-  for (const authority of authorities) {
-    addTrackedSlot(trackedSlots, authority.address, zeroSlotHex)
-  }
-
   const blocksOut: any[] = []
   let parentBlock = genesisBlock
   const senderCounter = { value: 0 }
-  const authorityCounter = { value: 0 }
   const nextWithdrawalIndex = { value: 0n }
 
   for (let blockIndex = 0; blockIndex < blocks; blockIndex++) {
@@ -1100,8 +1026,6 @@ async function main() {
           common,
           senders,
           senderCounter,
-          authorities,
-          authorityCounter,
           contracts,
           recipients,
           baseFee,
@@ -1117,8 +1041,6 @@ async function main() {
           common,
           senders,
           senderCounter,
-          authorities,
-          authorityCounter,
           contracts,
           baseFee,
           trackedAddresses,
@@ -1135,8 +1057,6 @@ async function main() {
           common,
           senders,
           senderCounter,
-          authorities,
-          authorityCounter,
           contracts,
           recipients,
           baseFee,
@@ -1212,7 +1132,7 @@ async function main() {
   const description = [
     `Synthetic Amsterdam BAL stress fixture with ${blocks} blocks.`,
     `Each block targets a mean of ${txsPerBlock} transactions, 200 internal contract calls, and ${withdrawalsPerBlock} withdrawals.`,
-    'Scenarios include legacy, EIP-2930, EIP-1559, and EIP-7702 transactions; access-list warming; contract storage writes; internal CALL/DELEGATECALL/STATICCALL/precompile fan out; CREATE/CREATE2; self-destruct calls; history queries; and EIP-7002 withdrawal requests.',
+    'Scenarios include legacy, EIP-2930, and EIP-1559 transactions; access-list warming; contract storage writes; internal CALL/DELEGATECALL/STATICCALL/precompile fan out; CREATE/CREATE2; self-destruct calls; history queries; and EIP-7002 withdrawal requests.',
   ].join('\n')
   const fixtureInfoHash = bytesToHex(
     keccak_256(new TextEncoder().encode(`${fixtureId}:${blocks}:${txsPerBlock}:${withdrawalsPerBlock}`)),
@@ -1272,7 +1192,7 @@ async function main() {
 
   console.log(`wrote ${outputPath}`)
   console.log(
-    `senders=${senderCount}, authorities=${authorityCount}, trackedAccounts=${trackedAddresses.size}, lastBlock=${bytesToHex(parentBlock.hash())}`,
+    `senders=${senderCount}, trackedAccounts=${trackedAddresses.size}, lastBlock=${bytesToHex(parentBlock.hash())}`,
   )
 }
 

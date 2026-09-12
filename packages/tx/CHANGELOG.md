@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove EIP-7702 transactions (type `0x04`), constructors, capabilities, type guards, authorization data types and dedicated examples. Reject type `0x04` and both authorization field spellings before normalization or transaction construction; preserve ordinary signing and serialization.
 - Remove Blob transactions (type `0x03`), constructors, network wrappers, type guards and public data types. Reject Blob inputs through object, RPC, RLP and block-body constructors while preserving ordinary transaction encoding and signing.
 - Keep access-list transaction encoding while removing Ethereum address and storage-key access-list charges from TRON intrinsic gas.
 - Default transaction configuration to `TronMainnet` and use the TRON capability matrix for legacy signature and replay-protection behavior. Pass the intended network's Common explicitly when constructing and signing transactions.
@@ -17,7 +18,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Fixes
 
 - Do not apply Ethereum EIP-3860 initcode-size validation or word metering when constructing transactions for a TRON chain profile, independently of the selected hardfork
-- Reject nonzero `tokenId` and `tokenValue` on EIP-2930, EIP-1559, EIP-4844, and EIP-7702 transactions because these fields are not part of those formats' signing payloads or serialization; TRC-10 transaction-level transfers remain supported by the signed legacy format
+- Reject nonzero `tokenId` and `tokenValue` on retained EIP-2930 and EIP-1559 transactions because these fields are not part of their signing payloads or serialization; TRC-10 transaction-level transfers remain supported by the signed legacy format
 
 ### Chores
 
