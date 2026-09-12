@@ -346,10 +346,6 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
         }
         const [_value, offset, length] = runState.stack.peek(3)
 
-        if (common.isActivatedEIP(3860) && !common.isTron()) {
-          gas += ((length + BIGINT_31) / BIGINT_32) * common.param('initCodeWordGas')
-        }
-
         gas += subMemUsage(runState, offset, length, common)
 
         let gasLimit = BigInt(runState.interpreter.getGasLeft()) - gas
@@ -437,10 +433,6 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
         const [_value, offset, length, _salt] = runState.stack.peek(4)
 
         gas += subMemUsage(runState, offset, length, common)
-
-        if (common.isActivatedEIP(3860) && !common.isTron()) {
-          gas += ((length + BIGINT_31) / BIGINT_32) * common.param('initCodeWordGas')
-        }
 
         gas += common.param('keccak256WordGas') * divCeil(length, BIGINT_32)
         let gasLimit = runState.interpreter.getGasLeft() - gas

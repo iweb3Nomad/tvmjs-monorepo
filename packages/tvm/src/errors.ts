@@ -5,7 +5,6 @@ export const TVMErrorTypeString = 'TVMError'
 const TVMErrorMessage = {
   OUT_OF_GAS: 'out of gas',
   CODESTORE_OUT_OF_GAS: 'code store out of gas',
-  CODESIZE_EXCEEDS_MAXIMUM: 'code size to deposit exceeds maximum code size',
   STACK_UNDERFLOW: 'stack underflow',
   STACK_OVERFLOW: 'stack overflow',
   INVALID_JUMP: 'invalid JUMP',
@@ -21,7 +20,6 @@ const TVMErrorMessage = {
   INSUFFICIENT_BALANCE: 'insufficient balance',
   INSUFFICIENT_TOKEN_BALANCE: 'insufficient token balance',
   INVALID_BYTECODE_RESULT: 'invalid bytecode deployed',
-  INITCODE_SIZE_VIOLATION: 'initcode exceeds max initcode size',
   INVALID_INPUT_LENGTH: 'invalid input length',
   INVALID_EOF_FORMAT: 'invalid EOF format',
   BLS_12_381_INVALID_INPUT_LENGTH: 'invalid input length',

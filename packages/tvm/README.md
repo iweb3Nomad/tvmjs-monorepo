@@ -2,6 +2,8 @@
 
 # @tvmjs/tvm
 
+EIP-170 runtime limits and EIP-3860 initcode limits/metering are removed. Omit `allowUnlimitedContractSize` and `allowUnlimitedInitCodeSize`; either key now throws, even with `false` or `undefined`. The corresponding instance properties, size parameters and error identifiers are removed. Code deposit, memory and CREATE2 hashing still consume Energy. See [contract size migration](../common/README.md#contract-size-configuration-in-v120).
+
 v1.2.0 removes Blob execution context and BLOBHASH/BLOBBASEFEE implementations. Passing `blobVersionedHashes` to a Message, `runCall()` or `runCode()` now throws. TRON Token opcodes and the multi-sign precompile at `0x0a` are preserved. See [Blob migration and affected packages](../common/README.md#blob-removal-in-v120).
 
 Caller-supplied block contexts with `parentBeaconBlockRoot` or `parent_beacon_block_root` are rejected before execution. EIP-4788 cannot be activated. See [Beacon root migration](../common/README.md#beacon-root-removal-in-v120).

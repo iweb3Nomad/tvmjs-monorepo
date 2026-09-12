@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove EIP-170/EIP-3860 size checks and initcode word metering. Remove `allowUnlimitedContractSize` / `allowUnlimitedInitCodeSize` from TVM options and instance properties, rejecting old options before initialization. Remove `paramsTVM[607].maxCodeSize`, `paramsTVM[3860]` and the `CODESIZE_EXCEEDS_MAXIMUM` / `INITCODE_SIZE_VIOLATION` error identifiers. Preserve code deposit, memory expansion, CREATE2 hashing and failure rollback.
 - Remove the EIP-7480 group from the exported `paramsTVM` dictionary, including `dataloadGas`, `dataloadnGas`, `datasizeGas` and `datacopyGas`. EOF parsing exports remain available.
 - Remove EIP-7702 delegation lookup, its dedicated warm/BAL tracking, the support declaration and `DELEGATION_7702_FLAG`. Former delegation code fails as invalid bytecode; ordinary CALL/DELEGATECALL and rollback behavior remain unchanged.
 - Remove the EIP-4788 support declaration and reject Beacon root fields in caller-supplied block contexts before state changes or execution locks.

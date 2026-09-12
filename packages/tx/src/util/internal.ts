@@ -65,17 +65,6 @@ export function validateNotArray(values: { [key: string]: any }) {
   }
 }
 
-function checkMaxInitCodeSize(common: Common, length: number) {
-  const maxInitCodeSize = common.param('maxInitCodeSize')
-  if (maxInitCodeSize && BigInt(length) > maxInitCodeSize) {
-    throw EthereumJSErrorWithoutCode(
-      `the initcode size of this transaction is too large: it is ${length} while the max is ${common.param(
-        'maxInitCodeSize',
-      )}`,
-    )
-  }
-}
-
 /**
  * Validates that an object with BigInt values cannot exceed the specified bit limit.
  * @param values Object containing string keys and BigInt values
@@ -172,6 +161,11 @@ export function sharedConstructor(
   txData: TxData[TransactionType],
   opts: TxOptions = {},
 ) {
+  if ('allowUnlimitedInitCodeSize' in opts) {
+    throw EthereumJSErrorWithoutCode(
+      'The allowUnlimitedInitCodeSize option has been removed; TRON does not use EIP-3860',
+    )
+  }
   rejectRemovedTransactionData(txData)
   tx.common = getCommon(opts.common)
   tx.common.updateParams(opts.params ?? paramsTx, opts.params !== undefined)
@@ -233,18 +227,6 @@ export function sharedConstructor(
         `Transaction gas limit ${tx.gasLimit} exceeds the maximum allowed by EIP-7825 (${maxGasLimit})`,
       )
     }
-  }
-
-  const createContract = tx.to === undefined || tx.to === null
-  const allowUnlimitedInitCodeSize = opts.allowUnlimitedInitCodeSize ?? false
-
-  if (
-    createContract &&
-    tx.common.isActivatedEIP(3860) &&
-    !tx.common.isTron() &&
-    allowUnlimitedInitCodeSize === false
-  ) {
-    checkMaxInitCodeSize(tx.common, tx.data.length)
   }
 }
 

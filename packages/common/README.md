@@ -52,6 +52,23 @@ console.log(common.isActivatedEIP(7939)) // true
 
 EIP-2929 cold/warm pricing, EIP-3529 refund rules and EIP-3651 coinbase warming are disabled and cannot be enabled explicitly. EIP-2930 remains available for transaction encoding; access lists do not change TRON Energy costs. See [TVM Energy accounting](../tvm/README.md#tron-energy-accounting) for the reference schedule and its boundaries.
 
+## Contract size configuration in v1.2.0
+
+TRON deployments do not apply EIP-170 runtime code limits or EIP-3860 initcode limits and word metering. `isActivatedEIP(3860)` now returns `false`; explicit activation and `paramByEIP()` queries for EIP-3860 are rejected. Group `607` remains active for shared EXP, replay-protection and created-account nonce behavior, with TRON Energy overrides.
+
+Remove the following retired configuration from callers:
+
+| Package | Removed API or parameter data |
+| --- | --- |
+| `@tvmjs/tvm` | `TVMOpts.allowUnlimitedContractSize`, `TVMOpts.allowUnlimitedInitCodeSize` and the corresponding TVM instance properties. |
+| `@tvmjs/tvm` | `paramsTVM[607].maxCodeSize`, `paramsTVM[3860]` (`maxInitCodeSize`, `initCodeWordGas`), and `TVMError.errorMessages.CODESIZE_EXCEEDS_MAXIMUM` / `INITCODE_SIZE_VIOLATION`. |
+| `@tvmjs/tx` | `TxOptions.allowUnlimitedInitCodeSize` and `paramsTx[3860]`. |
+| `@tvmjs/vm` | The two removed TVM options inside `tvmOpts`. |
+
+Passing a removed option throws before initialization, including `false`, `undefined`, `null` or inherited properties. Omit these keys entirely. There is no replacement bypass flag. Custom parameter data cannot restore retired size limits or word metering.
+
+Memory expansion, CREATE2 hashing, code deposit Energy and transaction envelope charges still apply. Insufficient Energy, REVERT and invalid `0xEF` runtime code still fail and roll back deployment state. Independent EOF parsing retains its own bounds; EOF execution remains unavailable.
+
 ## Execution presets and network metadata
 
 `TronExecutionChainConfig` contains execution settings without `genesis` or `consensus`. `NetworkChainConfig` describes explicitly supplied network metadata. No TRON preset inherits Ethereum genesis, Ethash, Casper, discovery records or fork hashes.

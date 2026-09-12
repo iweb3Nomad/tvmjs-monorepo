@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove EIP-3860 from the TRON execution profile; explicit activation and parameter queries now throw. Keep group 607 for shared EXP, replay-protection and nonce behavior without EIP-170 code size limits; document the coordinated TVM/Tx/VM option and parameter removal.
 - Remove the EIP-7702 metadata entry. Authorization activation and parameter queries remain rejected; document the coordinated transaction, delegation and authorization API removal.
 - Remove the EIP-4788 metadata entry. Beacon root activation and parameter queries remain rejected on all TRON presets.
 - Remove Blob gas schedules, Blob EIP metadata, KZG configuration and Blob genesis types. Reject removed fields before configuration data is copied or parsed.

@@ -1,5 +1,7 @@
 # @tvmjs/tx `1.0.1`
 
+EIP-3860 initcode limits and word metering are removed. Omit `TxOptions.allowUnlimitedInitCodeSize`; this key now throws even with `false` or `undefined`. `paramsTx[3860]` is removed. Ordinary data byte fees, creation overhead, signing and serialization remain unchanged. See [contract size migration](../common/README.md#contract-size-configuration-in-v120).
+
 Blob transactions, their public constructors/types and network wrappers have been removed in v1.2.0. Type `0x03` and retired Blob fields are rejected, including zero or empty values. Legacy, EIP-2930 and EIP-1559 encodings keep their original type numbers. See [Blob migration and affected packages](../common/README.md#blob-removal-in-v120).
 
 EIP-7702 transaction classes, constructors, types and guards are also removed. Type `0x04`, `authorizationList` and `authorization_list` are rejected at input boundaries, including explicitly empty fields. Ordinary transaction signing is unchanged. See [EIP-7702 migration](../common/README.md#eip-7702-removal-in-v120).

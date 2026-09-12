@@ -81,15 +81,6 @@ export interface TxOptions {
    * Default: true
    */
   freeze?: boolean
-
-  /**
-   * Allows unlimited initcode while debugging Ethereum or a custom chain. This partially disables
-   * EIP-3860: the initcode size check is bypassed, but initcode word gas is still charged.
-   *
-   * TRON chain profiles do not apply EIP-3860 size checks or word gas regardless of this option.
-   * Use with caution.
-   */
-  allowUnlimitedInitCodeSize?: boolean
 }
 
 /**

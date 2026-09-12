@@ -58,16 +58,6 @@ export function getDataGas(tx: LegacyTxInterface): bigint {
     tx.data[i] === 0 ? (cost += txDataZero) : (cost += txDataNonZero)
   }
 
-  if (
-    (tx.to === undefined || tx.to === null) &&
-    tx.common.isActivatedEIP(3860) &&
-    !tx.common.isTron()
-  ) {
-    const dataLength = BigInt(Math.ceil(tx.data.length / 32))
-    const initCodeCost = tx.common.param('initCodeWordGas') * dataLength
-    cost += initCodeCost
-  }
-
   if (Object.isFrozen(tx)) {
     tx.cache.dataFee = {
       value: cost,

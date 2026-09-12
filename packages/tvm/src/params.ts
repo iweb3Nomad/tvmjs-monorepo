@@ -170,13 +170,11 @@ export const paramsTVM: ParamsDict = {
     selfdestructGas: 5000, // Base fee of the SELFDESTRUCT opcode
   },
   /**
-.  * Spurious Dragon HF Meta EIP
+.  * Retained Spurious Dragon parameters; EIP-170 code size limits are absent.
 .  */
   607: {
     // gasPrices
     expByteGas: 50, // Times ceil(log256(exponent)) for the EXP instruction
-    // tvm
-    maxCodeSize: 24576, // Maximum length of contract code
   },
   /**
 .  * Byzantium HF Meta EIP
@@ -346,15 +344,6 @@ export const paramsTVM: ParamsDict = {
   3855: {
     // gasPrices
     push0Gas: 2, // Base fee of the PUSH0 opcode
-  },
-  /**
-.  * Limit and meter initcode
-.  */
-  3860: {
-    // gasPrices
-    initCodeWordGas: 2, // Gas to pay for each word (32 bytes) of initcode when creating a contract
-    // vm
-    maxInitCodeSize: 49152, // Maximum length of initialization code when creating a contract
   },
   /**
    * EOF - Static relative jumps

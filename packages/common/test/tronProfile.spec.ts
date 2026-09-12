@@ -48,7 +48,9 @@ describe('[Common]: independent TRON execution profile', () => {
   it('cannot restore retired capabilities through proposals or explicit EIPs', () => {
     for (const activatedProposals of [[], [95], [96], [95, 96]]) {
       const common = new Common({ chain: TronMainnet, activatedProposals })
-      for (const eip of [2929, 3529, 3651, 3675, 4399, 4788, 4844, 4895, 7516, 7702, 7918]) {
+      for (const eip of [
+        170, 2929, 3529, 3651, 3675, 3860, 4399, 4788, 4844, 4895, 7516, 7702, 7918,
+      ]) {
         assert.isFalse(common.isActivatedEIP(eip), `EIP ${eip}`)
         assert.throws(() => common.setEIPs([eip]), /not supported by the TRON execution profile/)
         assert.isFalse(common.isActivatedEIP(eip))

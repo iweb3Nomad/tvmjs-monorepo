@@ -7,9 +7,9 @@ import {
   createAddressFromString,
   hexToBytes,
 } from '@tvmjs/util'
-import { assert, describe, it } from 'vitest'
+import { assert, describe, expect, it, vi } from 'vitest'
 
-import { type VMOpts, createVM, paramsVM } from '../../src/index.ts'
+import { VM, type VMOpts, createVM, paramsVM } from '../../src/index.ts'
 
 import { setupVM } from './utils.ts'
 
@@ -62,7 +62,9 @@ describe('VM -> basic instantiation / boolean switches', () => {
 describe('VM -> Default TVM / Custom TVM Opts', () => {
   it('Default TVM should have correct default TVM opts', async () => {
     const vm = await createVM()
-    assert.isFalse((vm.tvm as TVM).allowUnlimitedContractSize, 'allowUnlimitedContractSize=false')
+    assert.notProperty(vm.tvm, 'allowUnlimitedContractSize')
+    assert.notProperty(vm.tvm, 'allowUnlimitedInitCodeSize')
+    assert.isFalse(vm.common.isActivatedEIP(3860))
   })
 
   it('should throw if tvm and tvmOpts are both used', async () => {
@@ -93,14 +95,47 @@ describe('VM -> Default TVM / Custom TVM Opts', () => {
   })
 
   it('Default TVM should use custom TVM opts', async () => {
-    const vm = await createVM({ tvmOpts: { allowUnlimitedContractSize: true } })
-    assert.isTrue((vm.tvm as TVM).allowUnlimitedContractSize, 'allowUnlimitedContractSize=true')
+    const vm = await createVM({
+      tvmOpts: {
+        customOpcodes: [
+          {
+            opcode: 0x21,
+            opcodeName: 'CUSTOM',
+            baseFee: 7,
+            logicFunction: (runState) => {
+              runState.stack.push(42n)
+            },
+          },
+        ],
+      },
+    })
     const copiedVM = await vm.shallowCopy()
-    assert.isTrue(
-      (copiedVM.tvm as TVM).allowUnlimitedContractSize,
-      'allowUnlimitedContractSize=true (for shallowCopied VM)',
-    )
+    for (const instance of [vm, copiedVM]) {
+      const result = await instance.tvm.runCode({ code: hexToBytes('0x21'), gasLimit: 7n })
+      assert.isUndefined(result.exceptionError)
+      assert.strictEqual(result.executionGasUsed, 7n)
+      assert.deepEqual(result.runState!.stack.peek(), [42n])
+    }
   })
+
+  it.each(['allowUnlimitedContractSize', 'allowUnlimitedInitCodeSize'])(
+    'rejects obsolete tvmOpts.%s before initialization',
+    async (option) => {
+      const common = new Common({ chain: TronNile })
+      const updateParams = vi.spyOn(common, 'updateParams')
+      for (const value of [true, false, undefined, null]) {
+        for (const tvmOpts of [{ [option]: value }, Object.create({ [option]: value })]) {
+          await expect(createVM({ common, tvmOpts })).rejects.toThrow(
+            `tvmOpts.${option} option has been removed`,
+          )
+          expect(() => new VM({ common, tvmOpts })).toThrow(
+            `tvmOpts.${option} option has been removed`,
+          )
+        }
+      }
+      expect(updateParams).not.toHaveBeenCalled()
+    },
+  )
 
   it('Default TVM should use VM common', async () => {
     const common = new Common({ chain: TronNile, hardfork: Hardfork.Tron })

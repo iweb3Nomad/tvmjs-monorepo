@@ -19,8 +19,9 @@ import { Message, TVMError, createTVM, paramsTVM } from '../src/index.ts'
 describe('initialization', () => {
   it('basic initialization', async () => {
     const tvm = await createTVM()
-    const msg = 'should use the correct parameter defaults'
-    assert.isFalse(tvm.allowUnlimitedContractSize, msg)
+    assert.notProperty(tvm, 'allowUnlimitedContractSize')
+    assert.notProperty(tvm, 'allowUnlimitedInitCodeSize')
+    assert.isFalse(tvm.common.isActivatedEIP(3860))
   })
 
   it('TVM parameter customization', async () => {

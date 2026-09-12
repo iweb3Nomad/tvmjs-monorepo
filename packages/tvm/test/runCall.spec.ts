@@ -674,29 +674,25 @@ describe('RunCall tests', () => {
     )
   })
 
-  it('runCall() => allows to detect for max code size deposit errors', async () => {
+  it('runCall() => permits runtime code above the former EIP-170 limit', async () => {
     // setup the accounts for this test
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
     // setup the tvm
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
 
     // setup the call arguments
     const runCallArgs = {
       caller, // call address
-      gasLimit: BigInt(0xffffffffff), // ensure we pass a lot of gas, so we do not run out of gas
-      // Simple test, PUSH <big number> PUSH 0 RETURN
-      // It tries to deploy a contract too large, where the code is all zeros
-      // (since memory which is not allocated/resized to yet is always defaulted to 0)
-      data: hexToBytes('0x62FFFFFF6000F3'),
+      gasLimit: 4918868n,
+      rootTransactionId: new Uint8Array(32),
+      data: hexToBytes('0x6160016000f3'),
     }
 
     const result = await tvm.runCall(runCallArgs)
-    assert.strictEqual(
-      result.execResult.exceptionError?.error,
-      TVMError.errorMessages.CODESIZE_EXCEEDS_MAXIMUM,
-      'reported error is correct',
-    )
+    assert.isUndefined(result.execResult.exceptionError)
+    assert.strictEqual(result.execResult.executionGasUsed, 4918868n)
+    assert.strictEqual((await tvm.stateManager.getCode(result.createdAddress!)).length, 24577)
   })
 
   it('step event: ensure TVM memory and not internal memory gets reported', async () => {
@@ -724,30 +720,33 @@ describe('RunCall tests', () => {
     assert.isTrue(verifyMemoryExpanded, 'memory did expand')
   })
 
-  it('ensure code deposit errors are logged correctly (>= Homestead)', async () => {
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Berlin })
+  it('reports Energy shortages during code deposit and memory expansion', async () => {
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
 
-    // Create a contract which is too large
+    // Execution succeeds but the remaining Energy cannot pay the code deposit fee.
     const runCallArgs = {
       gasLimit: BigInt(10000000),
       data: hexToBytes('0x61FFFF6000F3'),
+      rootTransactionId: new Uint8Array(32),
     }
 
     const res = await tvm.runCall(runCallArgs)
-    assert.strictEqual(
-      res.execResult.exceptionError?.error,
-      TVMError.errorMessages.CODESIZE_EXCEEDS_MAXIMUM,
-    )
+    assert.strictEqual(res.execResult.exceptionError?.error, TVMError.errorMessages.OUT_OF_GAS)
+    assert.strictEqual(res.execResult.executionGasUsed, runCallArgs.gasLimit)
+    assert.isUndefined(await tvm.stateManager.getAccount(res.createdAddress!))
 
     // Create a contract which goes OOG when creating
     const runCallArgs2 = {
       gasLimit: BigInt(100000),
       data: hexToBytes('0x62FFFFFF6000F3'),
+      rootTransactionId: new Uint8Array(32),
     }
 
     const res2 = await tvm.runCall(runCallArgs2)
     assert.strictEqual(res2.execResult.exceptionError?.error, TVMError.errorMessages.OUT_OF_GAS)
+    assert.strictEqual(res2.execResult.executionGasUsed, runCallArgs2.gasLimit)
+    assert.isUndefined(await tvm.stateManager.getAccount(res2.createdAddress!))
   })
 
   it('ensure code deposit errors are logged correctly (Frontier)', async () => {

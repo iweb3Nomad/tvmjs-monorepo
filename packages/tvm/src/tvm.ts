@@ -32,6 +32,7 @@ import { Journal } from './journal.ts'
 import { TVMPerformanceLogger } from './logger.ts'
 import { Message, createTronTransactionContext, rejectRemovedExecutionOptions } from './message.ts'
 import { getOpcodesForHF } from './opcodes/index.ts'
+import { rejectRemovedSizeOptions } from './options.ts'
 import { paramsTVM } from './params.ts'
 import { NobleBLS, getActivePrecompiles, getPrecompileName } from './precompiles/index.ts'
 import { TransientStorage } from './transientStorage.ts'
@@ -134,18 +135,6 @@ export function INVALID_EOF_RESULT(gasLimit: bigint): ExecResult {
 }
 
 /**
- * Returns an ExecResult for code size violations.
- * @param gasUsed - Gas consumed before the violation was detected
- */
-export function CodesizeExceedsMaximumError(gasUsed: bigint): ExecResult {
-  return {
-    returnValue: new Uint8Array(0),
-    executionGasUsed: gasUsed,
-    exceptionError: new TVMError(TVMError.errorMessages.CODESIZE_EXCEEDS_MAXIMUM),
-  }
-}
-
-/**
  * Wraps an {@link TVMError} in an ExecResult.
  * @param error - Error encountered during execution
  * @param gasUsed - Gas consumed up to the error
@@ -206,9 +195,6 @@ export class TVM implements TVMInterface {
 
   protected _opcodes!: OpcodeList
 
-  public readonly allowUnlimitedContractSize: boolean
-  public readonly allowUnlimitedInitCodeSize: boolean
-
   public readonly blockLevelAccessList?: BlockLevelAccessList
 
   protected readonly _customOpcodes?: CustomOpcode[]
@@ -262,6 +248,7 @@ export class TVM implements TVMInterface {
    * @param bn128 Initialized bn128 WASM object for precompile usage (internal)
    */
   constructor(opts: TVMOpts) {
+    rejectRemovedSizeOptions(opts)
     this.common = opts.common!
     this.blockchain = opts.blockchain!
     this.stateManager = opts.stateManager!
@@ -286,9 +273,9 @@ export class TVM implements TVMInterface {
 
     // Supported EIPs
     const supportedEIPs = [
-      1153, 1559, 2537, 2565, 2718, 2930, 2935, 3198, 3540, 3541, 3607, 3670, 3855, 3860, 4200,
-      4399, 4750, 4895, 5133, 5450, 5656, 6110, 6206, 6780, 7002, 7069, 7251, 7620, 7685, 7692,
-      7698, 7709, 7823, 7825, 7934, 7939, 7951, 8024,
+      1153, 1559, 2537, 2565, 2718, 2930, 2935, 3198, 3540, 3541, 3607, 3670, 3855, 4200, 4399,
+      4750, 4895, 5133, 5450, 5656, 6110, 6206, 6780, 7002, 7069, 7251, 7620, 7685, 7692, 7698,
+      7709, 7823, 7825, 7934, 7939, 7951, 8024,
     ]
 
     for (const eip of this.common.eips()) {
@@ -305,8 +292,6 @@ export class TVM implements TVMInterface {
 
     this.common.updateParams(opts.params ?? paramsTVM, opts.params !== undefined)
 
-    this.allowUnlimitedContractSize = opts.allowUnlimitedContractSize ?? false
-    this.allowUnlimitedInitCodeSize = opts.allowUnlimitedInitCodeSize ?? false
     this._customOpcodes = opts.customOpcodes
     this._customPrecompiles = opts.customPrecompiles
 
@@ -606,22 +591,6 @@ export class TVM implements TVMInterface {
     await this._reduceSenderBalance(account, message)
     await this._reduceSenderTokenBalance(account, message)
 
-    if (this.common.isActivatedEIP(3860) && !this.common.isTron()) {
-      if (
-        message.data.length > Number(this.common.param('maxInitCodeSize')) &&
-        !this.allowUnlimitedInitCodeSize
-      ) {
-        return {
-          createdAddress: message.to,
-          execResult: {
-            returnValue: new Uint8Array(0),
-            exceptionError: new TVMError(TVMError.errorMessages.INITCODE_SIZE_VIOLATION),
-            executionGasUsed: message.gasLimit,
-          },
-        }
-      }
-    }
-
     // TODO at some point, figure out why we swapped out data to code in the first place
     message.code = message.data
     message.data = message.eofCallData ?? new Uint8Array()
@@ -815,20 +784,9 @@ export class TVM implements TVMInterface {
       }
     }
 
-    // Check for SpuriousDragon EIP-170 code size limit
-    let allowedCodeSize = true
-    if (
-      !result.exceptionError &&
-      !this.common.isTron() &&
-      this.common.isActivatedEIP(607) &&
-      result.returnValue.length > Number(this.common.param('maxCodeSize'))
-    ) {
-      allowedCodeSize = false
-    }
-
-    // If enough gas and allowed code size
+    // TRON charges code deposit Energy without an EIP-170 runtime size limit.
     let CodestoreOOG = false
-    if (totalGas <= message.gasLimit && (this.allowUnlimitedContractSize || allowedCodeSize)) {
+    if (totalGas <= message.gasLimit) {
       if (this.common.isActivatedEIP(3541) && result.returnValue[0] === FORMAT) {
         if (!this.common.isActivatedEIP(3540)) {
           result = { ...result, ...INVALID_BYTECODE_RESULT(message.gasLimit) }
@@ -851,18 +809,11 @@ export class TVM implements TVMInterface {
       }
     } else {
       if (this.common.isActivatedEIP(606)) {
-        if (!allowedCodeSize) {
-          if (this.DEBUG) {
-            debug(`Code size exceeds maximum code size (>= SpuriousDragon)`)
-          }
-          result = { ...result, ...CodesizeExceedsMaximumError(message.gasLimit) }
-        } else {
-          if (this.DEBUG) {
-            debug(`Contract creation: out of gas`)
-          }
-          message.accessWitness?.revert()
-          result = { ...result, ...OOGResult(message.gasLimit) }
+        if (this.DEBUG) {
+          debug(`Contract creation: out of gas`)
         }
+        message.accessWitness?.revert()
+        result = { ...result, ...OOGResult(message.gasLimit) }
       } else {
         // we are in Frontier
         if (totalGas - returnFee <= message.gasLimit) {

@@ -34,15 +34,6 @@ export const paramsTx: ParamsDict = {
     accessListAddressGas: 2400, // Gas cost per storage key in an Access List transaction
   },
   /**
-.  * Limit and meter initcode
-.  */
-  3860: {
-    // gasPrices
-    initCodeWordGas: 2, // Gas to pay for each word (32 bytes) of initcode when creating a contract
-    // format
-    maxInitCodeSize: 49152, // Maximum length of initialization code when creating a contract
-  },
-  /**
    * Increase calldata cost to reduce maximum block size
    */
   7623: {

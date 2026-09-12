@@ -9,6 +9,7 @@ import {
   unprefixedHexToBytes,
 } from '@tvmjs/util'
 
+import { rejectRemovedTVMOptions } from './options.ts'
 import { paramsVM } from './params.ts'
 import { VM } from './vm.ts'
 
@@ -20,6 +21,7 @@ import type { VMOpts } from './types.ts'
  * @param opts VM engine constructor options
  */
 export async function createVM(opts: VMOpts = {}): Promise<VM> {
+  rejectRemovedTVMOptions(opts)
   opts = { ...opts }
   // Save if a `StateManager` was passed (for activatePrecompiles)
   const didPassStateManager =

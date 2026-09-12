@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove EIP-3860 initcode validation and word metering, `TxOptions.allowUnlimitedInitCodeSize` and `paramsTx[3860]`. Reject the removed option regardless of its value; retain ordinary data fees, creation overhead, signing and serialization.
 - Remove EIP-7702 transactions (type `0x04`), constructors, capabilities, type guards, authorization data types and dedicated examples. Reject type `0x04` and both authorization field spellings before normalization or transaction construction; preserve ordinary signing and serialization.
 - Remove Blob transactions (type `0x03`), constructors, network wrappers, type guards and public data types. Reject Blob inputs through object, RPC, RLP and block-body constructors while preserving ordinary transaction encoding and signing.
 - Keep access-list transaction encoding while removing Ethereum address and storage-key access-list charges from TRON intrinsic gas.

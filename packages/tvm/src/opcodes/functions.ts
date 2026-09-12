@@ -1280,17 +1280,8 @@ export const handlers: Map<number, OpHandler> = new Map([
   // 0xf0: CREATE
   [
     0xf0,
-    async function (runState, common) {
+    async function (runState) {
       const [value, offset, length] = runState.stack.popN(3)
-
-      if (
-        common.isActivatedEIP(3860) &&
-        !common.isTron() &&
-        length > Number(common.param('maxInitCodeSize')) &&
-        !runState.interpreter._tvm.allowUnlimitedInitCodeSize
-      ) {
-        trap(TVMError.errorMessages.INITCODE_SIZE_VIOLATION)
-      }
 
       const gasLimit = runState.messageGasLimit!
       runState.messageGasLimit = undefined
@@ -1313,21 +1304,12 @@ export const handlers: Map<number, OpHandler> = new Map([
   // 0xf5: CREATE2
   [
     0xf5,
-    async function (runState, common) {
+    async function (runState) {
       if (runState.interpreter.isStatic()) {
         trap(TVMError.errorMessages.STATIC_STATE_CHANGE)
       }
 
       const [value, offset, length, salt] = runState.stack.popN(4)
-
-      if (
-        common.isActivatedEIP(3860) &&
-        !common.isTron() &&
-        length > Number(common.param('maxInitCodeSize')) &&
-        !runState.interpreter._tvm.allowUnlimitedInitCodeSize
-      ) {
-        trap(TVMError.errorMessages.INITCODE_SIZE_VIOLATION)
-      }
 
       const gasLimit = runState.messageGasLimit!
       runState.messageGasLimit = undefined

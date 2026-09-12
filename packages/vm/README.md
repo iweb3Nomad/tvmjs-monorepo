@@ -2,6 +2,8 @@
 
 # @tvmjs/vm
 
+Remove `allowUnlimitedContractSize` and `allowUnlimitedInitCodeSize` from `tvmOpts`; either key now throws before initialization, even with `false` or `undefined`. VM and direct TVM deployment retain the same TRON execution Energy and rollback behavior without EIP-170/EIP-3860 limits. Transaction envelope charges remain separate from execution Energy. See [contract size migration](../common/README.md#contract-size-configuration-in-v120).
+
 v1.2.0 removes Blob fees, receipts and block-builder accounting. Remove `allowNoBlobs` from `addTransaction()` calls and use the four-argument `generateTxReceipt()` signature. Ordinary transaction execution and receipts are preserved. See [Blob migration and affected packages](../common/README.md#blob-removal-in-v120).
 
 Beacon root initialization, system-account writes and the `historicalRootsLength` parameter are removed. `runTx()`, `runBlock()` and block builders reject retired Beacon root fields before events or state changes. Ordinary contract storage and rollback remain available. See [Beacon root migration](../common/README.md#beacon-root-removal-in-v120).
