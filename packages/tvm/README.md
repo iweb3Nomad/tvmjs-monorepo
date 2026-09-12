@@ -1,4 +1,4 @@
-<!-- cspell:ignore blockhashes Fusaka prehash subarray CALLDATACOPY CODECOPY -->
+<!-- cspell:ignore blockhashes Fusaka prehash subarray CALLDATACOPY CODECOPY dataloadn datasize datacopy -->
 
 # @tvmjs/tvm
 
@@ -7,6 +7,8 @@ v1.2.0 removes Blob execution context and BLOBHASH/BLOBBASEFEE implementations. 
 Caller-supplied block contexts with `parentBeaconBlockRoot` or `parent_beacon_block_root` are rejected before execution. EIP-4788 cannot be activated. See [Beacon root migration](../common/README.md#beacon-root-removal-in-v120).
 
 EIP-7702 code delegation and `DELEGATION_7702_FLAG` are removed. Code beginning with `0xef0100` fails as invalid bytecode without loading a delegation target. Ordinary CALL/DELEGATECALL behavior is preserved. See [EIP-7702 migration](../common/README.md#eip-7702-removal-in-v120).
+
+The shared execution table reserves `0xd0`–`0xd3` for TRON `CALLTOKEN`, `TOKENBALANCE`, `CALLTOKENVALUE` and `CALLTOKENID`. Conflicting EOF data-instruction handlers and the `7480` group in the exported `paramsTVM` dictionary are removed, including `dataloadGas`, `dataloadnGas`, `datasizeGas` and `datacopyGas`. EOF cannot be activated through the TRON profile; independent EOF container parsing and the remaining inactive EOF implementation are retained.
 
 | TypeScript implementation of the TRON Virtual Machine (TVM). Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |
 | --- |

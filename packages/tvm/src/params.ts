@@ -412,16 +412,6 @@ export const paramsTVM: ParamsDict = {
     minCalleeGas: 2300, //Minimum gas available to the the address called by an EXT*CALL opcode
   },
   /**
-   * EOF - Data section access instructions
-   */
-  7480: {
-    // gasPrices
-    dataloadGas: 4, // Base fee of the DATALOAD opcode
-    dataloadnGas: 3, // Base fee of the DATALOADN opcode
-    datasizeGas: 2, // Base fee of the DATASIZE opcode
-    datacopyGas: 3, // Base fee of the DATACOPY opcode
-  },
-  /**
 .  * EOF Contract Creation
 .  */
   7620: {

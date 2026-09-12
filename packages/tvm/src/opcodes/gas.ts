@@ -290,23 +290,6 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
         return gas
       },
     ],
-    /* DATACOPY */
-    [
-      0xd3,
-      async function (runState, gas, common) {
-        if (runState.env.eof === undefined) {
-          // Opcode not available in legacy contracts
-          trap(TVMError.errorMessages.INVALID_OPCODE)
-        }
-        const [memOffset, _dataOffset, dataLength] = runState.stack.peek(3)
-
-        gas += subMemUsage(runState, memOffset, dataLength, common)
-        if (dataLength !== BIGINT_0) {
-          gas += common.param('copyGas') * divCeil(dataLength, BIGINT_32)
-        }
-        return gas
-      },
-    ],
     /* EOFCREATE */
     [
       0xec,

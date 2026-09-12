@@ -350,15 +350,6 @@ const eipOpcodes: { eip: number; opcodes: OpcodeEntry }[] = [
     },
   },
   {
-    eip: 7480,
-    opcodes: {
-      0xd0: defaultOp('DATALOAD'),
-      0xd1: defaultOp('DATALOADN'),
-      0xd2: defaultOp('DATASIZE'),
-      0xd3: dynamicGasOp('DATACOPY'),
-    },
-  },
-  {
     eip: 7843,
     opcodes: {
       0x4b: asyncOp('SLOTNUM'),

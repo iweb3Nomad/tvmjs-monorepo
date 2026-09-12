@@ -1,3 +1,5 @@
+<!-- cspell:ignore dataloadn datasize datacopy -->
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -10,6 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove the EIP-7480 group from the exported `paramsTVM` dictionary, including `dataloadGas`, `dataloadnGas`, `datasizeGas` and `datacopyGas`. EOF parsing exports remain available.
 - Remove EIP-7702 delegation lookup, its dedicated warm/BAL tracking, the support declaration and `DELEGATION_7702_FLAG`. Former delegation code fails as invalid bytecode; ordinary CALL/DELEGATECALL and rollback behavior remain unchanged.
 - Remove the EIP-4788 support declaration and reject Beacon root fields in caller-supplied block contexts before state changes or execution locks.
 - Remove BLOBHASH/BLOBBASEFEE, Blob execution/message/result fields and the Ethereum KZG precompile implementation. Reject removed execution options and retain TRON multi-sign at `0x0a` and Token opcodes at `0xd0`–`0xd3`.
@@ -18,6 +21,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Remove conflicting EOF data-instruction registrations and fees at `0xd0`–`0xd3`, preserving TRON Token opcode results, stack behavior and Energy costs. Retain independent EOF parsing and reject EOF activation through the TRON profile.
+- Migrate CLZ and MCOPY regressions to TRON configuration, checking successful execution, final stack/memory and fixed Energy costs.
 - Read and write TRC-10 balances by exact token ID in CALLTOKEN, TOKENBALANCE, message transfers and SELFDESTRUCT instead of converting IDs to `Number`, so adjacent IDs above `2^53 - 1` keep separate balances.
 - Charge new-account Energy only for missing CALL/CALLTOKEN recipients with nonzero value. Keep existing empty accounts across transactions and avoid creating recipients on zero-value calls, preserving the execution account for explicit `runCall({ code })` overrides.
 - Keep access reporting independent of warming and retain version-0 forwarding, checkpoint rollback and unused callee Energy handling.
