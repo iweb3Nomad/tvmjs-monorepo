@@ -164,10 +164,7 @@ describe('[Block]: Header functions', () => {
     headerArray[17] = new Uint8Array(4) // bad data
     headerArray[18] = new Uint8Array(4) // bad data
 
-    assert.throw(
-      () => createBlockHeaderFromBytesArray(headerArray),
-      'invalid header. More values than expected were received',
-    )
+    assert.throw(() => createBlockHeaderFromBytesArray(headerArray), 'Unsupported header extension')
 
     try {
       createBlockHeaderFromBytesArray(headerArray.slice(0, 5))
