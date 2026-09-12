@@ -1,6 +1,5 @@
 import { keccak_256 } from '@noble/hashes/sha3.js'
 import { Block, createBlockHeader } from '@tvmjs/block'
-import { Common, Hardfork, Mainnet, createCustomCommon } from '@tvmjs/common'
 import { RLP } from '@tvmjs/rlp'
 import { createAccessList2930Tx, createFeeMarket1559Tx, createLegacyTx } from '@tvmjs/tx'
 import {
@@ -390,37 +389,4 @@ export async function setupPreConditions(state: StateManagerInterface, testData:
     await state.putAccount(address, account)
   }
   await state.commit()
-}
-
-/**
- * Returns a DAO common which has a different activation block than the default block
- */
-export function getDAOCommon(activationBlock: number) {
-  // here: get the default fork list of mainnet and only edit the DAO fork block (thus copy the rest of the "default" hardfork settings)
-  const defaultDAOCommon = new Common({ chain: Mainnet, hardfork: Hardfork.Dao })
-  // retrieve the hard forks list from defaultCommon...
-  const forks = defaultDAOCommon.hardforks()
-  const editedForks = []
-  // explicitly edit the "dao" block number:
-  for (const fork of forks) {
-    if (fork.name === Hardfork.Dao) {
-      editedForks.push({
-        name: Hardfork.Dao,
-        forkHash: fork.forkHash,
-        block: activationBlock,
-      })
-    } else {
-      editedForks.push(fork)
-    }
-  }
-  const DAOCommon = createCustomCommon(
-    {
-      hardforks: editedForks,
-    },
-    Mainnet,
-    {
-      hardfork: Hardfork.Dao,
-    },
-  )
-  return DAOCommon
 }

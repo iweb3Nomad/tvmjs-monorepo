@@ -15,10 +15,8 @@ import {
   bigIntToHex,
   bigIntToUnpaddedBytes,
   bytesToHex,
-  bytesToUtf8,
   createZeroAddress,
   equalsBytes,
-  hexToBytes,
   toType,
 } from '@tvmjs/util'
 
@@ -152,13 +150,9 @@ export class BlockHeader {
       })
     }
 
-    // Hardfork defaults which couldn't be paired with earlier defaults
+    // Capability defaults for the TRON execution container.
     const hardforkDefaults = {
-      baseFeePerGas: this.common.isActivatedEIP(1559)
-        ? number === this.common.hardforkBlock(Hardfork.London)
-          ? this.common.param('initialBaseFee')
-          : BIGINT_7
-        : undefined,
+      baseFeePerGas: this.common.isActivatedEIP(1559) ? BIGINT_7 : undefined,
       withdrawalsRoot: this.common.isActivatedEIP(4895) ? KECCAK256_RLP : undefined,
       // Note: as of devnet-4 we stub the null SHA256 hash, but for devnet5 this will actually
       // be the correct hash for empty requests.
@@ -226,7 +220,6 @@ export class BlockHeader {
     this.blockAccessListHash = blockAccessListHash
     this.slotNumber = slotNumber
     this._genericFormatValidation()
-    this._validateDAOExtraData()
 
     // Now we have set all the values of this Header, we possibly have set a dummy
     // `difficulty` value (defaults to 0). If we have a `calcDifficultyFromHeader`
@@ -296,18 +289,6 @@ export class BlockHeader {
       if (typeof this.baseFeePerGas !== 'bigint') {
         const msg = this._errorMsg('EIP1559 block has no base fee field')
         throw EthereumJSErrorWithoutCode(msg)
-      }
-      const londonHfBlock = this.common.hardforkBlock(Hardfork.London)
-      if (
-        typeof londonHfBlock === 'bigint' &&
-        londonHfBlock !== BIGINT_0 &&
-        this.number === londonHfBlock
-      ) {
-        const initialBaseFee = this.common.param('initialBaseFee')
-        if (this.baseFeePerGas !== initialBaseFee) {
-          const msg = this._errorMsg('Initial EIP1559 block does not have initial base fee')
-          throw EthereumJSErrorWithoutCode(msg)
-        }
       }
     }
 
@@ -444,18 +425,7 @@ export class BlockHeader {
    * @param parentBlockHeader - the header from the parent `Block` of this header
    */
   validateGasLimit(parentBlockHeader: BlockHeader) {
-    let parentGasLimit = parentBlockHeader.gasLimit
-    // EIP-1559: assume double the parent gas limit on fork block
-    // to adopt to the new gas target centered logic
-    const londonHardforkBlock = this.common.hardforkBlock(Hardfork.London)
-    if (
-      typeof londonHardforkBlock === 'bigint' &&
-      londonHardforkBlock !== BIGINT_0 &&
-      this.number === londonHardforkBlock
-    ) {
-      const elasticity = this.common.param('elasticityMultiplier')
-      parentGasLimit = parentGasLimit * elasticity
-    }
+    const parentGasLimit = parentBlockHeader.gasLimit
     const gasLimit = this.gasLimit
 
     const a = parentGasLimit / this.common.param('gasLimitBoundDivisor')
@@ -701,31 +671,6 @@ export class BlockHeader {
       JSONDict.slotNumber = bigIntToHex(this.slotNumber!)
     }
     return JSONDict
-  }
-
-  /**
-   * Validates extra data is DAO_ExtraData for DAO_ForceExtraDataRange blocks after DAO
-   * activation block (see: https://blog.slock.it/hard-fork-specification-24b889e70703)
-   */
-  protected _validateDAOExtraData() {
-    if (!this.common.hardforkIsActiveOnBlock(Hardfork.Dao, this.number)) {
-      return
-    }
-    const DAOActivationBlock = this.common.hardforkBlock(Hardfork.Dao)
-    if (DAOActivationBlock === null || this.number < DAOActivationBlock) {
-      return
-    }
-    const DAO_ExtraData = hexToBytes('0x64616f2d686172642d666f726b')
-    const DAO_ForceExtraDataRange = BigInt(9)
-    const drift = this.number - DAOActivationBlock
-    if (drift <= DAO_ForceExtraDataRange && !equalsBytes(this.extraData, DAO_ExtraData)) {
-      const msg = this._errorMsg(
-        `extraData should be 'dao-hard-fork', got ${bytesToUtf8(this.extraData)} (hex: ${bytesToHex(
-          this.extraData,
-        )})`,
-      )
-      throw EthereumJSErrorWithoutCode(msg)
-    }
   }
 
   /**

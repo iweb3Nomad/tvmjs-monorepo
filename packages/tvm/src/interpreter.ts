@@ -1270,10 +1270,7 @@ export class Interpreter {
       this._runState.returnBytes = results.execResult.returnValue
     }
 
-    if (
-      !results.execResult.exceptionError ||
-      results.execResult.exceptionError.error === TVMError.errorMessages.CODESTORE_OUT_OF_GAS
-    ) {
+    if (!results.execResult.exceptionError) {
       for (const [addressToSelfdestructHex, beneficiaryHex] of selfdestruct) {
         this._result.selfdestruct.set(addressToSelfdestructHex, beneficiaryHex)
       }

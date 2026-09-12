@@ -1,4 +1,4 @@
-<!-- cspell:ignore dataloadn datasize datacopy -->
+<!-- cspell:ignore dataloadn datasize datacopy coldsload -->
 
 # Changelog
 
@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove obsolete storage-pricing entries from exported `paramsTVM`: `netSstoreNoopGas`, `netSstoreInitGas`, `netSstoreCleanGas`, `netSstoreDirtyGas`, `netSstoreClearRefundGas`, `netSstoreResetRefundGas`, `netSstoreResetClearRefundGas`, `sstoreSentryEIP2200Gas`, `sstoreNoopEIP2200Gas`, `sstoreDirtyEIP2200Gas`, `sstoreInitEIP2200Gas`, `sstoreInitRefundEIP2200Gas`, `sstoreCleanEIP2200Gas`, `sstoreCleanRefundEIP2200Gas`, `sstoreClearRefundEIP2200Gas` and `coldsloadGas`. Remove the now-empty `1716` parameter group; preserve other members of shared groups and the TRON schedule.
+- Remove the Frontier-only `CODESTORE_OUT_OF_GAS` error identifier and its internal result helper. Failed code deposits use `OUT_OF_GAS`, revert creation effects and return zero from internal CREATE/CREATE2.
 - Remove EIP-170/EIP-3860 size checks and initcode word metering. Remove `allowUnlimitedContractSize` / `allowUnlimitedInitCodeSize` from TVM options and instance properties, rejecting old options before initialization. Remove `paramsTVM[607].maxCodeSize`, `paramsTVM[3860]` and the `CODESIZE_EXCEEDS_MAXIMUM` / `INITCODE_SIZE_VIOLATION` error identifiers. Preserve code deposit, memory expansion, CREATE2 hashing and failure rollback.
 - Remove the EIP-7480 group from the exported `paramsTVM` dictionary, including `dataloadGas`, `dataloadnGas`, `datasizeGas` and `datacopyGas`. EOF parsing exports remain available.
 - Remove EIP-7702 delegation lookup, its dedicated warm/BAL tracking, the support declaration and `DELEGATION_7702_FLAG`. Former delegation code fails as invalid bytecode; ordinary CALL/DELEGATECALL and rollback behavior remain unchanged.
@@ -22,6 +24,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Validate explicit EIPs against the same `tronExecutionProfile` used by Common, accepting its base groups as well as optional CLZ. Retired implementations are no longer listed as supported capabilities.
+- Delete unused EIP-1283/EIP-2200 storage-metering modules and EIP-2929 storage/refund/BAL helpers. Retain the address-access helpers used by inactive EOF calls; verify fixed TRON Energy, zero refunds and failure rollback.
 - Remove conflicting EOF data-instruction registrations and fees at `0xd0`–`0xd3`, preserving TRON Token opcode results, stack behavior and Energy costs. Retain independent EOF parsing and reject EOF activation through the TRON profile.
 - Migrate CLZ and MCOPY regressions to TRON configuration, checking successful execution, final stack/memory and fixed Energy costs.
 - Read and write TRC-10 balances by exact token ID in CALLTOKEN, TOKENBALANCE, message transfers and SELFDESTRUCT instead of converting IDs to `Number`, so adjacent IDs above `2^53 - 1` keep separate balances.

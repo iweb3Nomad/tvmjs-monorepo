@@ -217,6 +217,8 @@ This library by default uses JavaScript implementations for the basic standard c
 
 ## TRON Energy and transaction overhead
 
+Block builders inherit the parent gas limit and calculate the next base fee from the parent unless explicitly overridden. London activation heights do not double gas limits or reset fees. `runBlock()` does not apply DAO balance transfers or create a DAO refund account.
+
 `runTx().execResult.executionGasUsed` uses the same [TRON Energy schedule](../tvm/README.md#tron-energy-accounting) as a direct TVM call with equivalent state, code and execution settings. `totalGasSpent` also includes the TVMJS transaction envelope's intrinsic gas: the base transaction cost, calldata cost and any top-level creation cost. This wrapper overhead is not java-tron execution Energy or its bandwidth/staking/feeLimit accounting.
 
 EIP-2930 and EIP-1559 transactions remain available as TVMJS transaction formats. Their access-list fields are validated and signed, but have no address/slot surcharge and do not warm state. `reportAccessList` reports diagnostic accesses without changing execution costs. The default TRON schedule generates no SSTORE or SELFDESTRUCT refunds; unused prepaid call and transaction gas is still returned.
@@ -353,7 +355,7 @@ void main()
 
 ```
 
-See [Common](../common/README.md) for the current capability and proposal configuration. Full TRON Gas alignment and the remaining implementation/API cleanup are separate development stages.
+See [Common](../common/README.md) for capability and proposal configuration and [TRON Energy accounting](../tvm/README.md#tron-energy-accounting) for the implemented schedule and its validation limits. Retained Ethereum-only data tools do not enable their execution capabilities.
 
 ## Events
 

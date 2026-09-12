@@ -1,4 +1,4 @@
-import { Hardfork } from '@tvmjs/common'
+import { Hardfork, tronExecutionProfile } from '@tvmjs/common'
 import type { BlockLevelAccessList, PrefixedHexString } from '@tvmjs/util'
 import {
   Account,
@@ -98,18 +98,6 @@ export function OOGResult(gasLimit: bigint): ExecResult {
     exceptionError: new TVMError(TVMError.errorMessages.OUT_OF_GAS),
   }
 }
-/**
- * Creates an ExecResult for code-deposit out-of-gas errors (EIP-3541).
- * @param gasUsedCreateCode - Gas consumed while attempting to store code
- */
-export function COOGResult(gasUsedCreateCode: bigint): ExecResult {
-  return {
-    returnValue: new Uint8Array(0),
-    executionGasUsed: gasUsedCreateCode,
-    exceptionError: new TVMError(TVMError.errorMessages.CODESTORE_OUT_OF_GAS),
-  }
-}
-
 /**
  * Returns an ExecResult signalling invalid bytecode input.
  * @param gasLimit - Gas consumed up to the point of failure
@@ -271,16 +259,15 @@ export class TVM implements TVMInterface {
     this.events = new EventEmitter<TVMEvent>()
     this._optsCached = opts
 
-    // Supported EIPs
-    const supportedEIPs = [
-      1153, 1559, 2537, 2565, 2718, 2930, 2935, 3198, 3540, 3541, 3607, 3670, 3855, 4200, 4399,
-      4750, 4895, 5133, 5450, 5656, 6110, 6206, 6780, 7002, 7069, 7251, 7620, 7685, 7692, 7698,
-      7709, 7823, 7825, 7934, 7939, 7951, 8024,
-    ]
-
+    // Common and TVM share one capability definition, including explicit base groups.
     for (const eip of this.common.eips()) {
-      if (!supportedEIPs.includes(eip)) {
-        throw EthereumJSErrorWithoutCode(`EIP-${eip} is not supported by the TVM`)
+      if (
+        !tronExecutionProfile.eips.includes(eip) &&
+        !tronExecutionProfile.optionalEIPs.includes(eip)
+      ) {
+        throw EthereumJSErrorWithoutCode(
+          `EIP-${eip} is not supported by the TRON execution profile`,
+        )
       }
     }
 
@@ -775,9 +762,8 @@ export class TVM implements TVMInterface {
 
     // fee for size of the return value
     let totalGas = result.executionGasUsed
-    let returnFee = BIGINT_0
     if (!result.exceptionError && !this.common.isActivatedEIP(6800)) {
-      returnFee = BigInt(result.returnValue.length) * BigInt(this.common.param('createDataGas'))
+      const returnFee = BigInt(result.returnValue.length) * this.common.param('createDataGas')
       totalGas = totalGas + returnFee
       if (this.DEBUG) {
         debugGas(`Add return value size fee (${returnFee} to gas used (-> ${totalGas}))`)
@@ -785,7 +771,6 @@ export class TVM implements TVMInterface {
     }
 
     // TRON charges code deposit Energy without an EIP-170 runtime size limit.
-    let CodestoreOOG = false
     if (totalGas <= message.gasLimit) {
       if (this.common.isActivatedEIP(3541) && result.returnValue[0] === FORMAT) {
         if (!this.common.isActivatedEIP(3540)) {
@@ -808,30 +793,12 @@ export class TVM implements TVMInterface {
         result.executionGasUsed = totalGas
       }
     } else {
-      if (this.common.isActivatedEIP(606)) {
-        if (this.DEBUG) {
-          debug(`Contract creation: out of gas`)
-        }
-        message.accessWitness?.revert()
-        result = { ...result, ...OOGResult(message.gasLimit) }
-      } else {
-        // we are in Frontier
-        if (totalGas - returnFee <= message.gasLimit) {
-          // we cannot pay the code deposit fee (but the deposit code actually did run)
-          if (this.DEBUG) {
-            debug(`Not enough gas to pay the code deposit fee (Frontier)`)
-          }
-          message.accessWitness?.revert()
-          result = { ...result, ...COOGResult(totalGas - returnFee) }
-          CodestoreOOG = true
-        } else {
-          if (this.DEBUG) {
-            debug(`Contract creation: out of gas`)
-          }
-          message.accessWitness?.revert()
-          result = { ...result, ...OOGResult(message.gasLimit) }
-        }
+      // TRON reverts failed code deposits; Frontier's partial creation is unsupported.
+      if (this.DEBUG) {
+        debug(`Contract creation: out of gas`)
       }
+      message.accessWitness?.revert()
+      result = { ...result, ...OOGResult(message.gasLimit) }
     }
 
     // get the fresh gas limit for the rest of the ops
@@ -899,16 +866,6 @@ export class TVM implements TVMInterface {
 
       if (this.DEBUG) {
         debug(`Code saved on new contract creation`)
-      }
-    } else if (CodestoreOOG) {
-      // This only happens at Frontier. But, let's do a sanity check;
-      if (!this.common.isActivatedEIP(606)) {
-        // Pre-Homestead behavior; put an empty contract.
-        // This contract would be considered "DEAD" in later hard forks.
-        // It is thus an unnecessary default item, which we have to save to disk
-        // It does change the state root, but it only wastes storage.
-        const account = await this.stateManager.getAccount(message.to)
-        await this.journal.putAccount(message.to, account ?? new Account())
       }
     }
 
@@ -1348,23 +1305,11 @@ export class TVM implements TVMInterface {
         )
       }
       const err = result.execResult.exceptionError
-      // This clause captures any error which happened during execution
-      // If that is the case, then all refunds are forfeited
-      // There is one exception: if the CODESTORE_OUT_OF_GAS error is thrown
-      // (this only happens the Frontier/Chainstart fork)
-      // then the error is dismissed
-      if (err && err.error !== TVMError.errorMessages.CODESTORE_OUT_OF_GAS) {
+      // Every failed TRON frame forfeits refunds and reverts its execution changes.
+      if (err) {
         result.execResult.selfdestruct = new Map()
         result.execResult.createdAddresses = new Set()
         result.execResult.gasRefund = BIGINT_0
-      }
-      if (
-        err &&
-        !(
-          this.common.hardfork() === Hardfork.Chainstart &&
-          err.error === TVMError.errorMessages.CODESTORE_OUT_OF_GAS
-        )
-      ) {
         result.execResult.logs = []
         await revert(executionCheckpoint)
         if (this.DEBUG) {

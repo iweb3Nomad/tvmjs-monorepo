@@ -1,5 +1,9 @@
 # @tvmjs/block `1.0.1`
 
+TRON execution headers retain their base-fee container and parent gas-limit checks without London activation-block adjustments or DAO extra-data requirements. The protected `_validateDAOExtraData()` hook is removed; public PoW/Clique tools still require explicit consensus metadata.
+
+Serialized headers must include `baseFeePerGas`, including when the fee is zero. Old 15-field headers are rejected instead of being silently assigned a fee. Object construction still defaults the fee to `7n`; complete TRON header encodings and hashes are unchanged.
+
 v1.2.0 removes Blob transaction support and Blob header fields and fee helpers. Object, RPC, payload and RLP inputs containing retired fields are rejected. Ordinary TRON header serialization is unchanged. See [Blob migration and affected packages](../common/README.md#blob-removal-in-v120).
 
 EIP-4788 Beacon root fields and their serialization are also removed. Inputs containing `parentBeaconBlockRoot` or `parent_beacon_block_root` are rejected even when their values are empty. Ordinary Beacon payload data conversion remains available. See [Beacon root migration](../common/README.md#beacon-root-removal-in-v120).

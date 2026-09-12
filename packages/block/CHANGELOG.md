@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Breaking Changes
 
+- Remove London activation-block fee/gas-limit special cases and the protected `_validateDAOExtraData()` hook. Preserve ordinary base-fee arithmetic, header defaults and gas-limit validation; PoW/Clique public tools remain available with explicit metadata.
+- Reject serialized headers missing the required `baseFeePerGas` field at every height, instead of silently filling it from object-constructor defaults. Complete TRON header serialization and hashes are unchanged.
 - Reject EIP-7702 type `0x04` and authorization fields through block object, RPC, RLP and payload inputs, including already-instantiated transactions passed to the Block constructor.
 - Remove EIP-4788 Beacon root fields from headers, public types, serialization and RPC/payload mappings. Reject both field spellings, including explicitly empty values, while preserving ordinary TRON block hashes and Beacon payload data conversion.
 - Remove Blob header fields, fee helpers and transaction validation. Reject retired fields before RPC/payload mapping and reject old extended RLP headers without changing ordinary TRON field order.

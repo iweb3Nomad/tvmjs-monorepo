@@ -163,6 +163,22 @@ MLOAD, MSTORE and MSTORE8 charge memory expansion without an additional base fee
 
 The [Energy vectors](./test/testdata/tronEnergy.json) record the reference commit, settings, expected costs and pre-migration results. They are derived from source; live-node comparison, dynamic Energy penalties, version-1 contracts and the full bandwidth/staking/feeLimit resource model are outside this validation. `executionGasUsed` measures execution Energy; the VM wrapper's transaction overhead is reported separately in `totalGasSpent`.
 
+### Storage parameter migration in v1.2.0
+
+<!-- cspell:ignore coldsload -->
+
+Remove these retired keys from consumers of the public `paramsTVM` dictionary:
+
+| Former groups | Removed keys |
+| --- | --- |
+| 1013, 1716 | `netSstoreNoopGas`, `netSstoreInitGas`, `netSstoreCleanGas`, `netSstoreDirtyGas`, `netSstoreClearRefundGas`, `netSstoreResetRefundGas`, `netSstoreResetClearRefundGas` |
+| 1679, 2929, 3529 | `sstoreSentryEIP2200Gas`, `sstoreNoopEIP2200Gas`, `sstoreDirtyEIP2200Gas`, `sstoreInitEIP2200Gas`, `sstoreInitRefundEIP2200Gas`, `sstoreCleanEIP2200Gas`, `sstoreCleanRefundEIP2200Gas`, `sstoreClearRefundEIP2200Gas` |
+| 2929 | `coldsloadGas` |
+
+The empty `1716` parameter group is also removed. Use `sloadGas`, `sstoreSetGas` and `sstoreResetGas` for the current TRON schedule. Supplying retired keys as custom parameters does not enable net metering, storage refunds or EIP-2929. Other entries in shared parameter groups remain available, including address costs used by the retained, inactive EOF implementation.
+
+`TVMError.errorMessages.CODESTORE_OUT_OF_GAS` is removed. Handle `OUT_OF_GAS` for insufficient code-deposit Energy; the failed creation is reverted, including storage, logs and value transfers. Internal CREATE/CREATE2 returns zero when the child fails.
+
 ## Examples
 
 See the [examples](./examples/) folder for different meaningful examples on how to use the TVM package and invoke certain aspects of it, e.g. running a bytecode snippet, listening to events, or to activate an TVM with a certain EIP for experimental purposes.
@@ -223,7 +239,7 @@ Proposal 95/96 are supplied through `activatedProposals`. They retain their exis
 
 ## Supported EIPs
 
-Shared implementation groups are defined by the TRON profile. Explicit CLZ activation uses `eips: [7939]`. Unsupported EIPs, including 4844, 4788 and 7516, are rejected.
+Common and TVM validate explicit EIPs against the same `tronExecutionProfile`. Its base implementation groups can be supplied explicitly without changing TRON Energy costs. Explicit CLZ activation uses `eips: [7939]`. Unsupported EIPs, including 4844, 4788 and 7516, are rejected.
 
 ```ts
 // ./examples/eips.ts
@@ -241,7 +257,7 @@ void main()
 
 ```
 
-The separate v1.2.0 Gas migration will remove the access-accounting rules retained by this configuration batch. See [Common configuration](../common/README.md).
+The [TRON Energy schedule](#tron-energy-accounting) applies independently of Ethereum hardfork ordering. See [Common configuration](../common/README.md) for profile and proposal settings.
 
 ## Precompiles
 

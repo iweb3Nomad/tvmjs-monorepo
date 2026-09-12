@@ -145,63 +145,26 @@ describe('RunCall tests', () => {
     )
   })
 
-  it('Ensure that Istanbul sstoreCleanRefundEIP2200 gas is applied correctly', async () => {
-    // setup the accounts for this test
-    const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
+  it('charges TRON writes from a padded original value without a reset refund', async () => {
+    const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee'))
     const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
-    // setup the vm
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
-    const tvm = await createTVM({ common })
-    const code = '0x61000260005561000160005500'
-    /*
-      idea: store the original value in the storage slot, except it is now a 1-length Uint8Array instead of a 32-length Uint8Array
-      code:
-        PUSH2 0x0002
-        PUSH1 0x00
-        SSTORE              -> make storage slot 0 "dirty"
-        PUSH2 0x0001
-        PUSH1 0x00
-        SSTORE              -> -> restore it to the original storage value (refund sstoreCleanRefundEIP2200)
-        STOP
-      gas cost:
-        4x PUSH                                         12
-        2x SSTORE (slot is nonzero, so charge 5000): 10000
-        net                                          10012
-      gas refund
-        sstoreCleanRefundEIP2200                      4200
-      gas used
-                                                     10012 - 4200 = 5812
-
-    */
-
-    await tvm.stateManager.putCode(address, hexToBytes(code))
-    await tvm.stateManager.putStorage(
-      address,
-      new Uint8Array(32),
-      hexToBytes(`0x${'00'.repeat(31)}01`),
-    )
-
-    // setup the call arguments
-    const runCallArgs = {
-      caller, // call address
-      to: address,
-      gasLimit: BigInt(0xffffffffff), // ensure we pass a lot of gas, so we do not run out of gas
-    }
-
-    const result = await tvm.runCall(runCallArgs)
-
-    assert.strictEqual(result.execResult.executionGasUsed, BigInt(5812), 'gas used correct')
-    assert.strictEqual(result.execResult.gasRefund, BigInt(4200), 'gas refund correct')
+    const tvm = await createTVM({ common: new Common({ chain: TronMainnet }) })
+    const key = new Uint8Array(32)
+    await tvm.stateManager.putCode(address, hexToBytes('0x61000260005561000160005500'))
+    await tvm.stateManager.putStorage(address, key, hexToBytes(`0x${'00'.repeat(31)}01`))
+    const result = await tvm.runCall({ caller, to: address, gasLimit: 50000n })
+    assert.isUndefined(result.execResult.exceptionError)
+    assert.strictEqual(result.execResult.executionGasUsed, 10012n)
+    assert.strictEqual(result.execResult.gasRefund, 0n)
+    assert.deepEqual(await tvm.stateManager.getStorage(address, key), Uint8Array.of(1))
   })
 
-  it('ensure correct gas for pre-constantinople sstore', async () => {
+  it('charges TRON zero-to-nonzero storage writes', async () => {
     // setup the accounts for this test
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
     const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
     // setup the vm
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
     // push 1 push 0 sstore stop
     const code = '0x600160015500'
@@ -458,74 +421,31 @@ describe('RunCall tests', () => {
     )
   })
 
-  it('ensure that sstores pay for the right gas costs pre-byzantium', async () => {
-    // setup the accounts for this test
-    const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
+  it('charges each TRON call from the current slot value without storage refunds', async () => {
+    const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee'))
     const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
-    // setup the vm
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
-    const tvm = await createTVM({ common })
-    // code to call 0x00..00fe, with the GAS opcode used as gas
-    // this cannot be paid, since we also have to pay for CALL (40 gas)
-    // this should thus go OOG
-    const code = '0x3460005500'
+    const tvm = await createTVM({ common: new Common({ chain: TronMainnet }) })
+    await tvm.stateManager.putAccount(caller, new Account(0n, 100n))
+    await tvm.stateManager.putCode(address, hexToBytes('0x3460005500'))
 
-    await tvm.stateManager.putAccount(caller, new Account())
-    await tvm.stateManager.putCode(address, hexToBytes(code))
-
-    const account = await tvm.stateManager.getAccount(caller)
-    account!.balance = BigInt(100)
-    await tvm.stateManager.putAccount(caller, account!)
-
-    /*
-    Situation:
-    Storage slot changes from 0 -> 0 (reset cost, 5000)
-    Changes 0 -> 1 (set cost, 20000)
-    Changes 1 -> 2 ("reset" cost, 5000)
-    Changes 2 -> 0 ("reset" cost, 5000 + 15000 refund)
-  */
-
-    const data = [
-      {
-        value: 0,
-        gas: 5005,
-        refund: 0,
-      },
-      {
-        value: 1,
-        gas: 20005,
-        refund: 0,
-      },
-      {
-        value: 2,
-        gas: 5005,
-        refund: 0,
-      },
-      {
-        value: 0,
-        gas: 5005,
-        refund: 15000,
-      },
-    ]
-
-    for (const callData of data) {
-      // setup the call arguments
-      const runCallArgs = {
-        caller, // call address
-        to: address,
-        gasLimit: BigInt(0xffffffffff),
-        value: BigInt(callData.value),
-      }
-
-      const result = await tvm.runCall(runCallArgs)
-      assert.strictEqual(
-        result.execResult.executionGasUsed,
-        BigInt(callData.gas),
-        'gas used correct',
+    // Four separate calls store CALLVALUE: 0 -> 0 -> 1 -> 2 -> 0.
+    for (const [value, energy] of [
+      [0n, 5005n],
+      [1n, 20005n],
+      [2n, 5005n],
+      [0n, 5005n],
+    ]) {
+      const result = await tvm.runCall({ caller, to: address, value, gasLimit: 50000n })
+      assert.isUndefined(result.execResult.exceptionError)
+      assert.strictEqual(result.execResult.executionGasUsed, energy)
+      assert.strictEqual(result.execResult.gasRefund, 0n)
+      assert.deepEqual(
+        await tvm.stateManager.getStorage(address, new Uint8Array(32)),
+        value === 0n ? new Uint8Array() : Uint8Array.of(Number(value)),
       )
-      assert.strictEqual(result.execResult.gasRefund, BigInt(callData.refund), 'gas refund correct')
     }
+    assert.strictEqual((await tvm.stateManager.getAccount(caller))!.balance, 97n)
+    assert.strictEqual((await tvm.stateManager.getAccount(address))!.balance, 3n)
   })
 
   it('Ensure that contracts cannot exceed nonce of MAX_UINT64 when creating new contracts (EIP-2681)', async () => {
@@ -762,33 +682,6 @@ describe('RunCall tests', () => {
     assert.strictEqual(res2.execResult.exceptionError?.error, TVMError.errorMessages.OUT_OF_GAS)
     assert.strictEqual(res2.execResult.executionGasUsed, runCallArgs2.gasLimit)
     assert.isUndefined(await tvm.stateManager.getAccount(res2.createdAddress!))
-  })
-
-  it('ensure code deposit errors are logged correctly (Frontier)', async () => {
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
-    const tvm = await createTVM({ common })
-
-    // Create a contract which cannot pay the code deposit fee
-    const runCallArgs = {
-      gasLimit: BigInt(10000000),
-      data: hexToBytes('0x61FFFF6000F3'),
-    }
-
-    const res = await tvm.runCall(runCallArgs)
-    assert.strictEqual(
-      res.execResult.exceptionError?.error,
-      TVMError.errorMessages.CODESTORE_OUT_OF_GAS,
-    )
-
-    // Create a contract which goes OOG when creating
-    const runCallArgs2 = {
-      gasLimit: BigInt(100000),
-      data: hexToBytes('0x62FFFFFF6000F3'),
-    }
-
-    const res2 = await tvm.runCall(runCallArgs2)
-    assert.strictEqual(res2.execResult.exceptionError?.error, TVMError.errorMessages.OUT_OF_GAS)
   })
 
   it('ensure call and callcode handle gas stipend correctly', async () => {

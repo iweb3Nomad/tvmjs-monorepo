@@ -4,7 +4,6 @@ export const TVMErrorTypeString = 'TVMError'
 
 const TVMErrorMessage = {
   OUT_OF_GAS: 'out of gas',
-  CODESTORE_OUT_OF_GAS: 'code store out of gas',
   STACK_UNDERFLOW: 'stack underflow',
   STACK_OVERFLOW: 'stack overflow',
   INVALID_JUMP: 'invalid JUMP',

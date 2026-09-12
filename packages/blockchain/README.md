@@ -1,5 +1,7 @@
 # @tvmjs/blockchain `1.0.1`
 
+Header validation uses the parent-derived base fee and ordinary gas-limit bounds at every height. Ethereum London activation heights do not override these checks. Invalid fees or doubled gas limits are rejected without advancing the canonical head.
+
 v1.2.0 removes Blob validation and parent-header Blob accounting. Blob blocks are rejected by block construction; ordinary chain storage and fork choice keep their existing behavior. See [Blob migration and affected packages](../common/README.md#blob-removal-in-v120).
 
 | A module to store and interact with TRON-compatible blocks. Part of the [TVMJS](https://github.com/tronweb3/tvmjs-monorepo) project, forked from [EthereumJS](https://github.com/ethereumjs/ethereumjs-monorepo). |

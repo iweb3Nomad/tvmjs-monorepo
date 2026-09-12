@@ -6,14 +6,13 @@ import {
   genTransactionsTrieRoot,
   genWithdrawalsTrieRoot,
 } from '@tvmjs/block'
-import { ConsensusType, Hardfork } from '@tvmjs/common'
+import { ConsensusType } from '@tvmjs/common'
 import { MerklePatriciaTrie } from '@tvmjs/mpt'
 import { RLP } from '@tvmjs/rlp'
 import {
   Address,
   BIGINT_0,
   BIGINT_1,
-  BIGINT_2,
   EthereumJSErrorWithoutCode,
   GWEI_TO_WEI,
   KECCAK256_RLP,
@@ -120,19 +119,7 @@ export class BlockBuilder {
       this.vm.common.isActivatedEIP(1559) &&
       typeof this.headerData.baseFeePerGas === 'undefined'
     ) {
-      if (this.headerData.number === vm.common.hardforkBlock(Hardfork.London)) {
-        this.headerData.baseFeePerGas = vm.common.param('initialBaseFee')
-      } else {
-        this.headerData.baseFeePerGas = opts.parentBlock.header.calcNextBaseFee()
-      }
-    }
-
-    if (typeof this.headerData.gasLimit === 'undefined') {
-      if (this.headerData.number === vm.common.hardforkBlock(Hardfork.London)) {
-        this.headerData.gasLimit = opts.parentBlock.header.gasLimit * BIGINT_2
-      } else {
-        this.headerData.gasLimit = opts.parentBlock.header.gasLimit
-      }
+      this.headerData.baseFeePerGas = opts.parentBlock.header.calcNextBaseFee()
     }
   }
 

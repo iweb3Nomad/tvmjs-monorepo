@@ -1,5 +1,5 @@
 import { Block, BlockHeader, createBlock } from '@tvmjs/block'
-import { Common, ConsensusAlgorithm, ConsensusType, Hardfork, TronMainnet } from '@tvmjs/common'
+import { Common, ConsensusAlgorithm, ConsensusType, TronMainnet } from '@tvmjs/common'
 import {
   BIGINT_0,
   BIGINT_1,
@@ -596,14 +596,7 @@ export class Blockchain implements BlockchainInterface {
     // check blockchain dependent EIP1559 values
     if (header.common.isActivatedEIP(1559)) {
       // check if the base fee is correct
-      let expectedBaseFee
-      const londonHfBlock = this.common.hardforkBlock(Hardfork.London)
-      const isInitialEIP1559Block = number === londonHfBlock
-      if (isInitialEIP1559Block) {
-        expectedBaseFee = header.common.param('initialBaseFee')
-      } else {
-        expectedBaseFee = parentHeader.calcNextBaseFee()
-      }
+      const expectedBaseFee = parentHeader.calcNextBaseFee()
 
       if (header.baseFeePerGas! !== expectedBaseFee) {
         throw EthereumJSErrorWithoutCode(`Invalid block: base fee not correct ${header.errorStr()}`)

@@ -196,31 +196,11 @@ export const paramsTVM: ParamsDict = {
 .  */
   1013: {
     // gasPrices
-    netSstoreNoopGas: 200, // Once per SSTORE operation if the value doesn't change
-    netSstoreInitGas: 20000, // Once per SSTORE operation from clean zero
-    netSstoreCleanGas: 5000, // Once per SSTORE operation from clean non-zero
-    netSstoreDirtyGas: 200, // Once per SSTORE operation from dirty
-    netSstoreClearRefundGas: 15000, // Once per SSTORE operation for clearing an originally existing storage slot
-    netSstoreResetRefundGas: 4800, // Once per SSTORE operation for resetting to the original non-zero value
-    netSstoreResetClearRefundGas: 19800, // Once per SSTORE operation for resetting to the original zero value
     shlGas: 3, // Base fee of the SHL opcode
     shrGas: 3, // Base fee of the SHR opcode
     sarGas: 3, // Base fee of the SAR opcode
     extcodehashGas: 400, // Base fee of the EXTCODEHASH opcode
     create2Gas: 32000, // Base fee of the CREATE2 opcode
-  },
-  /**
-.  * Petersburg HF Meta EIP
-.  */
-  1716: {
-    // gasPrices
-    netSstoreNoopGas: null, // Removed along EIP-1283
-    netSstoreInitGas: null, // Removed along EIP-1283
-    netSstoreCleanGas: null, // Removed along EIP-1283
-    netSstoreDirtyGas: null, // Removed along EIP-1283
-    netSstoreClearRefundGas: null, // Removed along EIP-1283
-    netSstoreResetRefundGas: null, // Removed along EIP-1283
-    netSstoreResetClearRefundGas: null, // Removed along EIP-1283
   },
   /**
 .  * Istanbul HF Meta EIP
@@ -232,14 +212,6 @@ export const paramsTVM: ParamsDict = {
     bn254MulGas: 6000, // Gas costs for curve multiplication precompile
     bn254PairingGas: 45000, // Base gas costs for curve pairing precompile
     bn254PairingWordGas: 34000, // Gas costs regarding curve pairing precompile input length
-    sstoreSentryEIP2200Gas: 2300, // Minimum gas required to be present for an SSTORE call, not consumed
-    sstoreNoopEIP2200Gas: 800, // Once per SSTORE operation if the value doesn't change
-    sstoreDirtyEIP2200Gas: 800, // Once per SSTORE operation if a dirty value is changed
-    sstoreInitEIP2200Gas: 20000, // Once per SSTORE operation from clean zero to non-zero
-    sstoreInitRefundEIP2200Gas: 19200, // Once per SSTORE operation for resetting to the original zero value
-    sstoreCleanEIP2200Gas: 5000, // Once per SSTORE operation from clean non-zero to something else
-    sstoreCleanRefundEIP2200Gas: 4200, // Once per SSTORE operation for resetting to the original non-zero value
-    sstoreClearRefundEIP2200Gas: 15000, // Once per SSTORE operation for clearing an originally existing storage slot
     balanceGas: 700, // Base fee of the BALANCE opcode
     extcodehashGas: 700, // Base fee of the EXTCODEHASH opcode
     chainidGas: 2, // Base fee of the CHAINID opcode
@@ -293,14 +265,8 @@ export const paramsTVM: ParamsDict = {
 .  */
   2929: {
     // gasPrices
-    coldsloadGas: 2100, // Gas cost of the first read of storage from a given location (per transaction)
     coldaccountaccessGas: 2600, // Gas cost of the first read of a given address (per transaction)
     warmstoragereadGas: 100, // Gas cost of reading storage locations which have already loaded 'cold'
-    sstoreCleanEIP2200Gas: 2900, // Once per SSTORE operation from clean non-zero to something else
-    sstoreNoopEIP2200Gas: 100, // Once per SSTORE operation if the value doesn't change
-    sstoreDirtyEIP2200Gas: 100, // Once per SSTORE operation if a dirty value is changed
-    sstoreInitRefundEIP2200Gas: 19900, // Once per SSTORE operation for resetting to the original zero value
-    sstoreCleanRefundEIP2200Gas: 4900, // Once per SSTORE operation for resetting to the original non-zero value
     callGas: 0, // Base fee of the CALL opcode
     callcodeGas: 0, // Base fee of the CALLCODE opcode
     delegatecallGas: 0, // Base fee of the DELEGATECALL opcode
@@ -336,7 +302,6 @@ export const paramsTVM: ParamsDict = {
     maxRefundQuotient: 5, // Maximum refund quotient; max tx refund is min(tx.gasUsed/maxRefundQuotient, tx.gasRefund)
     // gasPrices
     selfdestructRefundGas: 0, // Refunded following a selfdestruct operation
-    sstoreClearRefundEIP2200Gas: 4800, // Once per SSTORE operation for clearing an originally existing storage slot
   },
   /**
 .  * PUSH0 instruction

@@ -1,12 +1,6 @@
-import {
-  createBlock,
-  createBlockFromBytesArray,
-  createBlockFromRLP,
-  createSealedCliqueBlock,
-} from '@tvmjs/block'
+import { createBlock, createBlockFromRLP, createSealedCliqueBlock } from '@tvmjs/block'
 import { createBlockchain } from '@tvmjs/blockchain'
 import { Common, Hardfork, Mainnet, TronMainnet, createCustomCommon } from '@tvmjs/common'
-import { RLP } from '@tvmjs/rlp'
 import { type MerkleStateManager } from '@tvmjs/statemanager'
 import { SIGNER_A, SIGNER_B, customChainConfig, goerliChainConfig } from '@tvmjs/testdata'
 import {
@@ -18,26 +12,24 @@ import {
 } from '@tvmjs/tx'
 import {
   Account,
-  Address,
   KECCAK256_RLP,
   bytesToHex,
   createAddressFromString,
   createZeroAddress,
   generateTronContractAddress,
   hexToBytes,
-  utf8ToBytes,
 } from '@tvmjs/util'
 import { assert, describe, expect, it } from 'vitest'
 
 import { createVM, runBlock } from '../../src/index.ts'
-import { getDAOCommon, setupPreConditions } from '../util.ts'
+import { setupPreConditions } from '../util.ts'
 
 import { blockchainData } from './testdata/blockchain.ts'
 import { createAccountWithDefaults, setBalance, setupVM } from './utils.ts'
 
-import type { Block, BlockBytes } from '@tvmjs/block'
+import type { Block } from '@tvmjs/block'
 import type { TypedTransaction } from '@tvmjs/tx'
-import type { NestedUint8Array, PrefixedHexString } from '@tvmjs/util'
+import type { PrefixedHexString } from '@tvmjs/util'
 import type { VM } from '../../src/index.ts'
 import type {
   AfterBlockEvent,
@@ -457,66 +449,6 @@ describe('runBlock() -> API parameter usage/data errors', async () => {
 })
 
 describe('runBlock() -> runtime behavior', async () => {
-  // this test actually checks if the DAO fork works. This is not checked in ethereum/tests
-  it('DAO fork behavior', async () => {
-    const common = getDAOCommon(1)
-
-    const vm = await setupVM({ common })
-
-    const block1 = RLP.decode(blockchainData.blocks[0].rlp as PrefixedHexString) as NestedUint8Array
-    // edit extra data of this block to "dao-hard-fork"
-    block1[0][12] = utf8ToBytes('dao-hard-fork')
-    const block = createBlockFromBytesArray(block1 as BlockBytes, { common })
-    await setupPreConditions(vm.stateManager, blockchainData)
-
-    // The legacy tx embedded in the test block was signed for the Ethereum
-    // format; under the Tron tx format (which adds tokenId/tokenValue to the
-    // signing preimage) the signature recovers to a different sender. Fund
-    // the new recovered sender so the tx can be processed.
-    const txSender = block.transactions[0].getSenderAddress()
-    const txSenderAcc = createAccountWithDefaults(BigInt(0), BigInt('0x02540be400'))
-    await vm.stateManager.putAccount(txSender, txSenderAcc)
-
-    // fill two original DAO child-contracts with funds and the recovery account with funds in order to verify that the balance gets summed correctly
-    const fundBalance1 = BigInt('0x1111')
-    const accountFunded1 = createAccountWithDefaults(BigInt(0), fundBalance1)
-    const DAOFundedContractAddress1 = new Address(
-      hexToBytes('0xd4fe7bc31cedb7bfb8a345f31e668033056b2728'),
-    )
-    await vm.stateManager.putAccount(DAOFundedContractAddress1, accountFunded1)
-
-    const fundBalance2 = BigInt('0x2222')
-    const accountFunded2 = createAccountWithDefaults(BigInt(0), fundBalance2)
-    const DAOFundedContractAddress2 = new Address(
-      hexToBytes('0xb3fb0e5aba0e20e5c49d252dfd30e102b171a425'),
-    )
-    await vm.stateManager.putAccount(DAOFundedContractAddress2, accountFunded2)
-
-    const DAORefundAddress = new Address(hexToBytes('0xbf4ed7b27f1d666546e30d74d50d173d20bca754'))
-    const fundBalanceRefund = BigInt('0x4444')
-    const accountRefund = createAccountWithDefaults(BigInt(0), fundBalanceRefund)
-    await vm.stateManager.putAccount(DAORefundAddress, accountRefund)
-
-    await runBlock(vm, {
-      block,
-      skipBlockValidation: true,
-      generate: true,
-    })
-
-    const DAOFundedContractAccount1 =
-      (await vm.stateManager.getAccount(DAOFundedContractAddress1)) ?? new Account()
-    assert.strictEqual(DAOFundedContractAccount1!.balance, BigInt(0)) // verify our funded account now has 0 balance
-    const DAOFundedContractAccount2 =
-      (await vm.stateManager.getAccount(DAOFundedContractAddress2)) ?? new Account()
-    assert.strictEqual(DAOFundedContractAccount2!.balance, BigInt(0)) // verify our funded account now has 0 balance
-
-    const DAORefundAccount = await vm.stateManager.getAccount(DAORefundAddress)
-    // verify that the refund account gets the summed balance of the original refund account + two child DAO accounts
-    const msg =
-      'should transfer balance from DAO children to the Refund DAO account in the DAO fork'
-    assert.strictEqual(DAORefundAccount!.balance, BigInt(0x7777), msg)
-  })
-
   it('should allocate to correct clique beneficiary', async () => {
     const common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Istanbul })
     const vm = await setupVM({ common })

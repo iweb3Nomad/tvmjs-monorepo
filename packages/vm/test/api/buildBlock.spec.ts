@@ -306,8 +306,7 @@ describe('BlockBuilder', () => {
   })
 
   it('should build a 1559 block with legacy and 1559 txs', async () => {
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.London, eips: [1559] })
+    const common = new Common({ chain: TronMainnet, eips: [1559] })
     const genesisBlock = createBlock(
       { header: { gasLimit: 50000, baseFeePerGas: 100 } },
       { common },
@@ -321,8 +320,8 @@ describe('BlockBuilder', () => {
 
     const blockBuilder = await buildBlock(vm, {
       parentBlock: genesisBlock,
-      headerData: { coinbase: '0x96dc73c8b5969608c77375f085949744b5177660' },
-      blockOpts: { calcDifficultyFromHeader: genesisBlock.header, freeze: false },
+      headerData: { coinbase: '0x96dc73c8b5969608c77375f085949744b5177660', timestamp: 1n },
+      blockOpts: { freeze: false },
     })
 
     // Set up underpriced txs to test error response

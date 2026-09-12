@@ -164,67 +164,6 @@ describe('[Blockchain]: Block validation tests', () => {
     )
   })
 
-  it('EIP1559 base fee tests', async () => {
-    const common = new Common({
-      eips: [1559],
-      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-      chain: Mainnet,
-      hardfork: Hardfork.London,
-    })
-
-    const blockchain = await createBlockchain({ common })
-    const genesis = blockchain.genesisBlock
-
-    // Small hack to hack in the activation block number
-    // (Otherwise there would be need for a custom chain only for testing purposes)
-    common.hardforkBlock = function (hardfork: string | undefined) {
-      if (hardfork === 'london') {
-        return BigInt(1)
-      } else if (hardfork === 'dao') {
-        // Avoid DAO HF side-effects
-        return BigInt(99)
-      }
-      return BigInt(0)
-    }
-
-    const header = createBlockHeader(
-      {
-        number: BigInt(1),
-        parentHash: genesis.hash(),
-        gasLimit: genesis.header.gasLimit * BigInt(2), // Special case on EIP-1559 transition block
-        timestamp: BigInt(1),
-        baseFeePerGas: BigInt(1000000000),
-      },
-      {
-        calcDifficultyFromHeader: genesis.header,
-        common,
-        freeze: false,
-      },
-    )
-
-    const block = createBlock({ header }, { common })
-    await blockchain.putBlock(block)
-    try {
-      const header = createBlockHeader(
-        {
-          number: BigInt(2),
-          parentHash: block.hash(),
-          gasLimit: block.header.gasLimit,
-          timestamp: BigInt(10),
-          baseFeePerGas: BigInt(1000),
-        },
-        {
-          calcDifficultyFromHeader: block.header,
-          common,
-        },
-      )
-      const block2 = createBlock({ header }, { common })
-      await blockchain.putBlock(block2)
-    } catch (e: any) {
-      assert.include(e.message, 'Invalid block: base fee not correct')
-    }
-  })
-
   it('should select the right hardfork for uncles at a hardfork transition', async () => {
     /**
      * This test creates a chain around mainnet fork blocks:

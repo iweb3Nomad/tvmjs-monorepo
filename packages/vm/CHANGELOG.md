@@ -20,6 +20,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Remove DAO balance migration and London activation-block builder defaults. Builders derive fees from the parent, retain explicit overrides and inherit the parent gas limit; historical Ethereum heights do not change TRON account balances.
+- Replace EIP-1283/2200/2929/3529/3651 pricing tests with TRON storage-transition, zero-refund, repeated-access, coinbase, nested-revert and Energy-boundary regressions. Preserve 17 storage transition sequences and ordinary signed transaction fee validation.
 - Migrate custom-state and Clique sealing regressions to explicit TRON configuration; preserve genesis/consensus compatibility checks after removal of Common's metadata overrides and Geth constructor.
 - Validate transaction TRC-10 token existence and the sender balance by exact token ID instead of a `Number` conversion.
 - Verify equal execution Energy and state changes through VM and direct TVM calls, including CALLTOKEN rollback and empty-recipient handling across transactions.
