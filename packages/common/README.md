@@ -83,7 +83,9 @@ console.log(common.hasConsensus()) // false
 
 `genesis()`, `consensusType()`, `consensusAlgorithm()` and `consensusConfig()` throw a metadata error when the corresponding data was not supplied. VM/TVM execution and execution block contexts work without it. Creating a `Blockchain` requires an explicit genesis block or network genesis metadata; enabling consensus validation additionally requires explicit consensus metadata and an implementation. This library does not provide a TRON node consensus implementation.
 
-Ethereum fork-hash operations and creating execution configuration from Geth genesis are unsupported. Legacy preset constants and raw parsing helpers may remain available during migration, but they do not enable Ethereum execution.
+`ChainConfig.execution` is required and must be `'tron'`. `Mainnet`, `Sepolia`, `Holesky` and `Hoodi` are exported as `EthereumChainData`, a separate, non-executable data type. They cannot be passed to `Common` or used as the base of `createCustomCommon()`. Ethereum fork-hash operations remain unsupported.
+
+`createCommonFromGethGenesis()`, `GethConfigOpts` and `CreateCommonFromGethGenesisOpts` have been removed. Use `parseGethGenesis()` for raw network data and `parseGethGenesisState()` for allocations. Neither parser selects an execution profile or creates a `Common`; parsed Ethereum network data is not an executable `ChainConfig`.
 
 `parseGethGenesis()` explicitly rejects `blobSchedule`, `blobGasUsed` and `excessBlobGas`, including empty schedules and entries named `tron`. Other supported genesis fields can still be parsed as raw data.
 
@@ -173,6 +175,28 @@ console.log(common.chainId()) // 123n
 ```
 
 Custom networks use the TRON profile. Supply parameter overrides, supported explicit capabilities and governance flags through the corresponding options. Custom Ethereum hardfork dictionaries are rejected.
+
+The first argument is a `CustomChainConfig`: only `name`, `chainId`, `comment`, `url`, `bootstrapNodes` and `dnsNetworks` can be overridden. Metadata and profile overrides are excluded from the type; unsupported keys supplied dynamically are also rejected at runtime. Omit forbidden keys entirely, even if their value is `undefined`. The options argument cannot replace the selected chain.
+
+Supply network metadata through a complete configuration instead:
+
+```ts
+import { Common, TronMainnet } from '@tvmjs/common'
+import type { ChainConfig } from '@tvmjs/common'
+
+const chain: ChainConfig = {
+  ...TronMainnet,
+  name: 'local-execution-fixture',
+  // Example metadata for local simulation, not TRON Mainnet's genesis.
+  genesis: { gasLimit: 1000000, difficulty: 0, nonce: '0x0000000000000000', extraData: '0x' },
+}
+const common = new Common({ chain })
+console.log(common.hasGenesis()) // true
+```
+
+Explicit custom consensus metadata and implementations remain supported through the complete configuration and Blockchain's `consensusDict`. A configuration type cannot verify the network origin of supplied metadata; callers remain responsible for that data. Customizing the identity of an already complete base preserves its metadata.
+
+The configuration migration affects `@tvmjs/common` and the historical fixture types in `@tvmjs/testdata`. Update Common construction in `@tvmjs/blockchain`, `@tvmjs/tx` and `@tvmjs/vm` consumers and examples, and rebuild dependent packages together. See the [allocation import example](../blockchain/examples/gethGenesis.ts) and [custom TRON transaction example](../tx/examples/custom-chain-tx.ts).
 
 `customCrypto` continues to support alternative hashing and signing primitives. See [the custom crypto example](./examples/customCrypto.ts). `copy()` isolates parameter dictionaries, proposal state, EIP selections and network metadata; crypto function references are preserved and event listeners are not copied.
 

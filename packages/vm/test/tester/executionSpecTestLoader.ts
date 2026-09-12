@@ -2,9 +2,9 @@ import fs from 'fs'
 import path from 'path'
 
 import {
-  type ChainConfig,
   Common,
   ConsensusType,
+  type EthereumChainData,
   type HardforkTransitionConfig,
   Mainnet,
 } from '@tvmjs/common'
@@ -148,7 +148,11 @@ function customHardforkHistory(fork: string): HardforkTransitionConfig[] {
   return hardforks
 }
 
-function buildTransitionChainConfig(from: string, to: string, timestamp: number): ChainConfig {
+function buildTransitionChainConfig(
+  from: string,
+  to: string,
+  timestamp: number,
+): EthereumChainData {
   const hardforks: HardforkTransitionConfig[] = customHardforkHistory(from)
   // Add the "to" hardfork at the specified timestamp
   hardforks.push({
@@ -158,7 +162,7 @@ function buildTransitionChainConfig(from: string, to: string, timestamp: number)
   })
 
   // Build chain config with custom hardforks and additional hardforks in the hardforks list
-  const chainConfig: ChainConfig = {
+  const chainConfig: EthereumChainData = {
     ...Mainnet,
 
     defaultHardfork: from,
@@ -204,7 +208,7 @@ export function createCommonForFork(fork: string, testData?: any) {
     }
     const hardforks: HardforkTransitionConfig[] = customHardforkHistory(forkLower)
 
-    const chainConfig: ChainConfig = {
+    const chainConfig: EthereumChainData = {
       ...Mainnet,
       hardforks,
       consensus: preMergeForks.includes(forkLower)
@@ -223,6 +227,7 @@ export function createCommonForFork(fork: string, testData?: any) {
       chainConfig.chainId = testData.config.chainId
     }
     return new Common({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       chain: chainConfig,
       hardfork: forkLower,
     })
@@ -247,6 +252,7 @@ export function createCommonForFork(fork: string, testData?: any) {
     // Build the transition chain configuration
     const chainConfig = buildTransitionChainConfig(from, to, timestamp)
 
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     return new Common({ chain: chainConfig, hardfork: from })
   }
 }

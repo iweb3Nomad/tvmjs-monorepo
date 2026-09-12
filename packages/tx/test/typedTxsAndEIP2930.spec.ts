@@ -34,6 +34,7 @@ const pKey = hexToBytes('0x46464646464646464646464646464646464646464646464646464
 const address = privateToAddress(pKey)
 
 const common = new Common({
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   chain: Mainnet,
   hardfork: Hardfork.London,
   params: paramsTx,
@@ -74,6 +75,7 @@ describe('[AccessList2930Tx / FeeMarket1559Tx] -> EIP-2930 Compatibility', () =>
         {
           chainId: 5,
         },
+        // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
         { common: new Common({ chain: goerliChainConfig }) },
       )
       assert.strictEqual(
@@ -82,6 +84,7 @@ describe('[AccessList2930Tx / FeeMarket1559Tx] -> EIP-2930 Compatibility', () =>
         'should initialize Common with chain ID provided (supported chain ID)',
       )
 
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       const nonEIP2930Common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
       assert.throws(
         () => {
@@ -440,6 +443,7 @@ describe('[AccessList2930Tx / FeeMarket1559Tx] -> EIP-2930 Compatibility', () =>
       tx = txType.create.txData({}, { common, freeze: false })
       assert.strictEqual(tx.getDataGas(), BigInt(0), 'Should return data fee when not frozen')
 
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       const mutableCommon = new Common({ chain: Mainnet, hardfork: Hardfork.London })
       tx = txType.create.txData({}, { common: mutableCommon })
       tx.common.setHardfork(Hardfork.Istanbul)
@@ -636,6 +640,7 @@ describe('[AccessList2930Tx] -> Class Specific Tests', () => {
       chainId: txData.chainId!.toString(),
       eips: [2718, 2929, 2930],
     }
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const usedCommon = createCustomCommon(customChainParams, Mainnet, {
       hardfork: Hardfork.Berlin,
     })
@@ -712,6 +717,7 @@ describe('[AccessList2930Tx] -> Class Specific Tests', () => {
 
   it('common propagates from the common of tx, not the common in TxOptions', () => {
     const txn = createAccessList2930Tx({}, { common, freeze: false })
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const newCommon = new Common({ chain: Mainnet, hardfork: Hardfork.Paris })
     assert.notDeepEqual(newCommon, common, 'new common is different than original common')
     Object.defineProperty(txn, 'common', {

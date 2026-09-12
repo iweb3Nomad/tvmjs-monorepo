@@ -17,6 +17,7 @@ describe('Precompiles: MODEXP', () => {
   let addressStr: string
   let MODEXP: PrecompileFunc
   beforeAll(async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     common = new Common({ chain: Mainnet })
     tvm = await createTVM({
       common,

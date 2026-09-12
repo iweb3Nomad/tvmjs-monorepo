@@ -35,6 +35,7 @@ import type { NestedUint8Array } from '@tvmjs/util'
 
 describe('[Block]: block functions', () => {
   it('should test block initialization', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const genesis = createBlock({}, { common })
     assert.isDefined(bytesToHex(genesis.hash()), 'block should initialize')
@@ -91,6 +92,7 @@ describe('[Block]: block functions', () => {
   })
 
   it('initialization -> setHardfork option', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = createCustomCommon(testnetMergeChainConfig, Mainnet)
 
     let block = createBlock(
@@ -126,6 +128,7 @@ describe('[Block]: block functions', () => {
   })
 
   it('should initialize with null parameters without throwing', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet })
     const opts = { common }
     assert.doesNotThrow(function () {
@@ -134,6 +137,7 @@ describe('[Block]: block functions', () => {
   })
 
   it('should throw when trying to initialize with uncle headers on a PoA network', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet })
     const uncleBlock = createBlock({ header: { extraData: new Uint8Array(117) } }, { common })
     assert.throws(function () {
@@ -142,6 +146,7 @@ describe('[Block]: block functions', () => {
   })
 
   it('should test block validation on pow chain', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const blockRlp = hexToBytes(preLondonTestDataBlocks1RLP.blockRLP)
     try {
@@ -153,6 +158,7 @@ describe('[Block]: block functions', () => {
   })
 
   it('should test block validation on poa chain', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Chainstart })
 
     try {
@@ -170,6 +176,7 @@ describe('[Block]: block functions', () => {
 
   // Osaka not supported
   it.skip('should test transaction validation - transaction not signed', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Osaka })
     const maxTransactionGasLimit = paramsTx['7825'].maxTransactionGasLimit as number
     // Create tx with gas limit over max (but not yet on Osaka)
@@ -185,6 +192,7 @@ describe('[Block]: block functions', () => {
 
   it('should test transaction validation - invalid tx trie', async () => {
     const blockRlp = hexToBytes(preLondonTestDataBlocks1RLP.blockRLP)
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const block = createBlockFromRLP(blockRlp, { common, freeze: false })
     await testTransactionValidation(block)
@@ -225,6 +233,7 @@ describe('[Block]: block functions', () => {
   })
 
   it('should test transaction validation with legacy tx in london', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const blockRlp = hexToBytes(preLondonTestDataBlocks1RLP.blockRLP)
     const block = createBlockFromRLP(blockRlp, { common, freeze: false })
@@ -239,6 +248,7 @@ describe('[Block]: block functions', () => {
   })
 
   it('should test uncles hash validation', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const blockRlp = hexToBytes(preLondonTestDataBlocks2RLP.block2RLP)
     const block = createBlockFromRLP(blockRlp, { common, freeze: false })
@@ -300,6 +310,7 @@ describe('[Block]: block functions', () => {
           uncleHash: KECCAK256_RLP_ARRAY,
         },
       },
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       { common: new Common({ chain: Mainnet, hardfork: Hardfork.Shanghai }) },
     )
     await checkThrowsAsync(block.validateData(false, false), 'invalid withdrawals trie')
@@ -311,6 +322,7 @@ describe('[Block]: block functions', () => {
           uncleHash: zeroRoot,
         },
       },
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       { common: new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart }) },
     )
     await checkThrowsAsync(block.validateData(false, false), 'invalid uncle hash')
@@ -324,6 +336,7 @@ describe('[Block]: block functions', () => {
   })
 
   it('should test genesis hashes (mainnet default)', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const rlp = hexToBytes(`0x${genesisHashesTestData.test.genesis_rlp_hex}`)
     const hash = hexToBytes(`0x${genesisHashesTestData.test.genesis_hash}`)
@@ -332,6 +345,7 @@ describe('[Block]: block functions', () => {
   })
 
   it('should test hash() method (mainnet default)', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     let common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const rlp = hexToBytes(`0x${genesisHashesTestData.test.genesis_rlp_hex}`)
     const hash = hexToBytes(`0x${genesisHashesTestData.test.genesis_hash}`)
@@ -339,6 +353,7 @@ describe('[Block]: block functions', () => {
     assert.isTrue(equalsBytes(block.hash(), hash), 'genesis hash match')
 
     common = new Common({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       chain: Mainnet,
       hardfork: Hardfork.Chainstart,
       customCrypto: {
@@ -371,6 +386,7 @@ describe('[Block]: block functions', () => {
   })
 
   it('should return the same block data from raw()', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const block = createBlockFromRLP(hexToBytes(preLondonTestDataBlocks2RLP.block2RLP), {
       common,
@@ -380,6 +396,7 @@ describe('[Block]: block functions', () => {
   })
 
   it('should test toJSON', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const block = createBlockFromRLP(hexToBytes(preLondonTestDataBlocks2RLP.block2RLP), {
       common,
@@ -392,6 +409,7 @@ describe('[Block]: block functions', () => {
     // Set block number from test block to mainnet DAO fork block 1920000
     blockData[0][8] = hexToBytes('0x1D4C00')
 
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Dao })
     assert.throws(
       function () {
@@ -411,6 +429,7 @@ describe('[Block]: block functions', () => {
   })
 
   it('should set canonical difficulty if I provide a calcDifficultyFromHeader header', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     let common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const genesis = createBlock({}, { common })
 
@@ -419,6 +438,7 @@ describe('[Block]: block functions', () => {
       timestamp: genesis.header.timestamp + BigInt(10),
     }
 
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const blockWithoutDifficultyCalculation = createBlock(
       {
@@ -479,6 +499,7 @@ describe('[Block]: block functions', () => {
   })
 
   it('should be able to initialize shanghai blocks with correct hardfork defaults', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Shanghai })
     const block = createBlock({}, { common })
     assert.strictEqual(
@@ -507,6 +528,7 @@ describe('[Block]: EIP-7934 RLP Execution Block Size Limit', () => {
   }
 
   it('should not throw when size exceeds but EIP-7934 is not activated', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const block = createLargeBlock(common)
 
@@ -521,6 +543,7 @@ describe('[Block]: EIP-7934 RLP Execution Block Size Limit', () => {
       },
     }
     const common = new Common({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       chain: Mainnet,
       hardfork: Hardfork.Chainstart,
       eips: [7934],
@@ -539,6 +562,7 @@ describe('[Block]: EIP-7934 RLP Execution Block Size Limit', () => {
       },
     }
     const common = new Common({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       chain: Mainnet,
       hardfork: Hardfork.Chainstart,
       eips: [7934],
@@ -559,6 +583,7 @@ describe('[Block]: EIP-7934 RLP Execution Block Size Limit', () => {
       },
     }
     const common = new Common({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       chain: Mainnet,
       hardfork: Hardfork.Chainstart,
       eips: [7934],
@@ -579,6 +604,7 @@ describe('[Block]: EIP-7934 RLP Execution Block Size Limit', () => {
       },
     }
     const common = new Common({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       chain: Mainnet,
       hardfork: Hardfork.Chainstart,
       eips: [7934],
@@ -601,6 +627,7 @@ describe('[Block]: EIP-7934 RLP Execution Block Size Limit', () => {
       },
     }
     const common = new Common({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       chain: Mainnet,
       hardfork: Hardfork.Chainstart,
       eips: [7934],
@@ -629,6 +656,7 @@ describe('[Block]: EIP-7934 RLP Execution Block Size Limit', () => {
       },
     }
     const common = new Common({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       chain: Mainnet,
       hardfork: Hardfork.Chainstart,
       eips: [7934],
@@ -637,6 +665,7 @@ describe('[Block]: EIP-7934 RLP Execution Block Size Limit', () => {
 
     // Create a block without EIP-7934 active first to avoid size check during creation
     const commonWithout7934 = new Common({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       chain: Mainnet,
       hardfork: Hardfork.Chainstart,
     })

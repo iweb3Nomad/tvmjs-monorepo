@@ -28,6 +28,7 @@ import type { Block } from '@tvmjs/block'
 import type { CliqueConfig } from '@tvmjs/common'
 import type { Blockchain, ConsensusDict } from '../src/index.ts'
 
+// @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
 const COMMON = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Chainstart })
 const EXTRA_DATA = new Uint8Array(97)
 const GAS_LIMIT = BigInt(8000000)
@@ -147,6 +148,7 @@ const addNextBlock = async (
 
 describe('Clique: Initialization', () => {
   it('should initialize a clique blockchain', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Chainstart })
     const consensusDict: ConsensusDict = {}
     consensusDict[ConsensusAlgorithm.Clique] = new CliqueConsensus()
@@ -645,6 +647,7 @@ describe('Clique: Initialization', () => {
   it('Clique Voting: Epoch transitions reset all votes to allow chain checkpointing', async () => {
     const common = createCustomCommon(
       {
+        // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
         consensus: {
           type: ConsensusType.ProofOfAuthority,
           algorithm: ConsensusAlgorithm.Clique,
@@ -701,6 +704,7 @@ describe('Clique: Initialization', () => {
   it('Clique Voting: Recent signatures should not reset on checkpoint blocks imported in a batch', async () => {
     const common = createCustomCommon(
       {
+        // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
         consensus: {
           type: ConsensusType.ProofOfAuthority,
           algorithm: ConsensusAlgorithm.Clique,

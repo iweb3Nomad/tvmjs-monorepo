@@ -31,9 +31,9 @@ function formatNonce(nonce: string): PrefixedHexString {
 }
 
 /**
- * Converts Geth genesis parameters to an EthereumJS compatible `CommonOpts` object
+ * Normalizes Geth genesis parameters as raw Ethereum network data.
  * @param gethGenesis GethGenesis object
- * @returns genesis parameters in a `CommonOpts` compliant object
+ * @returns non-executable genesis parameters without a TRON execution marker
  */
 function parseGethParams(gethGenesis: GethGenesis) {
   const {
@@ -246,11 +246,12 @@ function parseGethParams(gethGenesis: GethGenesis) {
 }
 
 /**
- * Parses a genesis object exported from Geth into parameters for Common instance
+ * Parses a Geth genesis object as raw Ethereum network data, not an executable ChainConfig.
+ * Use parseGethGenesisState() to import allocations independently of execution configuration.
  * Blob schedules are unsupported, including empty schedules.
  * @param gethGenesis GethGenesis object
  * @param name optional chain name
- * @returns parsed params
+ * @returns parsed data without an execution profile; Common rejects this as a chain configuration
  */
 export function parseGethGenesis(gethGenesis: GethGenesis, name?: string) {
   try {

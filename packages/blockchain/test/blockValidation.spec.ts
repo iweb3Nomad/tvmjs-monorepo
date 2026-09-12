@@ -14,6 +14,7 @@ import { generateBlock } from './util.ts'
 
 describe('[Blockchain]: Block validation tests', () => {
   it('should throw if an uncle is included before', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const blockchain = await createBlockchain({ common })
 
@@ -33,6 +34,7 @@ describe('[Blockchain]: Block validation tests', () => {
   })
 
   it('should throw if the uncle parent block is not part of the canonical chain', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const blockchain = await createBlockchain({ common })
 
@@ -51,6 +53,7 @@ describe('[Blockchain]: Block validation tests', () => {
   })
 
   it('should throw if the uncle is too old', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const blockchain = await createBlockchain({ common })
 
@@ -78,6 +81,7 @@ describe('[Blockchain]: Block validation tests', () => {
   })
 
   it('should throw if uncle is too young', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const blockchain = await createBlockchain({ common })
 
@@ -124,6 +128,7 @@ describe('[Blockchain]: Block validation tests', () => {
   // })
 
   it('throws if uncle is a canonical block', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const blockchain = await createBlockchain({ common })
 
@@ -138,6 +143,7 @@ describe('[Blockchain]: Block validation tests', () => {
   })
 
   it('successfully validates uncles', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const blockchain = await createBlockchain({ common })
 
@@ -161,6 +167,7 @@ describe('[Blockchain]: Block validation tests', () => {
   it('EIP1559 base fee tests', async () => {
     const common = new Common({
       eips: [1559],
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       chain: Mainnet,
       hardfork: Hardfork.London,
     })
@@ -244,6 +251,7 @@ describe('[Blockchain]: Block validation tests', () => {
      * It is tested that common does not change
      */
 
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet })
     common.hardforkBlock = function (hardfork: string | undefined) {
       if (hardfork === 'london') {
@@ -305,6 +313,7 @@ describe('[Blockchain]: Block validation tests', () => {
 
     uncleHeaderData.extraData = '0xffff'
     const uncleHeader = createBlockHeader(uncleHeaderData, {
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       common: new Common({ chain: Mainnet, hardfork: Hardfork.Berlin }),
     })
 

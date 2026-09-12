@@ -6,6 +6,7 @@ import { createTVM, getActivePrecompiles } from '../../src/index.ts'
 
 describe('Precompiles: BN254PAIRING', () => {
   it('BN254PAIRING', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Petersburg })
     const tvm = await createTVM({
       common,

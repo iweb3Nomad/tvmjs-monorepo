@@ -84,15 +84,6 @@ export interface GethGenesis {
   baseFeePerGas?: PrefixedHexString | number | null
 }
 
-/**
- * Type for the options passed to createCommonFromGethGenesis
- */
-export interface CreateCommonFromGethGenesisOpts {
-  chain?: string
-  genesisHash?: string
-  mergeForkIdPostMerge?: boolean
-}
-
 export type StoragePair = [key: PrefixedHexString, value: PrefixedHexString]
 
 export type AccountState = [

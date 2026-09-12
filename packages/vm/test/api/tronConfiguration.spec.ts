@@ -1,6 +1,6 @@
 import { createBlock } from '@tvmjs/block'
 import { createBlockchain } from '@tvmjs/blockchain'
-import { Common, TronMainnet, TronNile, TronShasta, createCustomCommon } from '@tvmjs/common'
+import { Common, TronMainnet, TronNile, TronShasta } from '@tvmjs/common'
 import { MerkleStateManager } from '@tvmjs/statemanager'
 import { createTVM, getActivePrecompiles } from '@tvmjs/tvm'
 import { createLegacyTx } from '@tvmjs/tx'
@@ -88,7 +88,7 @@ describe('TRON configuration across execution entry points', () => {
       nonce: '0x0000000000000000',
       extraData: '0x',
     } as const
-    const common = createCustomCommon({ genesis }, TronMainnet)
+    const common = new Common({ chain: { ...TronMainnet, genesis } })
     assert.isTrue(common.hasGenesis())
     await assertRejected(
       createVM({ common, tvmOpts: { common: new Common({ chain: TronMainnet }) } }),
@@ -116,19 +116,18 @@ describe('TRON configuration across execution entry points', () => {
       difficulty: 0,
       gasLimit: 1000000,
     } as const
-    const common = createCustomCommon({ genesis }, TronMainnet)
-    const equivalent = createCustomCommon({ genesis: reorderedGenesis }, TronMainnet)
+    const common = new Common({ chain: { ...TronMainnet, genesis } })
+    const equivalent = new Common({ chain: { ...TronMainnet, genesis: reorderedGenesis } })
     assert.isTrue(common.isCompatibleWith(equivalent))
     assert.isTrue(equivalent.isCompatibleWith(common))
     const vm = await createVM({ common, tvmOpts: { common: equivalent } })
     assert.deepEqual(vm.common.genesis(), genesis)
 
     const consensus = { type: 'custom', algorithm: 'fibonacci' } as const
-    const withConsensus = createCustomCommon({ consensus }, TronMainnet)
-    const reorderedConsensus = createCustomCommon(
-      { consensus: { algorithm: 'fibonacci', type: 'custom' } },
-      TronMainnet,
-    )
+    const withConsensus = new Common({ chain: { ...TronMainnet, consensus } })
+    const reorderedConsensus = new Common({
+      chain: { ...TronMainnet, consensus: { algorithm: 'fibonacci', type: 'custom' } },
+    })
     assert.isTrue(withConsensus.isCompatibleWith(reorderedConsensus))
     assert.isFalse(withConsensus.isCompatibleWith(common))
   })

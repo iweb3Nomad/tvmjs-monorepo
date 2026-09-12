@@ -13,6 +13,7 @@ import { Block, createBlock, createBlockHeader } from '../src/index.ts'
 import type { BlockHeader } from '../src/index.ts'
 
 const common = new Common({
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   chain: Mainnet,
   hardfork: Hardfork.Paris,
 })

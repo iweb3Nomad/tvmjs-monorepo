@@ -24,6 +24,7 @@ const txTypes = [
 
 describe('[fromJSONRPCProvider]', () => {
   it('should work', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const provider = 'https://my.json.rpc.provider.com:8545'
 
@@ -111,6 +112,7 @@ describe('fromRPC: ensure `v="0x0"` is correctly decoded for signed txs', () => 
         // legacy tx cannot have v=0
         continue
       }
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       const common = createCustomCommon({ chainId: 0x10f2c }, Mainnet)
       const tx = await createTxFromRPC({ ...v0txData, type: txType } as TypedTxData, { common })
       assert.isTrue(tx.isSigned())

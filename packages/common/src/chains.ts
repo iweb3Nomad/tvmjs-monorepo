@@ -1,6 +1,6 @@
-import type { NetworkChainConfig, TronExecutionChainConfig } from './types.ts'
+import type { EthereumChainData, TronExecutionChainConfig } from './types.ts'
 
-export const Mainnet: NetworkChainConfig = {
+export const Mainnet: EthereumChainData = {
   name: 'mainnet',
   chainId: 1,
   defaultHardfork: 'prague',
@@ -214,7 +214,7 @@ export const TronShasta: TronExecutionChainConfig = createTronExecutionChainConf
   2494104990,
 )
 
-export const Sepolia: NetworkChainConfig = {
+export const Sepolia: EthereumChainData = {
   name: 'sepolia',
   chainId: 11155111,
   defaultHardfork: 'prague',
@@ -377,7 +377,7 @@ export const Sepolia: NetworkChainConfig = {
   ],
 }
 
-export const Holesky: NetworkChainConfig = {
+export const Holesky: EthereumChainData = {
   name: 'holesky',
   chainId: 17000,
   defaultHardfork: 'prague',
@@ -520,7 +520,7 @@ export const Holesky: NetworkChainConfig = {
   ],
 }
 
-export const Hoodi: NetworkChainConfig = {
+export const Hoodi: EthereumChainData = {
   name: 'hoodi',
   chainId: 560048,
   defaultHardfork: 'prague',

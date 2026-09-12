@@ -443,6 +443,7 @@ describe('initialization', () => {
   })
 
   it('fully restores the block access list when a host hook rejects execution', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Amsterdam })
     const tvm = await createTVM({ common })
     const recipient = new Address(hexToBytes('0x0000000000000000000000000000000000000111'))

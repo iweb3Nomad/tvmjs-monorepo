@@ -29,7 +29,11 @@ describe('[Common/Chains]: TRON initialization and lookup', () => {
 
   for (const chain of [Mainnet, Sepolia, Holesky, Hoodi]) {
     it(`rejects the retired ${chain.name} execution configuration`, () => {
-      assert.throws(() => new Common({ chain }), /Only TRON execution configurations/)
+      assert.throws(
+        // @ts-expect-error Ethereum data is intentionally rejected at the execution boundary.
+        () => new Common({ chain }),
+        /Only TRON execution configurations/,
+      )
       assert.throws(() => getPresetChainConfig(chain.name), /Unsupported chain/)
       assert.throws(() => getPresetChainConfig(chain.chainId), /Unsupported chain/)
     })

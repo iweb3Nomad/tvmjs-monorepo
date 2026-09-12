@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Migrate custom-state and Clique sealing regressions to explicit TRON configuration; preserve genesis/consensus compatibility checks after removal of Common's metadata overrides and Geth constructor.
 - Validate transaction TRC-10 token existence and the sender balance by exact token ID instead of a `Number` conversion.
 - Verify equal execution Energy and state changes through VM and direct TVM calls, including CALLTOKEN rollback and empty-recipient handling across transactions.
 - Match the pinned java-tron ChargeTest deployment cost without an extra memory/copy base fee.

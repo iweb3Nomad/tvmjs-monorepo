@@ -1,16 +1,24 @@
 import { EthereumJSErrorWithoutCode } from '@tvmjs/util'
 
 import { TronMainnet, TronNile, TronShasta } from './chains.ts'
-import { Common, parseGethGenesis } from './index.ts'
+import { Common } from './common.ts'
 
-import type { GethGenesis } from './gethGenesis.ts'
-import type { BaseOpts, ChainConfig, GethConfigOpts } from './index.ts'
+import type { BaseOpts, ChainConfig, CustomChainConfig } from './types.ts'
+
+const CUSTOM_CHAIN_FIELDS = new Set([
+  'name',
+  'chainId',
+  'comment',
+  'url',
+  'bootstrapNodes',
+  'dnsNetworks',
+])
 
 /**
- * Creates a {@link Common} object for a custom chain, based on a standard one.
+ * Creates a {@link Common} object with custom TRON identity and discovery fields.
  *
- * It uses all the {@link Chain} parameters from the {@link baseChain} option except the ones overridden
- * in a provided {@link chainParamsOrName} dictionary. Some usage example:
+ * Execution settings are supplied through {@link BaseOpts}. Network metadata cannot
+ * be added or replaced here; use `new Common({ chain: completeConfig })` to supply it.
  *
  * ```javascript
  * import { createCustomCommon, TronMainnet } from '@tvmjs/common'
@@ -18,51 +26,48 @@ import type { BaseOpts, ChainConfig, GethConfigOpts } from './index.ts'
  * createCustomCommon({chainId: 123}, TronMainnet)
  * ```
  *
- * @param partialConfig Custom parameter dict
+ * @param partialConfig Identity and discovery overrides
  * @param baseChain TRON execution configuration used as a base, e.g. `TronMainnet`
  * @param opts Custom chain options to set various {@link BaseOpts}
  */
 export function createCustomCommon(
-  partialConfig: Partial<ChainConfig>,
+  partialConfig: CustomChainConfig,
   baseChain: ChainConfig,
   opts: BaseOpts = {},
 ): Common {
+  if (partialConfig === null || typeof partialConfig !== 'object' || Array.isArray(partialConfig)) {
+    throw EthereumJSErrorWithoutCode('createCustomCommon() overrides must be an object')
+  }
+  // Reject forbidden fields even when inherited or non-enumerable, rather than silently ignoring them.
+  const fields = new Set<PropertyKey>(Reflect.ownKeys(partialConfig))
+  for (const field of [
+    'execution',
+    'genesis',
+    'consensus',
+    'defaultHardfork',
+    'hardforks',
+    'customHardforks',
+    'depositContractAddress',
+  ]) {
+    if (field in partialConfig) fields.add(field)
+  }
+  for (const field of fields) {
+    if (typeof field !== 'string' || !CUSTOM_CHAIN_FIELDS.has(field)) {
+      throw EthereumJSErrorWithoutCode(
+        `createCustomCommon() cannot override ${String(field)}. Only identity and discovery fields are supported; supply network metadata in a complete TRON ChainConfig.`,
+      )
+    }
+  }
+  if ('chain' in opts) {
+    throw EthereumJSErrorWithoutCode('createCustomCommon() options cannot override the base chain')
+  }
   return new Common({
+    ...opts,
     chain: {
       ...baseChain,
       ...partialConfig,
     },
-    ...opts,
   })
-}
-
-/**
- * Legacy Geth execution constructor. Ethereum configurations are rejected;
- * use parseGethGenesis() when only the raw genesis data is needed.
- * @deprecated Use a TRON execution preset with explicit network metadata.
- * @param genesisJSON GethGenesis object
- * @returns a new {@link Common} object
- */
-export function createCommonFromGethGenesis(
-  genesisJSON: GethGenesis,
-  { chain, eips, genesisHash, hardfork, params, customCrypto, activatedProposals }: GethConfigOpts,
-): Common {
-  const genesisParams = parseGethGenesis(genesisJSON, chain)
-  const common = new Common({
-    chain: {
-      ...genesisParams,
-      name: genesisParams.name ?? 'Custom chain',
-    } as ChainConfig, // Typecasting because of `string` -> `PrefixedHexString` mismatches
-    eips,
-    params,
-    hardfork: hardfork ?? genesisParams.hardfork,
-    customCrypto,
-    activatedProposals,
-  })
-  if (genesisHash !== undefined) {
-    common.setForkHashes(genesisHash)
-  }
-  return common
 }
 
 /**

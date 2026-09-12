@@ -21,6 +21,7 @@ describe('custom crypto', () => {
       sha256: customSha256,
     }
     const msg = Uint8Array.from([0, 1, 2, 3])
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, customCrypto })
     const tvm = await createTVM({ common })
     const addressStr = '0000000000000000000000000000000000000002'
@@ -44,6 +45,7 @@ describe('custom crypto', () => {
       ecrecover: customEcrecover,
     }
     const msg = concatBytes(randomBytes(32), setLengthLeft(intToBytes(27), 32), randomBytes(32))
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, customCrypto })
     const tvm = await createTVM({ common })
     const addressStr = '0000000000000000000000000000000000000001'

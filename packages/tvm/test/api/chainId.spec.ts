@@ -16,6 +16,7 @@ describe('CHAINID opcode (0x46)', () => {
 
   it('rejects retired Ethereum execution configuration', () => {
     assert.throws(
+      // @ts-expect-error Ethereum presets must be rejected by the execution constructor.
       () => new Common({ chain: Mainnet, hardfork: 'istanbul' }),
       /Only TRON execution configurations/,
     )

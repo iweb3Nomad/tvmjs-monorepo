@@ -34,7 +34,7 @@ export interface ChainConfig {
   name: string
   chainId: number | string
   /** Execution profile family. Ethereum network configurations are not executable. */
-  execution?: 'tron'
+  execution: 'tron'
   defaultHardfork?: string
   comment?: string
   url?: string
@@ -53,11 +53,26 @@ export interface NetworkChainConfig extends ChainConfig {
   consensus: ConsensusConfig
 }
 
+/** Historical Ethereum network data. Not accepted by execution constructors. */
+export interface EthereumChainData extends Omit<NetworkChainConfig, 'execution'> {
+  execution?: never
+}
+
 /** A TRON execution preset without network genesis or consensus metadata. */
 export interface TronExecutionChainConfig extends ChainConfig {
   execution: 'tron'
   genesis?: never
   consensus?: never
+}
+
+type CustomChainField = 'name' | 'chainId' | 'comment' | 'url' | 'bootstrapNodes' | 'dnsNetworks'
+
+/**
+ * Identity and discovery overrides for createCustomCommon().
+ * Supply genesis and consensus explicitly in a complete ChainConfig instead.
+ */
+export type CustomChainConfig = Partial<Pick<ChainConfig, CustomChainField>> & {
+  [K in Exclude<keyof ChainConfig, CustomChainField>]?: never
 }
 
 export interface GenesisBlockConfig {
@@ -170,11 +185,6 @@ export interface CommonOpts extends BaseOpts {
    * Ethereum presets and hardfork schedules are rejected with a migration error.
    */
   chain: ChainConfig
-}
-
-export interface GethConfigOpts extends BaseOpts {
-  chain?: string
-  genesisHash?: Uint8Array
 }
 
 export interface HardforkByOpts {

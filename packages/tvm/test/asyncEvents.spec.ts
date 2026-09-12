@@ -7,6 +7,7 @@ import { createTVM } from '../src/index.ts'
 describe('async events', () => {
   it('should work', async () => {
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee'))
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Constantinople })
     const tvm = await createTVM({
       common,

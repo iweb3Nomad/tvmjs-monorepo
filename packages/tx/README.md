@@ -235,36 +235,13 @@ The correct tx type class for instantiation will then be chosen at runtime based
 - `public static fromBlockBodyData(data: Uint8Array | Uint8Array[], txOptions: TxOptions = {})`
 - `public static async fromJsonRpcProvider(provider: string | EthersProvider, txHash: string, txOptions?: TxOptions)`
 
-## Sending a Transaction
+## Custom TRON execution transactions
 
-### L2 Support
+Use `createCustomCommon({ name, chainId }, TronMainnet)` to create a local TRON execution configuration. The TRON profile is preserved; Ethereum network presets and L2 execution configuration are no longer supported. The retired xDai example has been removed.
 
-This library has been tested to work with various L2 networks. To set an associated chainID, use the `createCustomCommon()` constructor from our `Common` library. The following is a simple example to send a tx to the xDai chain:
+See [the custom TRON transaction example](./examples/custom-chain-tx.ts) for signing and sender verification. These transaction objects are local execution envelopes; this example does not submit a transaction to a TRON node.
 
-```ts
-// ./examples/l2tx.ts
-
-import { Mainnet, createCustomCommon } from '@tvmjs/common'
-import { createLegacyTx } from '@tvmjs/tx'
-import { bytesToHex, createAddressFromString, hexToBytes } from '@tvmjs/util'
-
-const pk = hexToBytes('0x076247989df60a82f6e86e58104368676096f84e60972282ee00d4673a2bc9b9')
-// xDai chain ID
-const common = createCustomCommon({ chainId: 100 }, Mainnet)
-const to = createAddressFromString('0x256e8f0ba532ad83a0debde7501669511a41a1f3')
-
-const txData = {
-  nonce: 0,
-  gasPrice: 1000000000,
-  gasLimit: 21000,
-  to,
-  value: 1,
-}
-
-const tx = createLegacyTx(txData, { common })
-const signedTx = tx.sign(pk)
-console.log(bytesToHex(signedTx.hash())) // 0xbf98f6f8700812ed6f2314275070256e11945fa48afd80fb301265f6a41a2dc2
-```
+`createCustomCommon()` accepts identity and discovery overrides only. Supply genesis or consensus metadata through a complete `ChainConfig` passed to `new Common({ chain })`; see [Common configuration migration](../common/README.md#custom-networks-and-cryptography).
 
 ## Browser
 

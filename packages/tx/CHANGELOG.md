@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Chores
 
+- Migrate the custom transaction example to TRON identity overrides and remove the unsupported xDai/L2 configuration example; document the narrowed Common configuration boundary.
 - Update internal `@tvmjs/*` dependencies for the coordinated TVMJS release
 
 ## 1.0.0

@@ -12,6 +12,7 @@ import { eip1559baseFeeData } from './testdata/eip1559baseFee.ts'
 
 const common = new Common({
   eips: [1559],
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   chain: Mainnet,
   hardfork: Hardfork.London,
   params: paramsBlock,
@@ -33,6 +34,7 @@ common.hardforkBlock = function (hardfork: string | undefined) {
 
 describe('EIP1559 tests', () => {
   it('Header -> Initialization', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     assert.throws(
       () => {

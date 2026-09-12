@@ -26,6 +26,7 @@ describe('blockchain test', () => {
   })
 
   it('should initialize correctly', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet })
     let blockchain = await createBlockchain({ common })
 
@@ -48,6 +49,7 @@ describe('blockchain test', () => {
   it('should initialize holesky correctly', async () => {
     // Taken from: https://github.com/eth-clients/holesky/blob/f1d14b9a80085c3f0cb9d729fea9172cde445588/README.md#hole%C5%A1ky-hole%C5%A1ovice-testnet
     const holeskyHash = '0xb5f7f912443c940f21fd611f12828d75b534364ed9e95ca4e307729a4661bde4'
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Holesky })
     const blockchain = await createBlockchain({
       common,
@@ -58,6 +60,7 @@ describe('blockchain test', () => {
   })
 
   it('should initialize correctly with createBlockchainFromBlocksData()', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const blockchain = await createBlockchainFromBlocksData(mainnetBlocks, {
       validateBlocks: true,
@@ -69,10 +72,12 @@ describe('blockchain test', () => {
   })
 
   it('should only initialize with supported consensus validation options', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     let common = new Common({ chain: Mainnet })
     try {
       await createBlockchain({ common, validateConsensus: true })
       await createBlockchain({ common, validateBlocks: true })
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       common = new Common({ chain: goerliChainConfig })
       await createBlockchain({ common, validateConsensus: true })
       const chain = await createBlockchain({ common, validateBlocks: true })
@@ -83,6 +88,7 @@ describe('blockchain test', () => {
   })
 
   it('should add a genesis block without errors', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const genesisBlock = createBlock({ header: { number: 0 } }, { common })
     const blockchain = await createBlockchain({
@@ -123,6 +129,7 @@ describe('blockchain test', () => {
   it('should add 12 blocks, one at a time', async () => {
     const blocks: Block[] = []
     const gasLimit = 8000000
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
 
     const genesisBlock = createBlock({ header: { gasLimit } }, { common })
@@ -172,6 +179,7 @@ describe('blockchain test', () => {
   it('getBlock(): should get block by number', async () => {
     const blocks: Block[] = []
     const gasLimit = 8000000
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
 
     const genesisBlock = createBlock({ header: { gasLimit } }, { common })
@@ -208,6 +216,7 @@ describe('blockchain test', () => {
   })
 
   it('getBlock(): should get block by hash / not existing', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const gasLimit = 8000000
     const genesisBlock = createBlock({ header: { gasLimit } }, { common })
@@ -466,6 +475,7 @@ describe('blockchain test', () => {
 
     await blockchain.putBlocks(blocks.slice(1))
 
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const headerData = {
       number: 15,
@@ -490,6 +500,7 @@ describe('blockchain test', () => {
     const { blockchain, blocks, error } = await generateBlockchain(15)
     assert.strictEqual(error, null, 'no error')
 
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const headerData = {
       number: 15,
@@ -582,6 +593,7 @@ describe('blockchain test', () => {
   })
 
   it('should put multiple blocks at once', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const blocks: Block[] = []
     const genesisBlock = createBlock({ header: { gasLimit: 8000000 } }, { common })
@@ -612,6 +624,7 @@ describe('blockchain test', () => {
   })
 
   it('should add block with body', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const genesisRlp = hexToBytes(preLondonTestDataBlocks1RLP.genesisRLP)
     const genesisBlock = createBlockFromRLP(genesisRlp, { common })
@@ -652,6 +665,7 @@ describe('blockchain test', () => {
     const db = new MapDB()
     const gasLimit = 8000000
 
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const genesisBlock = createBlock({ header: { gasLimit } }, { common })
     let blockchain = await createBlockchain({
@@ -689,6 +703,7 @@ describe('blockchain test', () => {
 
   it('should get latest', async () => {
     const gasLimit = 8000000
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const opts: BlockOptions = { common }
 
@@ -748,6 +763,7 @@ describe('blockchain test', () => {
   })
 
   it('mismatched chains', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const gasLimit = 8000000
 
@@ -774,6 +790,7 @@ describe('blockchain test', () => {
         calcDifficultyFromHeader: genesisBlock.header,
       }),
       createBlock(blockData2, {
+        // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
         common: new Common({ chain: Sepolia, hardfork: Hardfork.Chainstart }),
         calcDifficultyFromHeader: genesisBlock.header,
       }),
@@ -805,6 +822,7 @@ describe('blockchain test', () => {
 describe('initialization tests', () => {
   it('should read genesis from database', async () => {
     const common = new Common({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       chain: Mainnet,
       hardfork: Hardfork.Chainstart,
     })
@@ -829,6 +847,7 @@ describe('initialization tests', () => {
   })
 
   it('should allow to put a custom genesis block', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const genesisBlock = createBlock(
       {
@@ -857,6 +876,7 @@ describe('initialization tests', () => {
   })
 
   it('should not allow to change the genesis block in the database', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const genesisBlock = createBlock(
       {
@@ -911,6 +931,7 @@ describe('initialization tests', () => {
 })
 
 it('should correctly derive mainnet genesis block hash and stateRoot', async () => {
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   const common = new Common({ chain: Mainnet })
   const blockchain = await createBlockchain({ common })
   const mainnetGenesisBlockHash = hexToBytes(

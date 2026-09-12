@@ -27,6 +27,7 @@ function create2address(sourceAddress: Address, codeHash: Uint8Array, salt: Uint
 
 describe('RunCall tests', () => {
   it('Create where FROM account nonce is 0', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Constantinople })
     const tvm = await createTVM({ common })
     const res = await tvm.runCall({ to: undefined })
@@ -50,6 +51,7 @@ describe('RunCall tests', () => {
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
     const contractAddress = new Address(hexToBytes('0x00000000000000000000000000000000000000ff')) // contract address
     // setup the vm
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Constantinople })
     const tvm = await createTVM({ common })
     const code = '0x3460008080F560005260206000F3'
@@ -105,9 +107,11 @@ describe('RunCall tests', () => {
     const contractAddress = new Address(hexToBytes('0x00000000000000000000000000000000000000ff')) // contract address
     // setup the tvm
     const tvmByzantium = await createTVM({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       common: new Common({ chain: Mainnet, hardfork: Hardfork.Byzantium }),
     })
     const tvmConstantinople = await createTVM({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       common: new Common({ chain: Mainnet, hardfork: Hardfork.Constantinople }),
     })
     const code = '0x600160011B00'
@@ -146,6 +150,7 @@ describe('RunCall tests', () => {
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
     const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
     // setup the vm
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const tvm = await createTVM({ common })
     const code = '0x61000260005561000160005500'
@@ -195,6 +200,7 @@ describe('RunCall tests', () => {
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
     const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
     // setup the vm
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const tvm = await createTVM({ common })
     // push 1 push 0 sstore stop
@@ -220,6 +226,7 @@ describe('RunCall tests', () => {
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
     const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
     // setup the vm
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Homestead })
     const tvm = await createTVM({ common })
     // code to call 0x00..00dd, which does not exist
@@ -247,6 +254,7 @@ describe('RunCall tests', () => {
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
     const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
     // setup the vm
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Homestead })
     const tvm = await createTVM({ common })
     // code to call back into the calling account (0x00..00EE),
@@ -278,6 +286,7 @@ describe('RunCall tests', () => {
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
     const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
     // setup the vm
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.TangerineWhistle })
     const tvm = await createTVM({ common })
     // code to call 0x00..00fe, with the GAS opcode used as gas
@@ -454,6 +463,7 @@ describe('RunCall tests', () => {
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
     const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
     // setup the vm
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const tvm = await createTVM({ common })
     // code to call 0x00..00fe, with the GAS opcode used as gas
@@ -525,6 +535,7 @@ describe('RunCall tests', () => {
     const slot = hexToBytes(`0x${'00'.repeat(32)}`)
     const emptyBytes = hexToBytes('0x')
     // setup the vm
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const tvm = await createTVM({ common })
     const code = '0x60008080F060005500'
@@ -577,6 +588,7 @@ describe('RunCall tests', () => {
     // setup the accounts for this test
     const caller = new Address(hexToBytes('0x1a02a619e51cc5f8a2a61d2a60f6c80476ee8ead')) // caller address
     // setup the vm
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const tvm = await createTVM({ common })
     const code = '0x3034526020600760203460045afa602034343e604034f3'
@@ -610,6 +622,7 @@ describe('RunCall tests', () => {
 
   it('Throws on negative call value', async () => {
     // setup the vm
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const tvm = await createTVM({ common })
 
@@ -631,6 +644,7 @@ describe('RunCall tests', () => {
   })
 
   it('runCall() -> skipBalance behavior', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Berlin })
     const tvm = await createTVM({ common })
 
@@ -696,6 +710,7 @@ describe('RunCall tests', () => {
   })
 
   it('step event: ensure TVM memory and not internal memory gets reported', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Berlin })
     const tvm = await createTVM({ common })
 
@@ -750,6 +765,7 @@ describe('RunCall tests', () => {
   })
 
   it('ensure code deposit errors are logged correctly (Frontier)', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     const tvm = await createTVM({ common })
 
@@ -777,6 +793,7 @@ describe('RunCall tests', () => {
 
   it('ensure call and callcode handle gas stipend correctly', async () => {
     // See: https://github.com/ethereumjs/ethereumjs-monorepo/issues/3194
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Shanghai })
     const tvm = await createTVM({ common })
 

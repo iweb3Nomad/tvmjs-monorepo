@@ -130,38 +130,41 @@ Note, if you construct a blockchain with a custom consensus implementation, tran
 Genesis state can be supplied directly with the `genesisState` constructor option when creating a blockchain. This repository does not currently publish a separate genesis-data package.
 
 
-### Custom genesis from a Geth genesis config
+### Importing Geth allocations for local execution
 
-For many custom chains we might come across a genesis configuration, which can be used to build both chain config as well the genesis state (and hence the genesis block as well to start off with)
+`parseGethGenesisState()` imports account allocations as data. Supply TRON execution configuration and explicit genesis metadata separately; `createCommonFromGethGenesis()` has been removed. The following example builds a local simulation from a fixture, not a canonical TRON network genesis block.
 
 ```ts
 // ./examples/gethGenesis.ts
 
 import { createBlockchain } from '@tvmjs/blockchain'
-import { createCommonFromGethGenesis, parseGethGenesisState } from '@tvmjs/common'
+import { Common, TronMainnet, parseGethGenesisState } from '@tvmjs/common'
 import { postMergeGethGenesis } from '@tvmjs/testdata'
 import { bytesToHex } from '@tvmjs/util'
 
 const main = async () => {
-  // Load geth genesis file
-  const common = createCommonFromGethGenesis(postMergeGethGenesis, { chain: 'customChain' })
+  // Import allocations as data; supply separate TRON execution configuration.
+  const common = new Common({
+    chain: {
+      ...TronMainnet,
+      name: 'local-genesis-example',
+      // Local simulation metadata, not the TRON Mainnet genesis block.
+      genesis: { gasLimit: 1000000, difficulty: 0, nonce: '0x0000000000000000', extraData: '0x' },
+    },
+  })
   const genesisState = parseGethGenesisState(postMergeGethGenesis)
   const blockchain = await createBlockchain({
     genesisState,
     common,
   })
-  const genesisBlockHash = blockchain.genesisBlock.hash()
-  common.setForkHashes(genesisBlockHash)
-  console.log(
-    `Genesis hash from geth genesis parameters - ${bytesToHex(blockchain.genesisBlock.hash())}`,
-  )
+  console.log(`Local genesis hash: ${bytesToHex(blockchain.genesisBlock.hash())}`)
 }
 
 void main()
 
 ```
 
-The genesis block from the initialized `Blockchain` can be retrieved via the `Blockchain.genesisBlock` getter. For creating a genesis block from the params in `@tvmjs/common`, the `createGenesisBlock(stateRoot: Buffer): Block` method can be used.
+The initialized genesis block is available through `Blockchain.genesisBlock`. `createGenesisBlock(stateRoot: Uint8Array)` uses explicitly supplied Common genesis metadata. An execution-only preset can also be paired with an explicit `genesisBlock`; it does not supply network genesis or consensus data itself.
 
 ## Supported Blocks and Tx Types
 

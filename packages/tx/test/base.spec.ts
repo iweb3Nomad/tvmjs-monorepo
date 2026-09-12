@@ -35,6 +35,7 @@ import type { AccessList2930TxData, FeeMarketEIP1559TxData, LegacyTxData } from 
 
 describe('[BaseTransaction]', () => {
   // EIP-2930 is not enabled in Common by default (2021-03-06)
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
 
   const legacyTxs: LegacyTx[] = []
@@ -136,6 +137,7 @@ describe('[BaseTransaction]', () => {
       assert.isFrozen(tx, `${txType.name}: tx should be frozen by default`)
 
       const initCommon = new Common({
+        // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
         chain: Mainnet,
         hardfork: Hardfork.London,
       })

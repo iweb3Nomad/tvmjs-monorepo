@@ -111,6 +111,7 @@ const eip1559TxValues = {
 
 describe('[Transaction Input Values]', () => {
   it('Legacy Transaction Values', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Homestead })
     const options = { ...baseTxValues, ...legacyTxValues, type: '0' }
     const legacyTxData = generateCombinations({
@@ -124,6 +125,7 @@ describe('[Transaction Input Values]', () => {
   })
 
   it('EIP-1559 Transaction Values', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const options = {
       ...baseTxValues,

@@ -13,6 +13,7 @@ import { createTVM } from '../src/index.ts'
 import { TransientStorage } from '../src/transientStorage.ts'
 
 describe('Transient Storage', () => {
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   const common = new Common({ chain: Mainnet, hardfork: Hardfork.Cancun })
 
   it('should set and get storage', () => {

@@ -6,6 +6,7 @@ import { Message, createTVM } from '../../src/index.ts'
 
 describe('EIP-6780 created-address tracking', () => {
   it('does not initialize createdAddresses through runCode before EIP-6780', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Berlin })
     const tvm = await createTVM({ common })
 
@@ -16,6 +17,7 @@ describe('EIP-6780 created-address tracking', () => {
   })
 
   it('tracks an internal CREATE so same-execution SELFDESTRUCT clears its balance', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Cancun })
     const tvm = await createTVM({ common })
     const factory = new Address(hexToBytes('0x0000000000000000000000000000000000000100'))
@@ -40,6 +42,7 @@ describe('EIP-6780 created-address tracking', () => {
   })
 
   it('initializes createdAddresses for a standalone nested CREATE Message', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Cancun })
     const tvm = await createTVM({ common })
     const caller = new Address(hexToBytes('0x0000000000000000000000000000000000000200'))

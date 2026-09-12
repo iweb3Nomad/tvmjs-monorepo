@@ -60,11 +60,13 @@ describe('[Transaction]', () => {
   })
 
   it('Initialization', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const nonEIP2930Common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     assert.isDefined(
       createLegacyTx({}, { common: nonEIP2930Common }),
       'should initialize on a pre-Berlin Hardfork (EIP-2930 not activated)',
     )
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     let common = new Common({ chain: goerliChainConfig })
     const txData = txsData[3].raw.map((rawTxData) => hexToBytes(rawTxData as PrefixedHexString))
     txData[6] = intToBytes(45) // v with 0-parity and chain ID 5
@@ -83,6 +85,7 @@ describe('[Transaction]', () => {
       'should initialize Common with chain ID (supported) derived from v value (v with 1-parity)',
     )
 
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     common = createCustomCommon({ chainId: 999 }, Mainnet)
 
     txData[6] = intToBytes(2033) // v with 0-parity and chain ID 999
@@ -127,18 +130,21 @@ describe('[Transaction]', () => {
   })
 
   it('Initialization -> throws when creating a a transaction with incompatible chainid and v value', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     let common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Petersburg })
     let tx = createLegacyTx({}, { common })
     assert.strictEqual(tx.common.chainId(), BigInt(5))
     const privKey = hexToBytes(`0x${txsData[0].privateKey}`)
     tx = tx.sign(privKey)
     const serialized = tx.serialize()
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     common = new Common({ chain: Mainnet, hardfork: Hardfork.Petersburg })
     assert.throws(() => createLegacyTxFromRLP(serialized, { common }))
   })
 
   it('Initialization -> throws if v is set to an EIP155-encoded value incompatible with the chain id', () => {
     assert.throws(() => {
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       const common = new Common({ chain: Sepolia, hardfork: Hardfork.Petersburg })
       createLegacyTx({ v: BigInt(1) }, { common })
     })
@@ -155,6 +161,7 @@ describe('[Transaction]', () => {
 
   it('addSignature() -> correctly adds correct signature values from ecrecover with ChainID protection enabled', () => {
     const privKey = hexToBytes(`0x${txsData[0].privateKey}`)
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const tx = createLegacyTx({}, { common: new Common({ chain: Sepolia }) })
     const signedTx = tx.sign(privKey)
     // `convertV` set to false, since we use the raw value from the signed tx
@@ -166,6 +173,7 @@ describe('[Transaction]', () => {
 
   it('addSignature() -> throws when adding the wrong v value', () => {
     const privKey = hexToBytes(`0x${txsData[0].privateKey}`)
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const tx = createLegacyTx({}, { common: new Common({ chain: Sepolia }) })
     const signedTx = tx.sign(privKey)
     // `convertV` set to true: this will apply EIP-155 replay transaction twice, so it should throw!
@@ -208,6 +216,7 @@ describe('[Transaction]', () => {
   })
 
   it('getDataGas() -> should return correct data fee for istanbul', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     let tx = createLegacyTx({}, { common })
     assert.strictEqual(tx.getDataGas(), BigInt(0))
@@ -222,6 +231,7 @@ describe('[Transaction]', () => {
   })
 
   it('getDataGas() -> should invalidate cached value on hardfork change', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Byzantium })
     const tx = createLegacyTxFromBytesArray(
       txsData[0].raw.map((rawTxData) => hexToBytes(rawTxData as PrefixedHexString)),
@@ -276,6 +286,7 @@ describe('[Transaction]', () => {
 
   it('hash() / getHashedMessageToSign() / getMessageToSign()', () => {
     const common = new Common({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       chain: Mainnet,
       hardfork: Hardfork.TangerineWhistle,
     })
@@ -394,6 +405,7 @@ describe('[Transaction]', () => {
   })
 
   it('sign(), getSenderPublicKey() (implicit call) -> EIP155 hashing when singing', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Petersburg })
     for (const txData of txsData.slice(0, 3)) {
       const tx = createLegacyTxFromBytesArray(
@@ -426,6 +438,7 @@ describe('[Transaction]', () => {
     const privateKey = hexToBytes(
       '0xDE3128752F183E8930D7F00A2AAA302DCB5E700B2CBA2D8CA5795660F07DEFD5',
     )
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = createCustomCommon({ chainId: 3 }, Mainnet)
     const tx = createLegacyTxFromBytesArray(
       txRaw.map((rawTxData) => hexToBytes(rawTxData as PrefixedHexString)),
@@ -453,6 +466,7 @@ describe('[Transaction]', () => {
     )
 
     const common = new Common({
+      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
       chain: Mainnet,
       hardfork: Hardfork.TangerineWhistle,
     })
@@ -512,6 +526,7 @@ describe('[Transaction]', () => {
   })
 
   it('sign(), verifySignature(): sign tx with chainId specified in params', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Petersburg })
     let tx = createLegacyTx({}, { common })
     assert.strictEqual(tx.common.chainId(), BigInt(5))
@@ -535,9 +550,11 @@ describe('[Transaction]', () => {
   })
 
   it('common propagates from the common of tx, not the common in TxOptions', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const pkey = hexToBytes(`0x${txsData[0].privateKey}`)
     const txn = createLegacyTx({}, { common, freeze: false })
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const newCommon = new Common({ chain: Mainnet, hardfork: Hardfork.Paris })
     assert.notDeepEqual(newCommon, common, 'new common is different than original common')
     Object.defineProperty(txn, 'common', {

@@ -120,6 +120,7 @@ describe('P256VERIFY precompile', () => {
   let tvm: any
 
   beforeAll(async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     common = new Common({ chain: Mainnet, eips: [7951] })
     tvm = await createTVM({ common })
   })

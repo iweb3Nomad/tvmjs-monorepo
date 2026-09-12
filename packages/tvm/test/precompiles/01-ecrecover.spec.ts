@@ -16,6 +16,7 @@ describe('Precompiles: ECRECOVER', () => {
   it('ECRECOVER', async () => {
     // Test reference: https://github.com/ethereum/go-ethereum/issues/3731#issuecomment-293866868
 
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Petersburg })
     const tvm = await createTVM({
       common,

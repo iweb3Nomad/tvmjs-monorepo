@@ -11,6 +11,7 @@ describe('Precompiles: RIPEMD160', () => {
   it('RIPEMD160', async () => {
     // Test reference: https://github.com/ethereum/go-ethereum/blob/e206d3f8975bd98cc86d14055dca40f996bacc60/core/vm/contracts_test.go#L217
 
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Petersburg })
     const tvm = await createTVM({
       common,

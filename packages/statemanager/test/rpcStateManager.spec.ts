@@ -241,6 +241,7 @@ describe('RPC State Manager API tests', () => {
 
 describe('runTx custom transaction test', () => {
   it('should work', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
 
     const state = new RPCStateManager({ provider, blockTag: 1n })
@@ -267,6 +268,7 @@ describe('runTx custom transaction test', () => {
 
 describe('runTx test: replay mainnet transactions', () => {
   it('should work', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
 
     const blockTag = 15496077n
@@ -289,6 +291,7 @@ describe('runTx test: replay mainnet transactions', () => {
 
 describe('runBlock test', () => {
   it('should work', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
 
     const blockTag = 500000n

@@ -16,6 +16,7 @@ import {
 import { SIGNER_A, goerliChainConfig } from '@tvmjs/testdata'
 
 describe('[Header]: Clique PoA Functionality', () => {
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   const common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Chainstart })
 
   it('Header Data', () => {

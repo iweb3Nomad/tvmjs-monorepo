@@ -25,6 +25,7 @@ import type { JSONRPCTx, LegacyTx } from '@tvmjs/tx'
 import type { JSONRPCBlock } from '../src/index.ts'
 
 describe('[fromRPC]: block #2924874', () => {
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
 
   it('should create a block with transactions with valid signatures', () => {
@@ -42,6 +43,7 @@ describe('[fromRPC]: block #2924874', () => {
 
 describe('[fromRPC]:', () => {
   it('Should create a block with JSON data that includes a transaction with value parameter as integer string', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const valueAsIntegerString = '1'
     const blockDataTransactionValueAsInteger = testdataFromRPCData
@@ -58,6 +60,7 @@ describe('[fromRPC]:', () => {
   })
 
   it('Should create a block with JSON data that includes a transaction with defaults with gasPrice parameter as integer string', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const gasPriceAsIntegerString = '1'
     const blockDataTransactionGasPriceAsInteger = testdataFromRPCData
@@ -75,6 +78,7 @@ describe('[fromRPC]:', () => {
   })
 
   it('should create a block given JSON data that includes a difficulty parameter of type integer string', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const blockDifficultyAsInteger = createBlockFromRPC(
       testdataFromRPCDifficultyAsIntegerData as JSONRPCBlock,
@@ -90,6 +94,7 @@ describe('[fromRPC]:', () => {
   })
 
   it('should create a block from london hardfork', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.London })
     const block = createBlockFromRPC(testdataFromRPCGoerliLondonData, [], { common })
     assert.strictEqual(
@@ -100,6 +105,7 @@ describe('[fromRPC]:', () => {
   })
 
   it('should create a block with uncles', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const block = createBlockFromRPC(
       testdataFromRPCWithUnclesData,
@@ -112,12 +118,14 @@ describe('[fromRPC]:', () => {
   })
 
   it('should create a block with EIP-4896 withdrawals', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Shanghai })
     const block = createBlockFromRPC(testdataFromRPCWithWithdrawalsData, [], { common })
     assert.isTrue(await block.withdrawalsTrieIsValid())
   })
 
   it('should create a block header with the correct hash when EIP-4896 withdrawals are present', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Shanghai })
     const block = createBlockHeaderFromRPC(testdataFromRPCWithWithdrawalsData, { common })
     const hash = testdataFromRPCWithWithdrawalsData.hash
@@ -127,12 +135,14 @@ describe('[fromRPC]:', () => {
 
 describe('[fromRPC] - Alchemy/Infura API block responses', () => {
   it('should create pre merge block from Alchemy API response to eth_getBlockByHash', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const block = createBlockFromRPC(alchemy14151203Data, [], { common })
     assert.strictEqual(bytesToHex(block.hash()), alchemy14151203Data.hash)
   })
 
   it('should create pre and post merge blocks from Infura API responses to eth_getBlockByHash and eth_getBlockByNumber', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet })
     let block = createBlockFromRPC(infura2000004withoutTransactionsData, [], {
       common,
@@ -173,6 +183,7 @@ describe('[fromRPC] - Alchemy/Infura API block responses', () => {
 
 describe('[fromJSONRPCProvider]', () => {
   it('should work', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const provider = 'https://my.json.rpc.provider.com:8545'
 

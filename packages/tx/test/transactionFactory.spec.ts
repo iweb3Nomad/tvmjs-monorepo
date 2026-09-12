@@ -16,6 +16,7 @@ import {
 } from '../src/index.ts'
 
 const common = new Common({
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   chain: Mainnet,
   hardfork: Hardfork.London,
 })
@@ -73,6 +74,7 @@ describe('[TransactionFactory]: Basic functions', () => {
   it('fromSerializedData() -> error cases', () => {
     for (const txType of txTypes) {
       if (txType.eip2718) {
+        // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
         const unsupportedCommon = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
         assert.throws(
           () => {
@@ -149,6 +151,7 @@ describe('[TransactionFactory]: Basic functions', () => {
   })
 
   it('fromTxData() -> error cases', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const unsupportedCommon = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     assert.throws(() => {
       createTx({ type: 1 }, { common: unsupportedCommon })

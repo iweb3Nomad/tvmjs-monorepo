@@ -4,8 +4,8 @@ import { assert, describe, it } from 'vitest'
 import {
   Common,
   TronMainnet,
-  createCommonFromGethGenesis,
   createCustomCommon,
+  parseGethGenesis,
   tronProposalsDict,
 } from '../src/index.ts'
 
@@ -117,8 +117,9 @@ describe('[Common]: TRON proposal gating state', () => {
   it('rejects Ethereum genesis configuration even when TRON proposals are supplied', () => {
     assert.throws(
       () =>
-        createCommonFromGethGenesis(shanghaiTimeGethGenesis, {
-          chain: 'withdrawals',
+        new Common({
+          // @ts-expect-error Governance options do not turn raw Ethereum data into TRON config.
+          chain: parseGethGenesis(shanghaiTimeGethGenesis, 'withdrawals'),
           activatedProposals: [95],
         }),
       /Only TRON execution configurations/,

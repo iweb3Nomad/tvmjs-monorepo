@@ -34,6 +34,7 @@ const precompileMap: { [key: string]: string } = {
   'pairing_check_bls.json': '000000000000000000000000000000000000000f',
 }
 
+// @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
 const common = new Common({ chain: Mainnet, hardfork: Hardfork.Berlin, eips: [2537] })
 
 // MCL Instantiation
@@ -110,6 +111,7 @@ for (let address = precompileAddressStart; address <= precompileAddressEnd; addr
 
 describe('EIP-2537 BLS precompile availability tests', () => {
   it('BLS precompiles should not be available if EIP not activated', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const tvm = await createTVM({
       common,

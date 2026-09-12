@@ -10,6 +10,7 @@ import { eip1559Data } from './testData/eip1559.ts' // Source: Besu
 import { secp256k1 } from '@noble/curves/secp256k1.js'
 import type { JSONTx } from '../src/index.ts'
 
+// @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
 const common = createCustomCommon({ chainId: 4 }, Mainnet)
 common.setHardfork(Hardfork.London)
 
@@ -239,6 +240,7 @@ describe('[FeeMarket1559Tx]', () => {
       freeze: false,
     })
 
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const newCommon = createCustomCommon({ chainId: 4 }, Mainnet)
     newCommon.setHardfork(Hardfork.Paris)
 

@@ -9,6 +9,7 @@ import type { CLRequest } from '@tvmjs/util'
 
 describe('[Block]: CLRequests tests', () => {
   // Common with EIP-7685 enabled (CLRequests)
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   const common = new Common({ chain: Mainnet, hardfork: Hardfork.Cancun, eips: [7685] })
 
   function createDepositRequest(): CLRequest<CLRequestType> {

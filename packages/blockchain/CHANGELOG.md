@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Migrate Geth allocation examples and genesis regressions to explicitly supplied local TRON metadata after removal of the Geth execution constructor; preserve the allocation state root and custom consensus contracts.
 - Choose the canonical head by block number when the Common has no consensus metadata: a higher block extends the head, while re-put or lower blocks are stored without moving it. TRON execution presets default block difficulty to zero, so the total-difficulty comparison alone left the head at genesis after the consensus guard was introduced.
 - Require Clique epoch checkpoint signer lists to exactly match the active signer list, rejecting empty, truncated, extended, duplicated, and reordered checkpoints
 

@@ -20,6 +20,7 @@ export const generateBlocks = (numberOfBlocks: number, existingBlocks?: Block[])
   const blocks = existingBlocks ?? []
 
   const gasLimit = 8000000
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
   const opts = { common }
 
@@ -82,6 +83,7 @@ export const generateConsecutiveBlock = (
   if (difficultyChangeFactor > 1) {
     difficultyChangeFactor = 1
   }
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   const common = new Common({ chain: Mainnet, hardfork: Hardfork.MuirGlacier })
   const tmpHeader = createBlockHeader(
     {
@@ -123,6 +125,7 @@ export const isConsecutive = (blocks: Block[]) => {
 export const createTestDB = async (): Promise<
   [DB<string | Uint8Array, string | Uint8Array>, Block]
 > => {
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
   const genesis = createBlock({ header: { number: 0 } }, { common })
   const db = new MapDB<any, any>()
@@ -191,6 +194,7 @@ function generateBlock(
   common?: Common,
 ): Block {
   uncles = uncles ?? []
+  // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
   common = common ?? new Common({ chain: Mainnet })
 
   if (extraData.length > 32) {

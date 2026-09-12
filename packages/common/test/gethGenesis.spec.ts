@@ -4,11 +4,12 @@ import {
   invalidSpuriousDragonGethGenesis,
   kilnGethGenesis,
   postMergeGethGenesis,
+  shanghaiTimeGethGenesis,
 } from '@tvmjs/testdata'
 import { assert, describe, it } from 'vitest'
 
 import { parseGethGenesisState } from '../src/gethGenesis.ts'
-import { Hardfork, createCommonFromGethGenesis, parseGethGenesis } from '../src/index.ts'
+import { Common, Hardfork, parseGethGenesis } from '../src/index.ts'
 
 describe('[Common/genesis]', () => {
   it('should properly generate stateRoot from gethGenesis', () => {
@@ -79,13 +80,18 @@ describe('[Utils/Parse]', () => {
 
   it('rejects Ethereum genesis as an execution configuration', () => {
     for (const genesis of [eip4844GethGenesis, goerliGethGenesis, postMergeGethGenesis]) {
+      const chain = parseGethGenesis(genesis)
+      assert.notProperty(chain, 'execution')
       assert.throws(
-        () => createCommonFromGethGenesis(genesis, {}),
+        // @ts-expect-error Raw Ethereum network data is not an execution configuration.
+        () => new Common({ chain }),
         /Only TRON execution configurations/,
       )
       assert.throws(
         () =>
-          createCommonFromGethGenesis(genesis, {
+          new Common({
+            // @ts-expect-error Selecting TRON options does not make Ethereum data executable.
+            chain,
             hardfork: Hardfork.Tron,
             activatedProposals: [95, 96],
           }),
@@ -95,7 +101,7 @@ describe('[Utils/Parse]', () => {
   })
 
   it.each(['cancun', 'prague', 'tron', 'unknown', 'empty'])(
-    'explicitly rejects a %s blob schedule in parsing and execution constructors',
+    'explicitly rejects a %s blob schedule in raw data parsing',
     (name) => {
       const blobSchedule =
         name === 'empty' ? {} : { [name]: { target: 3, max: 6, baseFeeUpdateFraction: 3338477 } }
@@ -105,7 +111,26 @@ describe('[Utils/Parse]', () => {
       }
       const message = /blobSchedule is not supported by TRON configuration parsing/
       assert.throws(() => parseGethGenesis(genesis), message)
-      assert.throws(() => createCommonFromGethGenesis(genesis, {}), message)
     },
   )
+
+  it('preserves timestamp schedules as raw data without mutating the input', () => {
+    const genesis = {
+      ...shanghaiTimeGethGenesis,
+      config: {
+        ...shanghaiTimeGethGenesis.config,
+        cancunTime: shanghaiTimeGethGenesis.config.shanghaiTime! + 1000,
+      },
+    }
+    const before = JSON.stringify(genesis)
+    const parsed = parseGethGenesis(genesis, 'raw-timestamp-data')
+    assert.strictEqual(parsed.name, 'raw-timestamp-data')
+    assert.strictEqual(parsed.hardfork, Hardfork.Cancun)
+    assert.deepEqual(parsed.hardforks.slice(-2), [
+      { name: Hardfork.Shanghai, block: null, timestamp: genesis.config.shanghaiTime! },
+      { name: Hardfork.Cancun, block: null, timestamp: genesis.config.cancunTime },
+    ])
+    assert.notProperty(parsed, 'execution')
+    assert.strictEqual(JSON.stringify(genesis), before)
+  })
 })

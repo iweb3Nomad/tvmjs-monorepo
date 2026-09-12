@@ -21,7 +21,11 @@ describe('[Common]: custom TRON configuration', () => {
   })
 
   it('rejects Ethereum bases and custom hardfork overrides', () => {
-    assert.throws(() => createCustomCommon({ chainId: 123 }, Mainnet), /Only TRON execution/)
+    assert.throws(
+      // @ts-expect-error Ethereum data is not an executable chain configuration.
+      () => createCustomCommon({ chainId: 123 }, Mainnet),
+      /Only TRON execution/,
+    )
     const variants: Partial<ChainConfig>[] = [
       { defaultHardfork: Hardfork.Cancun },
       { hardforks: [{ name: Hardfork.Cancun, block: 0 }] },
@@ -33,8 +37,9 @@ describe('[Common]: custom TRON configuration', () => {
     ]
     for (const variant of variants) {
       assert.throws(
+        // @ts-expect-error Schedule overrides are rejected at both type and runtime boundaries.
         () => createCustomCommon(variant, TronMainnet),
-        /Only the TRON execution profile/,
+        /createCustomCommon\(\) cannot override/,
       )
     }
   })

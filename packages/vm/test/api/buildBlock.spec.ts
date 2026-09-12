@@ -5,14 +5,7 @@ import {
   createSealedCliqueBlock,
 } from '@tvmjs/block'
 import { createBlockchain } from '@tvmjs/blockchain'
-import {
-  Common,
-  type GethGenesis,
-  Hardfork,
-  Mainnet,
-  TronMainnet,
-  createCommonFromGethGenesis,
-} from '@tvmjs/common'
+import { Common, Hardfork, Mainnet, TronMainnet } from '@tvmjs/common'
 // import { Ethash } from '@tvmjs/ethash'
 import { createFeeMarket1559Tx, createLegacyTx } from '@tvmjs/tx'
 import { concatBytes, createAccount, createZeroAddress } from '@tvmjs/util'
@@ -66,6 +59,7 @@ describe('BlockBuilder', () => {
   })
 
   it('should build a valid block', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const genesisBlock = createBlock({ header: { gasLimit: 50000 } }, { common })
     const blockchain = await createBlockchain({ genesisBlock, common, validateConsensus: false })
@@ -102,6 +96,7 @@ describe('BlockBuilder', () => {
   })
 
   it('should throw if adding a transaction exceeds the block gas limit', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const vm = await createVM({ common })
     const genesis = createBlock({}, { common })
@@ -172,54 +167,19 @@ describe('BlockBuilder', () => {
   //   )
   // })
 
-  it('should correctly seal a PoA block', async () => {
-    // const common = new Common({ chain: Chain.Rinkeby, hardfork: Hardfork.Istanbul })
-    const consensusConfig = {
-      clique: {
-        period: 10,
-        epoch: 30000,
-      },
-    }
-    const defaultChainData: GethGenesis = {
-      config: {
+  it('should correctly seal a block with explicit Clique metadata', async () => {
+    // Synthetic consensus fixture; this does not define TRON network consensus.
+    const common = new Common({
+      chain: {
+        ...TronMainnet,
+        name: 'clique-sealing-fixture',
         chainId: 123456,
-        homesteadBlock: 0,
-        eip150Block: 0,
-        eip150Hash: '0x0000000000000000000000000000000000000000000000000000000000000000',
-        eip155Block: 0,
-        eip158Block: 0,
-        byzantiumBlock: 0,
-        constantinopleBlock: 0,
-        petersburgBlock: 0,
-        istanbulBlock: 0,
-        berlinBlock: 0,
-        londonBlock: 0,
-        ...consensusConfig,
+        consensus: {
+          type: 'poa',
+          algorithm: 'clique',
+          clique: { period: 10, epoch: 30000 },
+        },
       },
-      nonce: '0x0',
-      timestamp: '0x614b3731',
-      gasLimit: '0x47b760',
-      difficulty: '0x1',
-      mixHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
-      coinbase: '0x0000000000000000000000000000000000000000',
-      number: '0x0',
-      gasUsed: '0x0',
-      parentHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
-      baseFeePerGas: 7,
-      alloc: {},
-    }
-
-    const addr = SIGNER_A.address.toString().slice(2)
-
-    const extraData2 = `0x${'0'.repeat(64)}${addr}${'0'.repeat(130)}`
-    const chainData = {
-      ...defaultChainData,
-      extraData: extraData2,
-      alloc: { [addr]: { balance: '0x10000000000000000000' } },
-    }
-    const common = createCommonFromGethGenesis(chainData, {
-      chain: 'devnet',
-      hardfork: Hardfork.Istanbul,
     })
 
     // extraData: [vanity, activeSigner, seal]
@@ -238,7 +198,7 @@ describe('BlockBuilder', () => {
     const vm = await createVM({ common, blockchain })
 
     // add balance for tx
-    await vm.stateManager.putAccount(SIGNER_A.address, createAccount({ balance: 100000 }))
+    await vm.stateManager.putAccount(SIGNER_A.address, createAccount({ balance: 1000000 }))
 
     const blockBuilder = await buildBlock(vm, {
       parentBlock: genesisBlock,
@@ -248,7 +208,7 @@ describe('BlockBuilder', () => {
 
     // Set up tx
     const tx = createLegacyTx(
-      { to: createZeroAddress(), value: 1000, gasLimit: 21000, gasPrice: 1 },
+      { to: createZeroAddress(), value: 1000, gasLimit: 21000, gasPrice: 10 },
       { common, freeze: false },
     ).sign(SIGNER_A.privateKey)
 
@@ -268,6 +228,7 @@ describe('BlockBuilder', () => {
   })
 
   it('should throw if block already built or reverted', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const genesisBlock = createBlock({ header: { gasLimit: 50000 } }, { common })
     const blockchain = await createBlockchain({ genesisBlock, common, validateConsensus: false })
@@ -322,6 +283,7 @@ describe('BlockBuilder', () => {
   })
 
   it('should build a block without any txs', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
     const genesisBlock = createBlock({ header: { gasLimit: 50000 } }, { common })
     const blockchain = await createBlockchain({ genesisBlock, common, validateConsensus: false })
@@ -344,6 +306,7 @@ describe('BlockBuilder', () => {
   })
 
   it('should build a 1559 block with legacy and 1559 txs', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London, eips: [1559] })
     const genesisBlock = createBlock(
       { header: { gasLimit: 50000, baseFeePerGas: 100 } },

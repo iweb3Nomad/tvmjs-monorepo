@@ -41,7 +41,11 @@ describe('[Common]: independent TRON execution profile', () => {
 
   it('rejects the old implicit Mainnet + tron mapping', () => {
     for (const chain of [Mainnet, { ...Mainnet }]) {
-      assert.throws(() => new Common({ chain, hardfork: Hardfork.Tron }), /Use TronMainnet/)
+      assert.throws(
+        // @ts-expect-error Selecting TRON does not make Ethereum data executable.
+        () => new Common({ chain, hardfork: Hardfork.Tron }),
+        /Use TronMainnet/,
+      )
     }
   })
 

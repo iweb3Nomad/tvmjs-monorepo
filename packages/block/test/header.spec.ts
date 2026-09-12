@@ -55,6 +55,7 @@ describe('[Block]: Header functions', () => {
   })
 
   it('Initialization -> fromHeaderData()', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     let header = createBlockHeader(undefined, { common })
     assert.isDefined(bytesToHex(header.hash()), 'genesis block should initialize')
@@ -84,6 +85,7 @@ describe('[Block]: Header functions', () => {
   })
 
   it('Initialization -> fromRLPSerializedHeader()', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     let header = createBlockHeader({}, { common, freeze: false })
 
@@ -125,6 +127,7 @@ describe('[Block]: Header functions', () => {
   })
 
   it('Initialization -> createWithdrawalFromBytesArray()', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const zero = new Uint8Array(0)
     const headerArray = []
@@ -175,6 +178,7 @@ describe('[Block]: Header functions', () => {
   })
 
   it('Initialization -> Clique Blocks', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Chainstart })
     const header = createBlockHeader({ extraData: new Uint8Array(97) }, { common })
     assert.isDefined(bytesToHex(header.hash()), 'default block should initialize')
@@ -182,6 +186,7 @@ describe('[Block]: Header functions', () => {
 
   it('should validate extraData', () => {
     // PoW
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     let common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     let genesis = createBlock({}, { common })
 
@@ -217,6 +222,7 @@ describe('[Block]: Header functions', () => {
     )
 
     // PoA
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Chainstart })
     genesis = createBlock({ header: { extraData: new Uint8Array(97) } }, { common })
 
@@ -269,6 +275,7 @@ describe('[Block]: Header functions', () => {
   })
 
   it('should skip consensusFormatValidation if flag is set to false', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Chainstart })
 
     assert.doesNotThrow(
@@ -425,6 +432,7 @@ describe('[Block]: Header functions', () => {
       })
 */
   it('should test validateGasLimit()', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
     const testData = bcBlockGasLimitTestData.tests.BlockGasLimit2p63m1
 
@@ -450,6 +458,7 @@ describe('[Block]: Header functions', () => {
   })
 
   it('should test hash() function', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     let common = new Common({ chain: Mainnet, hardfork: Hardfork.Chainstart })
     let header = createBlockHeader(mainnetBlocks[0]['header'], { common })
     assert.strictEqual(
@@ -458,6 +467,7 @@ describe('[Block]: Header functions', () => {
       'correct PoW hash (mainnet block 1)',
     )
 
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Chainstart })
     header = createBlockHeader(goerliBlocks[0]['header'], { common })
     assert.strictEqual(
@@ -468,6 +478,7 @@ describe('[Block]: Header functions', () => {
   })
 
   it('should be able to initialize shanghai header with correct hardfork defaults', () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.Shanghai })
     const header = createBlockHeader({}, { common })
     assert.strictEqual(

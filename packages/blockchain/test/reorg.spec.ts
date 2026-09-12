@@ -14,6 +14,7 @@ import type { ConsensusDict } from '../src/index.ts'
 
 describe('reorg tests', () => {
   it.skip('should correctly reorg the chain if the total difficulty is higher on a lower block number than the current head block', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: Mainnet, hardfork: Hardfork.MuirGlacier })
     const genesis = createBlock(
       {
@@ -67,6 +68,7 @@ describe('reorg tests', () => {
   })
 
   it('should correctly reorg a poa chain and remove blocks from clique snapshots', async () => {
+    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
     const common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Chainstart })
     const genesisBlock = createBlock({ header: { extraData: new Uint8Array(97) } }, { common })
 
