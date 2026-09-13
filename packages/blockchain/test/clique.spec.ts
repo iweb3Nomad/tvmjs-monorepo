@@ -1,11 +1,5 @@
 import { cliqueEpochTransitionSigners, createBlock, createSealedCliqueBlock } from '@tvmjs/block'
-import {
-  Common,
-  ConsensusAlgorithm,
-  ConsensusType,
-  Hardfork,
-  createCustomCommon,
-} from '@tvmjs/common'
+import { ConsensusAlgorithm } from '@tvmjs/common'
 import type { Address } from '@tvmjs/util'
 import { concatBytes, createAddressFromString, createZeroAddress } from '@tvmjs/util'
 import { assert, describe, expect, it } from 'vitest'
@@ -21,15 +15,14 @@ import {
   SIGNER_E,
   SIGNER_F,
   type Signer,
-  goerliChainConfig,
 } from '@tvmjs/testdata'
 
 import type { Block } from '@tvmjs/block'
-import type { CliqueConfig } from '@tvmjs/common'
+import type { CliqueConfig, Common } from '@tvmjs/common'
 import type { Blockchain, ConsensusDict } from '../src/index.ts'
+import { cliqueCommon } from './util.ts'
 
-// @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-const COMMON = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Chainstart })
+const COMMON = cliqueCommon()
 const EXTRA_DATA = new Uint8Array(97)
 const GAS_LIMIT = BigInt(8000000)
 
@@ -93,6 +86,7 @@ function getBlock(
       timestamp: lastBlock.header.timestamp + BigInt(15),
       extraData,
       gasLimit: GAS_LIMIT,
+      baseFeePerGas: lastBlock.header.calcNextBaseFee(),
       difficulty: BigInt(2),
       nonce,
     },
@@ -148,11 +142,23 @@ const addNextBlock = async (
 
 describe('Clique: Initialization', () => {
   it('should initialize a clique blockchain', async () => {
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: goerliChainConfig, hardfork: Hardfork.Chainstart })
+    const common = cliqueCommon()
     const consensusDict: ConsensusDict = {}
     consensusDict[ConsensusAlgorithm.Clique] = new CliqueConsensus()
-    const blockchain = await createBlockchain({ common, consensusDict })
+    const genesisBlock = createBlock(
+      {
+        header: {
+          gasLimit: GAS_LIMIT,
+          extraData: concatBytes(
+            new Uint8Array(32),
+            SIGNER_A.address.toBytes(),
+            new Uint8Array(65),
+          ),
+        },
+      },
+      { common },
+    )
+    const blockchain = await createBlockchain({ common, consensusDict, genesisBlock })
 
     const head = await blockchain.getIteratorHead()
     assert.deepEqual(head.hash(), blockchain.genesisBlock.hash(), 'correct genesis hash')
@@ -645,23 +651,7 @@ describe('Clique: Initialization', () => {
   })
 
   it('Clique Voting: Epoch transitions reset all votes to allow chain checkpointing', async () => {
-    const common = createCustomCommon(
-      {
-        // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-        consensus: {
-          type: ConsensusType.ProofOfAuthority,
-          algorithm: ConsensusAlgorithm.Clique,
-          clique: {
-            period: 15,
-            epoch: 3,
-          },
-        },
-      },
-      goerliChainConfig,
-      {
-        hardfork: Hardfork.Chainstart,
-      },
-    )
+    const common = cliqueCommon(3)
     const { blocks, blockchain } = await initWithSigners([SIGNER_A, SIGNER_B], common)
     await addNextBlock(blockchain, blocks, SIGNER_A, [SIGNER_C, true], undefined, common)
     await addNextBlock(blockchain, blocks, SIGNER_B, undefined, undefined, common)
@@ -702,23 +692,7 @@ describe('Clique: Initialization', () => {
   })
 
   it('Clique Voting: Recent signatures should not reset on checkpoint blocks imported in a batch', async () => {
-    const common = createCustomCommon(
-      {
-        // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-        consensus: {
-          type: ConsensusType.ProofOfAuthority,
-          algorithm: ConsensusAlgorithm.Clique,
-          clique: {
-            period: 15,
-            epoch: 3,
-          },
-        },
-      },
-      goerliChainConfig,
-      {
-        hardfork: Hardfork.Chainstart,
-      },
-    )
+    const common = cliqueCommon(3)
     const { blocks, blockchain } = await initWithSigners([SIGNER_A, SIGNER_B, SIGNER_C], common)
     await addNextBlock(blockchain, blocks, SIGNER_A, undefined, undefined, common)
     await addNextBlock(blockchain, blocks, SIGNER_B, undefined, undefined, common)
@@ -851,70 +825,4 @@ describe('clique: reorgs', () => {
       'address SIGNER_C not added to signers',
     )
   })
-
-  /**
-   * This test fails, but demonstrates why at an epoch reorg with changing votes, we get an internal error.
-  it(
-    'Two signers, voting to add one other signer, epoch transition, then reorg and revoke this addition',
-    async (st) => {
-      const common = createCustomCommon(
-        {
-          consensus: {
-            type: ConsensusType.ProofOfAuthority,
-            algorithm: ConsensusAlgorithm.Clique,
-            clique: {
-              period: 15,
-              epoch: 3,
-            },
-          },
-        },
-        {
-          baseChain: Chain.Rinkeby,
-          hardfork: Hardfork.Chainstart,
-        }
-      )
-      const { blocks, blockchain } = await initWithSigners([SIGNER_A, SIGNER_B])
-      const genesis = blocks[0]
-      await addNextBlock(blockchain, blocks, SIGNER_A, [SIGNER_C, true], undefined, common)
-      await addNextBlock(blockchain, blocks, SIGNER_B, [SIGNER_C, true], undefined, common)
-      await addNextBlock(blockchain, blocks, SIGNER_A, undefined, undefined, common)
-      const headBlockNotForked = await addNextBlock(
-        blockchain,
-        blocks,
-        SIGNER_B,
-        undefined,
-        undefined,
-        common
-      )
-     assert.deepEqual(
-        (blockchain.consensus as CliqueConsensus).cliqueActiveSigners(
-          blocks[blocks.length - 1].header.number + BigInt(1)
-        ),
-        [SIGNER_A.address, SIGNER_B.address, SIGNER_C.address],
-        'address SIGNER_C added to signers'
-      )
-     assert.deepEqual((await blockchain.getCanonicalHeadBlock()).hash(), headBlockNotForked.hash())
-      await addNextBlockReorg(blockchain, blocks, genesis, SIGNER_B, undefined, undefined, common)
-      await addNextBlock(blockchain, blocks, SIGNER_A, undefined, undefined, common)
-
-      // Add block 3: epoch transition
-      await addNextBlock(blockchain, blocks, SIGNER_B, undefined, undefined, common)
-      // Now here suddenly SIGNER_C is added again as signer
-
-      await addNextBlock(blockchain, blocks, SIGNER_A, undefined, undefined, common)
-      await addNextBlock(blockchain, blocks, SIGNER_B, undefined, undefined, common)
-
-      const headBlock = await addNextBlock(blockchain, blocks, SIGNER_A, undefined, undefined, common)
-     assert.deepEqual((await blockchain.getCanonicalHeadBlock()).hash(), headBlock.hash())
-
-     assert.deepEqual(
-        (blockchain.consensus as CliqueConsensus).cliqueActiveSigners(
-          blocks[blocks.length - 1].header.number + BigInt(1)
-        ),
-        [SIGNER_A.address, SIGNER_B.address],
-        'address SIGNER_C not added to signers'
-      )
-
-          }
-  ) */
 })

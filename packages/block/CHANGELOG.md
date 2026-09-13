@@ -17,6 +17,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Remove Blob header fields, fee helpers and transaction validation. Reject retired fields before RPC/payload mapping and reject old extended RLP headers without changing ordinary TRON field order.
 - Default execution blocks to `TronMainnet`. Do not require inherited Ethereum consensus metadata for execution headers, and reject uncle headers when using execution-only presets.
 
+### Fixes
+
+- Preserve large decimal RPC difficulty values with direct bigint conversion.
+- Reject inactive RLP block-body extensions instead of silently dropping withdrawals or other trailing fields.
+- Reject RPC transaction-hash arrays with an actionable message requiring full transaction objects; header-only decoding remains available.
+
+### Tests
+
+- Migrate retained Node and Browser suites to TRON configuration, preserving base-fee, serialization, signed Token JSON/RPC round trips, and explicit PoW/Clique/PoS tool coverage.
+- Replace retired Ethereum activation tests with capability and input rejection checks. Keep standalone withdrawal/request vectors; retire the external multi-Hardfork difficulty runner and excluded BAL activation test. Official Ethereum vectors remain unexecuted.
+- Migrate runnable examples and document the separation between execution blocks and retained data/consensus tools.
+
 ### Chores
 
 - Update internal `@tvmjs/*` dependencies for the coordinated TVMJS release

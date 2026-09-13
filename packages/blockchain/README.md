@@ -11,8 +11,8 @@ v1.2.0 removes Blob validation and parent-header Blob accounting. Blob blocks ar
 
 - [Installation](#installation)
 - [Getting Started](#getting-started)
-- [EIP Integrations](#eip-integrations)
-- [Consensus Types](#consensus-types)
+- [Supported Blocks and Tx Types](#supported-blocks-and-tx-types)
+- [Consensus](#consensus)
 - [Browser](#browser)
 - [API](#api)
 - [Testing](#testing)
@@ -47,54 +47,35 @@ The following is an example to instantiate a simple Blockchain object, put block
 
 import { createBlock } from '@tvmjs/block'
 import { createBlockchain } from '@tvmjs/blockchain'
-import { Common, Hardfork, Mainnet } from '@tvmjs/common'
+import { Common, TronMainnet } from '@tvmjs/common'
 import { bytesToHex } from '@tvmjs/util'
 
-const main = async () => {
-  const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
-  // Use the safe static constructor which awaits the init method
-  const blockchain = await createBlockchain({
-    validateBlocks: false, // Skipping validation so we can make a simple chain without having to provide complete blocks
-    validateConsensus: false,
-    common,
-  })
+const common = new Common({ chain: TronMainnet })
+// An explicit local genesis, not the network's canonical genesis block.
+const genesisBlock = createBlock({ header: { gasLimit: 1000000n } }, { common })
+const blockchain = await createBlockchain({ common, genesisBlock, validateBlocks: true })
 
-  // We use minimal data to provide a sequence of blocks (increasing number, difficulty, and then setting parent hash to previous block)
+let parent = genesisBlock
+for (let height = 1n; height <= 2n; height++) {
   const block = createBlock(
     {
       header: {
-        number: 1n,
-        parentHash: blockchain.genesisBlock.hash(),
-        difficulty: blockchain.genesisBlock.header.difficulty + 1n,
+        number: height,
+        parentHash: parent.hash(),
+        timestamp: parent.header.timestamp + 1n,
+        gasLimit: parent.header.gasLimit,
+        baseFeePerGas: parent.header.calcNextBaseFee(),
       },
     },
-    { common, setHardfork: true },
+    { common },
   )
-  const block2 = createBlock(
-    {
-      header: {
-        number: 2n,
-        parentHash: block.header.hash(),
-        difficulty: block.header.difficulty + 1n,
-      },
-    },
-    { common, setHardfork: true },
-  )
-  // See @tvmjs/block for more details on how to create a block
   await blockchain.putBlock(block)
-  await blockchain.putBlock(block2)
-
-  // We iterate over the blocks in the chain to the current head (block 2)
-  await blockchain.iterator('i', (block) => {
-    const blockNumber = block.header.number.toString()
-    const blockHash = bytesToHex(block.hash())
-    console.log(`Block ${blockNumber}: ${blockHash}`)
-  })
-
-  // Block 1: 0xa1a061528d74ba81f560e1ebc4f29d6b58171fc13b72b876cdffe6e43b01bdc5
-  // Block 2: 0x5583be91cf9fb14f5dbeb03ad56e8cef19d1728f267c35a25ba5a355a528f602
+  parent = block
 }
-void main()
+
+await blockchain.iterator('example', (block) => {
+  console.log(`Block ${block.header.number}: ${bytesToHex(block.hash())}`)
+})
 ```
 
 More examples can be found in the [examples](./examples/) folder.
@@ -111,19 +92,11 @@ If you need a persistent data store for your use case you can consider using the
 
 ### Consensus
 
-There is a dedicated consensus class for each type of supported consensus, `Ethash`, `Clique` and `Casper` (PoS, this one is rather the do-nothing part of `Casper` and letting the respective consensus/beacon client do the hard work! 🙂). Each consensus class adheres to a common interface `Consensus` implementing the following five methods in a consensus-specific way:
+By default there is no consensus implementation: TRON presets contain execution configuration only. Supply an explicit `genesisBlock`, or provide genesis metadata and state separately. Without consensus metadata, canonical selection follows block height; an equal-height sibling is stored without replacing the first canonical block. Rewriting an older block does not move the head back, and canonical bodies arriving after headers advance the block head independently.
 
-- `genesisInit(genesisBlock: Block): Promise<void>`
-- `setup(): Promise<void>`
-- `validateConsensus(block: Block): Promise<void>`
-- `validateDifficulty(header: BlockHeader): Promise<void>`
-- `newBlock(block: Block, commonAncestor?: BlockHeader, ancientHeaders?: BlockHeader[]): Promise<void>`
+`Ethash`, `Clique`, `Casper` and custom consensus adapters remain extension tools. To use one, provide the metadata in a complete TRON `ChainConfig` and supply any required implementation through `consensusDict`. Setting `validateConsensus: true` without metadata or a matching implementation is rejected. These adapters do not implement TRON DPoS or permit Ethereum Hardfork schedules.
 
-#### Custom Consensus Algorithms
-
-You can also create a custom consensus class implementing the above interface and pass it into the `Blockchain` constructor using the `consensus` option at instantiation. See [this test script](https://github.com/tronweb3/tvmjs-monorepo/blob/master/packages/blockchain/test/customConsensus.spec.ts) for a complete example of how write and use a custom consensus implementation.
-
-Note, if you construct a blockchain with a custom consensus implementation, transition checks for switching from PoW to PoS are disabled so defining a merge hardfork will have no impact on the consensus mechanism defined for the chain.
+The [Clique example](./examples/clique.ts) demonstrates explicit metadata and genesis initialization. The [custom consensus test](./test/customConsensus.spec.ts) demonstrates the adapter contract (`genesisInit`, `setup`, `validateConsensus`, `validateDifficulty`, and `newBlock`).
 
 ## Custom Genesis State
 
@@ -174,9 +147,9 @@ The initialized genesis block is available through `Blockchain.genesisBlock`. `c
 
 This library supports the handling of `EIP-1559` blocks and transactions.
 
-### EIP-7685 Requests Support
+### Unavailable Ethereum execution capabilities
 
-This library supports blocks including the [EIP-7685](https://eips.ethereum.org/EIPS/eip-7685) requests to the consensus layer (like e.g. deposit or withdrawal requests).
+Blob transactions, Beacon root fields and authorization transactions are removed. Withdrawals, execution requests, BAL and slot-number implementations may remain as data tools, but cannot be activated in a TRON execution profile. Their block input is rejected; standalone helper availability does not imply execution support.
 
 ## Browser
 
@@ -240,6 +213,12 @@ DEBUG=tvmjs,blockchain:clique tsx test.ts
 Additional log selections can be added with a comma separated list (no spaces). Logs with extensions can be enabled with a colon `:`, and `*` can be used to include all extensions (currently do not apply for blockchain debugging, example taken from another library).
 
 `DEBUG=tvmjs,statemanager:cache:*,trie,statemanager:merkle npx vitest test/statemanager.spec.ts`
+
+## Testing
+
+Run `npm run test:node` and `npm run test:browser` from `packages/blockchain`. Both execute the retained storage, fork-choice, iterator, explicit-consensus and configuration regression suites. Fixtures use an explicit local genesis; they are not canonical TRON network genesis blocks.
+
+The formerly skipped iterator-reorg and shorter-chain/higher-total-difficulty cases execute with explicit TRON configuration. Clique voting, checkpoint signer validation, headers-before-bodies and repeated-old-block regressions remain covered. Ethash proof verification and the external official Ethereum blockchain vector suite are not executed by these package tests.
 
 ## Upstream
 

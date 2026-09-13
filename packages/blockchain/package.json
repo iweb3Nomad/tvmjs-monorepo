@@ -60,7 +60,10 @@
     "lru-cache": "11.0.2"
   },
   "devDependencies": {
-    "@types/debug": "4.1.12"
+    "@types/debug": "4.1.12",
+    "@noble/hashes": "2.0.1",
+    "@tvmjs/testdata": "1.0.0",
+    "@tvmjs/tx": "1.0.1"
   },
   "engines": {
     "node": ">=20"

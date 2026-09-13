@@ -21,6 +21,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Choose the canonical head by block number when the Common has no consensus metadata: a higher block extends the head, while re-put or lower blocks are stored without moving it. TRON execution presets default block difficulty to zero, so the total-difficulty comparison alone left the head at genesis after the consensus guard was introduced.
 - Require Clique epoch checkpoint signer lists to exactly match the active signer list, rejecting empty, truncated, extended, duplicated, and reordered checkpoints
 
+### Tests
+
+- Migrate Node and Browser suites to explicit TRON genesis configuration, including database reload, header/body progression, lookup, insertion, deletion and fork choice.
+- Restore the skipped iterator reorg and shorter-chain/higher-total-difficulty regressions. Retain explicit Clique voting, checkpoint signer and snapshot rollback coverage without Ethereum Hardfork schedules.
+- Fix exception assertions that could pass without throwing, and verify large Token IDs and actual signers when stored blocks are decoded.
+- Migrate examples and declare their existing test-data/hash dependencies plus the transaction dependency used by block-body tests. External Ethereum blockchain vectors and Ethash proof verification remain outside the package suite.
+
 ### Chores
 
 - Update internal `@tvmjs/*` dependencies for the coordinated TVMJS release
