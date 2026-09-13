@@ -1,5 +1,5 @@
 import { keccak_256 } from '@noble/hashes/sha3.js'
-import { Common, Hardfork, Mainnet, TronMainnet } from '@tvmjs/common'
+import { Common, Hardfork, TronMainnet, TronNile, TronShasta } from '@tvmjs/common'
 import { SIGNER_G } from '@tvmjs/testdata'
 import {
   Account,
@@ -18,41 +18,45 @@ import { assert, describe, it } from 'vitest'
 import { TVMError } from '../src/errors.ts'
 import { createTVM } from '../src/index.ts'
 
-// Non-protected Create2Address generator. Does not check if Uint8Arrays have the right padding.
-function create2address(sourceAddress: Address, codeHash: Uint8Array, salt: Uint8Array): Address {
-  const rlp_proc_bytes = hexToBytes('0xff')
-  const hashBytes = concatBytes(rlp_proc_bytes, sourceAddress.bytes, salt, codeHash)
+// Independent TRON CREATE2 formula: keccak256(0x41 || creator20 || salt32 || initcodeHash).
+function tronCreate2Address(
+  sourceAddress: Address,
+  codeHash: Uint8Array,
+  salt: Uint8Array,
+): Address {
+  const prefix = Uint8Array.of(0x41)
+  const hashBytes = concatBytes(prefix, sourceAddress.bytes, salt, codeHash)
   return new Address(keccak_256(hashBytes).slice(12))
 }
 
 describe('RunCall tests', () => {
-  it('Create where FROM account nonce is 0', async () => {
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Constantinople })
+  it('creates a TRON deployment when the caller nonce is zero', async () => {
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
-    const res = await tvm.runCall({ to: undefined })
+    const res = await tvm.runCall({ to: undefined, rootTransactionId: new Uint8Array(32) })
+    assert.isUndefined(res.execResult.exceptionError)
     assert.strictEqual(
       res.createdAddress?.toString(),
-      '0xbd770416a3345f91e4b34576cb804a576fa48eb1',
-      'created valid address when FROM account nonce is 0',
+      '0x675e991f2dbd1a61dd0d257de5be78e4fa9dd48c',
+      'derives the address from the root transaction ID and 21-byte owner',
     )
   })
 
   /*
     This test:
         Setups a contract at address 0x00..ff
-        Instantiates the TVM at the Constantinople fork
+        Instantiates the TVM with the TRON execution profile
         Calls the address with various arguments (callvalue is used as argument). VMs `runCall` is used.
         The CREATE2 address which the contract creates is checked against the expected CREATE2 value.
 */
 
-  it('Constantinople: EIP-1014 CREATE2 creates the right contract address', async () => {
+  it('TRON CREATE2 returns the 21-byte address for every salt', async () => {
     // setup the accounts for this test
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
     const contractAddress = new Address(hexToBytes('0x00000000000000000000000000000000000000ff')) // contract address
     // setup the vm
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Constantinople })
+
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
     const code = '0x3460008080F560005260206000F3'
     /*
@@ -88,62 +92,33 @@ describe('RunCall tests', () => {
         valueBytes = concatBytes(new Uint8Array(diff), valueBytes)
       }
       // calculate expected CREATE2 address
-      const expectedAddress = create2address(contractAddress, codeHash, valueBytes)
+      const expectedAddress = tronCreate2Address(contractAddress, codeHash, valueBytes)
       // run the actual call
       const res = await tvm.runCall(runCallArgs)
-      // retrieve the return value and convert it to an address (remove the first 12 bytes from the 32-byte return value)
+      assert.isUndefined(res.execResult.exceptionError)
+      assert.strictEqual(res.execResult.returnValue.length, 32)
+      assert.strictEqual(res.execResult.returnValue[11], 0x41)
+      // The stack word contains the 21-byte TRON address; Address stores its low 20 bytes.
       const executionReturnValue = new Address(res.execResult.returnValue.slice(12))
       if (!expectedAddress.equals(executionReturnValue)) {
         assert.fail('contract address not equal')
       }
     }
-
-    assert.isTrue(true, 'CREATE2 creates (empty) contracts at the expected address')
   })
 
-  it('Byzantium cannot access Constantinople opcodes', async () => {
-    // setup the accounts for this test
-    const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
-    const contractAddress = new Address(hexToBytes('0x00000000000000000000000000000000000000ff')) // contract address
-    // setup the tvm
-    const tvmByzantium = await createTVM({
-      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-      common: new Common({ chain: Mainnet, hardfork: Hardfork.Byzantium }),
-    })
-    const tvmConstantinople = await createTVM({
-      // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-      common: new Common({ chain: Mainnet, hardfork: Hardfork.Constantinople }),
-    })
-    const code = '0x600160011B00'
-    /*
-      code:             remarks: (top of the stack is at the zero index)
-        PUSH1 0x01
-        PUSH1 0x01
-        SHL
-        STOP
-    */
-
-    await tvmByzantium.stateManager.putCode(contractAddress, hexToBytes(code)) // setup the contract code
-    await tvmConstantinople.stateManager.putCode(contractAddress, hexToBytes(code)) // setup the contract code
-
-    const runCallArgs = {
-      caller, // call address
-      gasLimit: BigInt(0xffffffffff), // ensure we pass a lot of gas, so we do not run out of gas
-      to: contractAddress, // call to the contract address
-    }
-
-    const byzantiumResult = await tvmByzantium.runCall(runCallArgs)
-    const constantinopleResult = await tvmConstantinople.runCall(runCallArgs)
-
-    assert.isTrue(
-      byzantiumResult.execResult.exceptionError?.error === 'invalid opcode',
-      'byzantium cannot accept constantinople opcodes (SHL)',
-    )
-    assert.isUndefined(
-      constantinopleResult.execResult.exceptionError,
-      'constantinople can access the SHL opcode',
-    )
-  })
+  it.each([TronMainnet, TronNile, TronShasta])(
+    '$name keeps SHL available when an Ethereum hardfork switch is rejected',
+    async (chain) => {
+      const common = new Common({ chain })
+      const tvm = await createTVM({ common })
+      assert.throws(() => common.setHardfork(Hardfork.Byzantium), /not supported/)
+      assert.strictEqual(common.hardfork(), Hardfork.Tron)
+      const result = await tvm.runCode({ code: hexToBytes('0x600160011b00'), gasLimit: 9n })
+      assert.isUndefined(result.exceptionError)
+      assert.deepEqual(result.runState!.stack.peek(), [2n])
+      assert.strictEqual(result.executionGasUsed, 9n)
+    },
+  )
 
   it('charges TRON writes from a padded original value without a reset refund', async () => {
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee'))
@@ -184,13 +159,13 @@ describe('RunCall tests', () => {
     assert.strictEqual(result.execResult.gasRefund, BigInt(0), 'gas refund correct')
   })
 
-  it('ensure correct gas for calling non-existent accounts in homestead', async () => {
+  it('charges TRON zero-value CALL without creating an absent recipient', async () => {
     // setup the accounts for this test
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
     const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
     // setup the vm
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Homestead })
+
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
     // code to call 0x00..00dd, which does not exist
     const code = '0x6000600060006000600060DD61FFFF5A03F100'
@@ -206,19 +181,24 @@ describe('RunCall tests', () => {
 
     const result = await tvm.runCall(runCallArgs)
 
-    // 7x push + gas + sub + call + callNewAccount
-    // 7*3 + 2 + 3 + 40 + 25000 = 25066
-    assert.strictEqual(result.execResult.executionGasUsed, BigInt(25066), 'gas used correct')
+    // 7 PUSH instructions + GAS + SUB + CALL: 21 + 2 + 3 + 40 = 66.
+    assert.isUndefined(result.execResult.exceptionError)
+    assert.strictEqual(result.execResult.executionGasUsed, 66n, 'Energy used correctly')
+    assert.isUndefined(
+      await tvm.stateManager.getAccount(
+        createAddressFromString('0x00000000000000000000000000000000000000dd'),
+      ),
+    )
     assert.strictEqual(result.execResult.gasRefund, BigInt(0), 'gas refund correct')
   })
 
-  it('ensure callcode goes OOG if the gas argument is more than the gas left in the homestead fork', async () => {
+  it('rejects CALLCODE when memory expansion exceeds the available Energy', async () => {
     // setup the accounts for this test
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
     const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
     // setup the vm
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Homestead })
+
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
     // code to call back into the calling account (0x00..00EE),
     // but using too much memory
@@ -249,12 +229,10 @@ describe('RunCall tests', () => {
     const caller = new Address(hexToBytes('0x00000000000000000000000000000000000000ee')) // caller address
     const address = new Address(hexToBytes('0x00000000000000000000000000000000000000ff'))
     // setup the vm
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.TangerineWhistle })
+
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
-    // code to call 0x00..00fe, with the GAS opcode used as gas
-    // this cannot be paid, since we also have to pay for CALL (40 gas)
-    // this should thus go OOG
+    // SELFDESTRUCT to the missing beneficiary 0x00..00fe.
     const code = '0x60FEFF'
 
     await tvm.stateManager.putCode(address, hexToBytes(code))
@@ -269,8 +247,8 @@ describe('RunCall tests', () => {
     const result = await tvm.runCall(runCallArgs)
     // gas: 5000 (selfdestruct) + 25000 (call new account)  + push (1) = 30003
     assert.strictEqual(result.execResult.executionGasUsed, BigInt(30003), 'gas used correct')
-    // selfdestruct refund
-    assert.strictEqual(result.execResult.gasRefund, BigInt(24000), 'gas refund correct')
+    assert.isUndefined(result.execResult.exceptionError)
+    assert.strictEqual(result.execResult.gasRefund, 0n, 'TRON does not refund SELFDESTRUCT Energy')
   })
 
   const selfdestructNewAccountCases = (['missing', 'empty', 'existing', 'self'] as const).flatMap(
@@ -455,8 +433,8 @@ describe('RunCall tests', () => {
     const slot = hexToBytes(`0x${'00'.repeat(32)}`)
     const emptyBytes = hexToBytes('0x')
     // setup the vm
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
+
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
     const code = '0x60008080F060005500'
     /*
@@ -481,16 +459,25 @@ describe('RunCall tests', () => {
     const runCallArgs = {
       caller, // call address
       to: address,
+      rootTransactionId: new Uint8Array(32).fill(1),
       gasLimit: BigInt(0xffffffffff), // ensure we pass a lot of gas, so we do not run out of gas
     }
 
-    await tvm.runCall(runCallArgs)
+    const first = await tvm.runCall(runCallArgs)
+    assert.isUndefined(first.execResult.exceptionError)
+    assert.strictEqual((await tvm.stateManager.getAccount(address))!.nonce, MAX_UINT64)
     let storage = await tvm.stateManager.getStorage(address, slot)
 
     // The nonce is MAX_UINT64 - 1, so we are allowed to create a contract (nonce of creating contract is now MAX_UINT64)
     assert.notDeepEqual(storage, emptyBytes, 'successfully created contract')
 
-    await tvm.runCall(runCallArgs)
+    // A new transaction ID prevents an address collision from masking the nonce limit.
+    const second = await tvm.runCall({
+      ...runCallArgs,
+      rootTransactionId: new Uint8Array(32).fill(2),
+    })
+    assert.isUndefined(second.execResult.exceptionError)
+    assert.strictEqual((await tvm.stateManager.getAccount(address))!.nonce, MAX_UINT64)
 
     // The nonce is MAX_UINT64, so we are NOT allowed to create a contract (nonce of creating contract is now MAX_UINT64)
     storage = await tvm.stateManager.getStorage(address, slot)
@@ -508,8 +495,8 @@ describe('RunCall tests', () => {
     // setup the accounts for this test
     const caller = new Address(hexToBytes('0x1a02a619e51cc5f8a2a61d2a60f6c80476ee8ead')) // caller address
     // setup the vm
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
+
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
     const code = '0x3034526020600760203460045afa602034343e604034f3'
 
@@ -523,13 +510,18 @@ describe('RunCall tests', () => {
       caller, // call address
       gasLimit: BigInt(150000),
       data: hexToBytes(code),
+      rootTransactionId: new Uint8Array(32),
       gasPrice: BigInt(70000000000),
     }
 
     const result = await tvm.runCall(runCallArgs)
-    const expectedAddress = '0x28373a29d17af317e669579d97e7dddc9da6e3e2'
-    const expectedCode =
-      '0x00000000000000000000000028373a29d17af317e669579d97e7dddc9da6e3e2e7dddc9da6e3e200000000000000000000000000000000000000000000000000'
+    assert.isUndefined(result.execResult.exceptionError)
+    const expectedAddress = '0xc823b6d87a2cf17a731af1b6e150e58c13b2ee7f'
+    // ADDRESS uses the internal 20-byte account address; CREATE/CREATE2 return 21 bytes.
+    const addressWord = hexToBytes(`0x${'00'.repeat(12)}${expectedAddress.slice(2)}`)
+    const expectedMemory = new Uint8Array(64)
+    expectedMemory.set(addressWord, 7)
+    expectedMemory.set(addressWord, 0)
 
     assert.strictEqual(
       result.createdAddress?.toString(),
@@ -537,13 +529,17 @@ describe('RunCall tests', () => {
       'created address correct',
     )
     const deployedCode = await tvm.stateManager.getCode(result.createdAddress!)
-    assert.strictEqual(bytesToHex(deployedCode), expectedCode, 'deployed code correct')
+    assert.deepEqual(
+      deployedCode,
+      expectedMemory,
+      'IDENTITY keeps an independent copy across overlapping memory writes',
+    )
   })
 
   it('Throws on negative call value', async () => {
     // setup the vm
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
+
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
 
     // setup the call arguments
@@ -564,8 +560,7 @@ describe('RunCall tests', () => {
   })
 
   it('runCall() -> skipBalance behavior', async () => {
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Berlin })
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
 
     // runCall against a contract to reach `_reduceSenderBalance`
@@ -578,21 +573,22 @@ describe('RunCall tests', () => {
     const runCallArgs = {
       gasLimit: BigInt(21000),
       value: BigInt(6),
-      from: sender,
+      caller: sender,
       to: contractAddress,
       skipBalance: true,
     }
 
-    for (const balance of [undefined, BigInt(5)]) {
+    for (const balance of [undefined, 5n, 10n]) {
+      await tvm.stateManager.modifyAccountFields(contractAddress, { balance: 0n })
       await tvm.stateManager.modifyAccountFields(sender, { nonce: BigInt(0), balance })
       const res = await tvm.runCall(runCallArgs)
-      assert.isTrue(true, 'runCall should not throw with no balance and skipBalance')
       const senderBalance = (await tvm.stateManager.getAccount(sender))!.balance
       assert.strictEqual(
         senderBalance,
-        balance ?? BigInt(0),
-        'sender balance should be the same before and after call execution with skipBalance',
+        balance !== undefined && balance >= 6n ? balance - 6n : 0n,
+        'skipBalance funds only a shortfall and the call still debits the sender',
       )
+      assert.strictEqual((await tvm.stateManager.getAccount(contractAddress))!.balance, 6n)
       assert.strictEqual(
         res.execResult.exceptionError,
         undefined,
@@ -600,12 +596,15 @@ describe('RunCall tests', () => {
       )
     }
 
+    await tvm.stateManager.modifyAccountFields(sender, { balance: 5n })
     const res2 = await tvm.runCall({ ...runCallArgs, skipBalance: false })
     assert.include(
       res2.execResult.exceptionError?.error,
       'insufficient balance',
       'runCall reverts when insufficient sender balance and skipBalance is false',
     )
+    assert.strictEqual((await tvm.stateManager.getAccount(sender))!.balance, 5n)
+    assert.strictEqual((await tvm.stateManager.getAccount(contractAddress))!.balance, 6n)
   })
 
   it('runCall() => permits runtime code above the former EIP-170 limit', async () => {
@@ -630,8 +629,7 @@ describe('RunCall tests', () => {
   })
 
   it('step event: ensure TVM memory and not internal memory gets reported', async () => {
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Berlin })
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({ common })
 
     const contractCode = hexToBytes('0x600060405200') // PUSH 0 PUSH 40 MSTORE STOP
@@ -643,7 +641,7 @@ describe('RunCall tests', () => {
       to: contractAddress,
     }
 
-    let verifyMemoryExpanded: boolean = false
+    let verifyMemoryExpanded = false
 
     tvm.events.on('step', (e) => {
       assert.isTrue(e.memory.length <= 96)
@@ -686,16 +684,16 @@ describe('RunCall tests', () => {
 
   it('ensure call and callcode handle gas stipend correctly', async () => {
     // See: https://github.com/ethereumjs/ethereumjs-monorepo/issues/3194
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Shanghai })
-    const tvm = await createTVM({ common })
+
+    const common = new Common({ chain: TronMainnet })
 
     for (const [opcode, gas, expectedOutput] of [
-      ['f1', 36600, '0x'], // 36600 is CALL fee
-      ['f2', 11600, '0x'], // 11600 is CALLCODE fee
-      ['f1', 36600 + 7 * 3, '0x01'], // 36600 is CALL fee + 7 * 3 gas for 7 PUSH opcodes
-      ['f2', 11600 + 7 * 3, '0x01'], // 11600 is CALLCODE fee + 7 * 3 gas for 7 PUSH opcodes
-    ]) {
+      ['f1', 34040, '0x'], // CALL base 40 + value transfer 9000 + new account 25000
+      ['f2', 9040, '0x'], // CALLCODE base 40 + value transfer 9000
+      ['f1', 34040 + 7 * 3, '0x01'], // Fee plus seven PUSH instructions
+      ['f2', 9040 + 7 * 3, '0x01'], // Fee plus seven PUSH instructions
+    ] as const) {
+      const tvm = await createTVM({ common: common.copy() })
       // Code to either CALL or CALLCODE into AACC empty contract, with value 1 // cspell:disable-line
       // If enough gas is provided, then since nonzero value is sent, the gas limit
       // in the call(coded) contract will get the "bonus gas" stipend of 2300
@@ -733,7 +731,7 @@ describe('RunCall tests', () => {
       const callerAddress = createAddressFromString('0x000000000000000000000000000000000000aaab')
       const callerCode = hexToBytes(`0x60008080808061AAAA61${gasLimit}f1600055`)
 
-      await tvm.stateManager.putAccount(callCodeAddress, new Account())
+      await tvm.stateManager.putAccount(callCodeAddress, new Account(0n, 1n))
       await tvm.stateManager.putCode(callCodeAddress, callCode)
 
       await tvm.stateManager.putAccount(callerAddress, new Account(undefined, BigInt(1)))
@@ -743,7 +741,8 @@ describe('RunCall tests', () => {
         to: callerAddress,
         gasLimit: 0xfffffffn,
       }
-      await tvm.runCall(runCallArgs)
+      const result = await tvm.runCall(runCallArgs)
+      assert.isUndefined(result.execResult.exceptionError)
 
       const callResult = bytesToHex(
         await tvm.stateManager.getStorage(callerAddress, new Uint8Array(32)),
@@ -751,6 +750,14 @@ describe('RunCall tests', () => {
       // Expect slot to have value of either: 0 since CALLCODE and CODE did not have enough gas to execute
       // Or 1, if CALL(CODE) has enough gas to enter the new call frame
       assert.strictEqual(callResult, expectedOutput, `should have result ${expectedOutput}`)
+      const target = createAddressFromString('0x000000000000000000000000000000000000aacc')
+      if (opcode === 'f1' && expectedOutput === '0x01') {
+        assert.strictEqual((await tvm.stateManager.getAccount(target))!.balance, 1n)
+        assert.strictEqual((await tvm.stateManager.getAccount(callCodeAddress))!.balance, 0n)
+      } else {
+        assert.isUndefined(await tvm.stateManager.getAccount(target))
+        assert.strictEqual((await tvm.stateManager.getAccount(callCodeAddress))!.balance, 1n)
+      }
     }
   })
 })

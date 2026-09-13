@@ -548,6 +548,27 @@ Happy TVM Profiling! 🎉 🤩
 
 ## Development
 
+Run the complete TVM package suites from the repository root:
+
+```sh
+npm run build --workspace @tvmjs/tvm
+npm run tsc --workspace @tvmjs/tvm
+npm run test:node --workspace @tvmjs/tvm
+npm run test:browser --workspace @tvmjs/tvm
+```
+
+Browser tests require a local Playwright Chromium installation. Both suites include the bundled MODEXP vectors and the Noble/MCL BLS helper vectors. BLS fixtures use JSON imports so Browser runs the same cases without a filesystem loader. Direct BLS/P256 helper tests do not enable those capabilities in the TRON execution profile.
+
+The v1.2.0 test migration follows these rules:
+
+| Treatment | Coverage |
+| --- | --- |
+| Migrate retained tests | Events, custom crypto, signature and BN254 precompiles, MODEXP, transient storage, and direct P256/BLS helpers use valid TRON configuration. Preserve expected outputs and meaningful error checks. |
+| Replace Ethereum expectations with TRON checks | Deployment and internal creation use root transaction IDs; CREATE2 checks the 21-byte stack result. CALL, CALLCODE, SELFDESTRUCT and BN254 use fixed TRON Energy expectations. Nonce-limit checks use different transaction IDs to avoid accidental address-collision failures; `skipBalance` tests inspect the actual caller and recipient balances. |
+| Retire unsupported execution tests | Ethereum hardfork transitions, BAL/EOF activation, and alternate precompile addresses are replaced by rejection or non-registration checks. The previously excluded Ethereum EOF runners and alternate-address wrappers are removed; the underlying inactive implementations and independent EOF container parser remain. |
+
+The external `ethereum-tests` EOF conformance vectors are not executed. A passing TVM suite covers this package's retained behavior and capability boundaries; VM API tests and the repository-wide release gates must be run separately.
+
 See [@tvmjs/vm](https://github.com/tronweb3/tvmjs-monorepo/tree/master/packages/vm) README.
 
 ## Upstream

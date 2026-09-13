@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Tests
+
+- Migrate retained execution and precompile tests to TRON configuration, including transaction-ID-based creation, 21-byte CREATE2 results, Energy costs, sender funding, nonce boundaries and transient-storage cleanup. Remove the temporary Ethereum-input type suppressions from TVM tests.
+- Restore MODEXP vectors and direct P256/BLS helper tests; reject activation of inactive cryptographic capabilities and check their absence from the active precompile table. Validate BLS error results without swallowing failed assertions, and run the bundled Noble/MCL vectors in both Node and Browser.
+- Retire the old Ethereum EOF execution runners and unregistered alternate-precompile integration tests. Preserve independent EOF parser coverage and explicit TRON rejection tests; the external Ethereum EOF conformance vectors are not executed.
+
 ### Breaking Changes
 
 - Remove obsolete storage-pricing entries from exported `paramsTVM`: `netSstoreNoopGas`, `netSstoreInitGas`, `netSstoreCleanGas`, `netSstoreDirtyGas`, `netSstoreClearRefundGas`, `netSstoreResetRefundGas`, `netSstoreResetClearRefundGas`, `sstoreSentryEIP2200Gas`, `sstoreNoopEIP2200Gas`, `sstoreDirtyEIP2200Gas`, `sstoreInitEIP2200Gas`, `sstoreInitRefundEIP2200Gas`, `sstoreCleanEIP2200Gas`, `sstoreCleanRefundEIP2200Gas`, `sstoreClearRefundEIP2200Gas` and `coldsloadGas`. Remove the now-empty `1716` parameter group; preserve other members of shared groups and the TRON schedule.

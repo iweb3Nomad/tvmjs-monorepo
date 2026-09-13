@@ -1,12 +1,11 @@
-import { Common, Hardfork, Mainnet } from '@tvmjs/common'
+import { Common, TronMainnet } from '@tvmjs/common'
 import { assert, describe, it } from 'vitest'
 
 import { createTVM, getActivePrecompiles } from '../../src/index.ts'
 
 describe('Precompiles: BN254MUL', () => {
   it('BN254MUL', async () => {
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet, hardfork: Hardfork.Petersburg })
+    const common = new Common({ chain: TronMainnet })
     const tvm = await createTVM({
       common,
     })
@@ -19,6 +18,10 @@ describe('Precompiles: BN254MUL', () => {
       _TVM: tvm,
     })
 
-    assert.deepEqual(result.executionGasUsed, BigInt(40000), 'should use petersburg gas costs')
+    assert.deepEqual(
+      result.executionGasUsed,
+      6000n,
+      'uses the TRON BN254 multiplication Energy cost',
+    )
   })
 })

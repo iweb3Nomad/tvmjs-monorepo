@@ -1,12 +1,11 @@
-import { Common, Mainnet, TronNile } from '@tvmjs/common'
+import { Common, TronMainnet, TronNile } from '@tvmjs/common'
 import { bytesToHex, hexToBytes } from '@tvmjs/util'
 import { assert, describe, it } from 'vitest'
 import { TVMError, createTVM, getActivePrecompiles } from '../../src/index.ts'
 
 describe('Precompiles: BATCH-VALIDATE-SIGN', () => {
   it('static call test 1', async () => {
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet })
+    const common = new Common({ chain: TronMainnet })
     const addressStr = '0000000000000000000000000000000000000009'
     const FUNC = getActivePrecompiles(common).get(addressStr)!
 
@@ -30,8 +29,7 @@ describe('Precompiles: BATCH-VALIDATE-SIGN', () => {
   })
 
   it('over 16 sign', async () => {
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet })
+    const common = new Common({ chain: TronMainnet })
     const addressStr = '0000000000000000000000000000000000000009'
     const FUNC = getActivePrecompiles(common).get(addressStr)!
 
@@ -52,8 +50,7 @@ describe('Precompiles: BATCH-VALIDATE-SIGN', () => {
   })
 
   it('incorrect hash', async () => {
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet })
+    const common = new Common({ chain: TronMainnet })
     const addressStr = '0000000000000000000000000000000000000009'
     const FUNC = getActivePrecompiles(common).get(addressStr)!
 
@@ -77,8 +74,7 @@ describe('Precompiles: BATCH-VALIDATE-SIGN', () => {
   })
 
   it('different length', async () => {
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet })
+    const common = new Common({ chain: TronMainnet })
     const addressStr = '0000000000000000000000000000000000000009'
     const FUNC = getActivePrecompiles(common).get(addressStr)!
 
@@ -99,8 +95,7 @@ describe('Precompiles: BATCH-VALIDATE-SIGN', () => {
   })
 
   it('returns no error if bytes length is not aligned', async () => {
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet })
+    const common = new Common({ chain: TronMainnet })
     const addressStr = '0000000000000000000000000000000000000009'
     const FUNC = getActivePrecompiles(common).get(addressStr)!
 
@@ -120,8 +115,7 @@ describe('Precompiles: BATCH-VALIDATE-SIGN', () => {
   })
 
   it('returns error if bytes length is not enough to read', async () => {
-    // @ts-expect-error Retired Ethereum input; this legacy test still needs TRON migration.
-    const common = new Common({ chain: Mainnet })
+    const common = new Common({ chain: TronMainnet })
     const addressStr = '0000000000000000000000000000000000000009'
     const FUNC = getActivePrecompiles(common).get(addressStr)!
 
