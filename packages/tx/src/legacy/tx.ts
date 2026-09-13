@@ -408,6 +408,8 @@ export class LegacyTx implements TransactionInterface<typeof TransactionType.Leg
 
     const baseJSON = getBaseJSON(this) as JSONTx
     baseJSON.gasPrice = bigIntToHex(this.gasPrice)
+    baseJSON.tokenId = bigIntToHex(this.tokenId)
+    baseJSON.tokenValue = bigIntToHex(this.tokenValue)
 
     return baseJSON
   }

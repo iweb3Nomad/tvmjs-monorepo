@@ -47,6 +47,8 @@ export function validateNotArray(values: { [key: string]: any }) {
     'gasLimit',
     'to',
     'value',
+    'tokenId',
+    'tokenValue',
     'data',
     'v',
     'r',

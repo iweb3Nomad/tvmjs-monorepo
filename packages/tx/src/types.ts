@@ -424,6 +424,9 @@ export interface JSONTx {
   r?: PrefixedHexString
   s?: PrefixedHexString
   value?: PrefixedHexString
+  /** TRC-10 fields emitted by legacy transaction envelopes. */
+  tokenId?: PrefixedHexString
+  tokenValue?: PrefixedHexString
   chainId?: PrefixedHexString
   accessList?: JSONAccessListItem[] // TODO should this not be AccessList?
   type?: PrefixedHexString

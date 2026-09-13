@@ -25,10 +25,11 @@ EIP-7702 transaction classes, constructors, types and guards are also removed. T
   - [Access List Transactions (EIP-2930)](#access-list-transactions-eip-2930)
   - [Legacy Transactions](#legacy-transactions)
 - [Transaction Factory](#transaction-factory)
-- [Sending a Transaction](#sending-a-transaction)
+- [Custom TRON execution transactions](#custom-tron-execution-transactions)
 - [Browser](#browser)
-- [Hardware Wallets](#hardware-wallets)
+- [External signing](#external-signing)
 - [API](#api)
+- [Development](#development)
 - [Upstream](#upstream)
 - [License](#license)
 
@@ -42,13 +43,15 @@ npm install @tvmjs/tx
 
 ## Getting Started
 
-### Static Constructor Methods
+### Transaction constructors
 
-To instantiate a tx, it is not recommended to use the constructor directly. Instead each tx type comes with the following set of static constructor methods which help instantiate depending on the input data format:
+Use the exported factory functions for the desired format:
 
-- `public static fromTxData(txData: TxData, opts: TxOptions = {})`: instantiate from a data dictionary
-- `public static fromSerializedTx(serialized: Uint8Array, opts: TxOptions = {})`: instantiate from a serialized tx
-- `public static fromValuesArray(values: Uint8Array[], opts: TxOptions = {})`: instantiate from a values array
+| Input | Legacy | Access list | Fee market |
+| --- | --- | --- | --- |
+| Object | `createLegacyTx` | `createAccessList2930Tx` | `createFeeMarket1559Tx` |
+| RLP bytes | `createLegacyTxFromRLP` | `createAccessList2930TxFromRLP` | `createFeeMarket1559TxFromRLP` |
+| Values array | `createLegacyTxFromBytesArray` | `createAccessList2930TxFromBytesArray` | `create1559FeeMarketTxFromBytesArray` |
 
 See one of the code examples on the tx types below on how to use.
 
@@ -72,26 +75,26 @@ This library supports the following transaction types ([EIP-2718](https://eips.e
 
 - [Gas Fee Market Transactions (EIP-1559)](#gas-fee-market-transactions-eip-1559)
 - [Access List Transactions (EIP-2930)](#access-list-transactions-eip-2930)
-- [Legacy Transactions](#legacy-transactions) (original Ethereum txs)
+- [Legacy Transactions](#legacy-transactions) (including TRC-10 fields)
 
 ### Gas Fee Market Transactions (EIP-1559)
 
-- Class: `FeeMarketEIP1559Tx`
+- Class: `FeeMarket1559Tx`
 - EIP: [EIP-1559](https://eips.ethereum.org/EIPS/eip-1559)
-- Activation: `london`
+- Availability: TRON execution profile
 - Type: `2`
 
-This is the recommended tx type starting with the activation of the `london` HF, see the following code snippet for an example on how to instantiate:
+This fee-market container is retained for local TRON execution. It does not model native TRON resource accounting or node transaction encoding:
 
 ```ts
 // ./examples/londonTx.ts
 
-import { Common, Hardfork, Mainnet } from '@tvmjs/common'
+import { Common, TronMainnet } from '@tvmjs/common'
 import type { FeeMarketEIP1559TxData } from '@tvmjs/tx'
 import { createFeeMarket1559Tx } from '@tvmjs/tx'
-import { bytesToHex } from '@tvmjs/util'
+import { bytesToHex, hexToBytes } from '@tvmjs/util'
 
-const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
+const common = new Common({ chain: TronMainnet })
 
 const txData: FeeMarketEIP1559TxData = {
   data: '0x1a8451e600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
@@ -101,37 +104,36 @@ const txData: FeeMarketEIP1559TxData = {
   nonce: '0x00',
   to: '0xcccccccccccccccccccccccccccccccccccccccc',
   value: '0x0186a0',
-  v: '0x01',
-  r: '0xafb6e247b1c490e284053c87ab5f6b59e219d51f743f7a4d83e400782bc7e4b9',
-  s: '0x479a268e0e0acd4de3f1e28e4fac2a6b32a4195e8dfa9d19147abe8807aa6f64',
-  chainId: '0x01',
+  chainId: common.chainId(),
   accessList: [],
   type: '0x02',
 }
 
 const tx = createFeeMarket1559Tx(txData, { common })
-console.log(bytesToHex(tx.hash())) // 0x6f9ef69ccb1de1aea64e511efd6542541008ced321887937c95b03779358ec8a
-
+// Demonstration key only. This is a local execution envelope, not a node broadcast.
+const privateKey = hexToBytes(`0x${'46'.repeat(32)}`)
+const signedTx = tx.sign(privateKey)
+console.log(bytesToHex(signedTx.hash()))
 ```
 
 ### Access List Transactions (EIP-2930)
 
-- Class: `AccessListEIP2930Tx`
+- Class: `AccessList2930Tx`
 - EIP: [EIP-2930](https://eips.ethereum.org/EIPS/eip-2930)
-- Activation: `berlin`
+- Availability: TRON execution profile
 - Type: `1`
 
-This transaction type has been introduced along the `berlin` HF. See the following code snippet for an example on how to instantiate:
+Access lists remain part of the signed transaction payload. Their entries do not add TRON intrinsic gas or enable warm/cold access pricing:
 
 ```ts
 // ./examples/accessListTx.ts
 
-import { Common, Hardfork, Mainnet } from '@tvmjs/common'
+import { Common, TronMainnet } from '@tvmjs/common'
 import type { AccessList2930TxData } from '@tvmjs/tx'
 import { createAccessList2930Tx } from '@tvmjs/tx'
-import { bytesToHex } from '@tvmjs/util'
+import { bytesToHex, hexToBytes } from '@tvmjs/util'
 
-const common = new Common({ chain: Mainnet, hardfork: Hardfork.Berlin })
+const common = new Common({ chain: TronMainnet })
 
 const txData: AccessList2930TxData = {
   data: '0x1a8451e600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
@@ -140,10 +142,7 @@ const txData: AccessList2930TxData = {
   nonce: '0x00',
   to: '0xcccccccccccccccccccccccccccccccccccccccc',
   value: '0x0186a0',
-  v: '0x01',
-  r: '0xafb6e247b1c490e284053c87ab5f6b59e219d51f743f7a4d83e400782bc7e4b9',
-  s: '0x479a268e0e0acd4de3f1e28e4fac2a6b32a4195e8dfa9d19147abe8807aa6f64',
-  chainId: '0x01',
+  chainId: common.chainId(),
   accessList: [
     {
       address: '0x0000000000000000000000000000000000000101',
@@ -157,26 +156,26 @@ const txData: AccessList2930TxData = {
 }
 
 const tx = createAccessList2930Tx(txData, { common })
-console.log(bytesToHex(tx.hash())) // 0x9150cdebad74e88b038e6c6b964d99af705f9c0883d7f0bbc0f3e072358f5b1d
-
+// Demonstration key only. Access-list entries do not add TRON access charges.
+const privateKey = hexToBytes(`0x${'46'.repeat(32)}`)
+const signedTx = tx.sign(privateKey)
+console.log(bytesToHex(signedTx.hash()))
 ```
 
-For generating access lists from tx data based on a certain network state there is a `reportAccessList` option
-on the `VM.runTx()` method of the `@tvmjs/vm` `TypeScript` VM implementation.
+Access-list entries remain serializable metadata. Use the legacy format for transaction-level TRC-10 transfers; typed envelopes reject nonzero `tokenId` or `tokenValue` because their signing payloads do not include those fields.
 
 ### Legacy Transactions
 
 - Class: `LegacyTx`
-- Activation: `chainstart` (with modifications along the road, see HF section below)
+- Availability: TRON execution profile
 - Type: `0` (internal)
 
-Legacy transactions are still valid transactions within Ethereum `mainnet` but will likely be deprecated at some point.
-See this [example script](./examples/transactions.ts) or the following code example on how to use.
+Legacy envelopes include `tokenId` and `tokenValue` in their signing payloads and eleven-field RLP encoding. `toJSON()` emits these values as hex quantities, preserving IDs above Number precision when reconstructing a transaction with the same Common. See this [example script](./examples/transactions.ts) or the following example.
 
 ```ts
 // ./examples/legacyTx.ts
 
-import { Common, Hardfork, Mainnet } from '@tvmjs/common'
+import { Common, TronMainnet } from '@tvmjs/common'
 import type { LegacyTxData } from '@tvmjs/tx'
 import { createLegacyTx } from '@tvmjs/tx'
 import { bytesToHex, hexToBytes } from '@tvmjs/util'
@@ -184,37 +183,37 @@ import { bytesToHex, hexToBytes } from '@tvmjs/util'
 const txData: LegacyTxData = {
   nonce: '0x0',
   gasPrice: '0x09184e72a000',
-  gasLimit: '0x2710',
+  gasLimit: '0xc350',
   to: '0x0000000000000000000000000000000000000000',
   value: '0x00',
   data: '0x7f7465737432000000000000000000000000000000000000000000000000000000600057',
 }
 
-const common = new Common({ chain: Mainnet, hardfork: Hardfork.Istanbul })
+const common = new Common({ chain: TronMainnet })
 const tx = createLegacyTx(txData, { common })
 
+// WARNING: The private key in this example is for demonstration only. Never use in production.
 const privateKey = hexToBytes('0xe331b6d69882b4cb4ea581d88e0b604039a3de5967688d3dcffdd2270c0fd109')
 
 const signedTx = tx.sign(privateKey)
 
 const _serializedTx = signedTx.serialize()
-console.log(bytesToHex(signedTx.hash())) // 0x894b72d87f8333fccd29d1b3aca39af69d97a6bc281e7e7a3a60640690a3cd2b
-
+console.log(bytesToHex(signedTx.hash()))
 ```
 
 ## Transaction Factory
 
-If you only know at runtime which tx type will be used within your code or if you want to keep your code transparent to tx types, this library comes with a `TransactionFactory` for your convenience which can be used as follows:
+Use `createTx()` when the transaction type is selected at runtime:
 
 ```ts
 // ./examples/txFactory.ts
 
-import { Common, Hardfork, Mainnet } from '@tvmjs/common'
+import { Common, TronMainnet } from '@tvmjs/common'
 import { Capability, createTx } from '@tvmjs/tx'
 
 import type { EIP1559CompatibleTx } from '@tvmjs/tx'
 
-const common = new Common({ chain: Mainnet, hardfork: Hardfork.London })
+const common = new Common({ chain: TronMainnet })
 
 const txData = { type: 2, maxFeePerGas: BigInt(20) } // Creates an EIP-1559 compatible transaction
 const tx = createTx(txData, { common })
@@ -228,12 +227,12 @@ if (tx.supports(Capability.EIP1559FeeMarket)) {
 
 The correct tx type class for instantiation will then be chosen at runtime based on the data provided as an input.
 
-`TransactionFactory` supports the following static constructor methods:
+The package exports these generic constructors:
 
-- `public static fromTxData(txData: TxData | AccessListEIP2930TxData, txOptions: TxOptions = {})`
-- `public static fromSerializedData(data: Uint8Array, txOptions: TxOptions = {})`
-- `public static fromBlockBodyData(data: Uint8Array | Uint8Array[], txOptions: TxOptions = {})`
-- `public static async fromJsonRpcProvider(provider: string | EthersProvider, txHash: string, txOptions?: TxOptions)`
+- `createTx(txData, txOptions)` for transaction objects.
+- `createTxFromRLP(data, txOptions)` for serialized bytes.
+- `createTxFromBlockBodyData(data, txOptions)` for block-body entries.
+- `createTxFromRPC(txData, txOptions)` and `createTxFromJSONRPCProvider(provider, txHash, txOptions)` for compatible JSON-RPC envelopes.
 
 ## Custom TRON execution transactions
 
@@ -249,90 +248,11 @@ We provide hybrid ESM/CJS builds for all our libraries. With the v10 breaking re
 
 It is easily possible to run a browser build of one of the TVMJS libraries within a modern browser using the provided ESM build. For a setup example see [./examples/browser.html](./examples/browser.html).
 
-## Hardware Wallets
+## External signing
 
-### Ledger
+Use `getMessageToSign()` to obtain the signing payload and `addSignature()` to attach an external signature. Legacy transactions return an array of bytes that must be RLP encoded; typed transactions return serialized bytes. The legacy payload includes `tokenId` and `tokenValue`, and the selected TRON chain ID participates in replay protection.
 
-To sign a tx with a hardware or external wallet use `tx.getMessageToSign()` to return an [EIP-155](https://eips.ethereum.org/EIPS/eip-155) compliant unsigned tx.
-
-A legacy transaction will return a Buffer list of the values, and a Typed Transaction ([EIP-2718](https://eips.ethereum.org/EIPS/eip-2718)) will return the serialized output.
-
-Here is an example of signing txs with `@ledgerhq/hw-app-eth` with `v6.45.4` and `@ledgerhq/hw-transport-node-hid` with `v6.29.5`:
-```ts
-// examples/ledgerSigner.mts
-
-import { Common, Sepolia } from '@tvmjs/common'
-import { RLP } from '@tvmjs/rlp'
-import {
-  type FeeMarketEIP1559TxData,
-  type LegacyTxData,
-  createFeeMarket1559Tx,
-  createLegacyTx,
-} from '@tvmjs/tx'
-import { bytesToHex } from '@tvmjs/util'
-import Eth from '@ledgerhq/hw-app-eth'
-import TransportNodeHid from '@ledgerhq/hw-transport-node-hid'
-
-const transport = await TransportNodeHid.default.open()
-const eth = new Eth.default(transport)
-const common = new Common({ chain: Sepolia })
-
-// Signing with the first key of the derivation path
-const bip32Path = "44'/60'/0'/0/0"
-
-const legacyTxData: LegacyTxData = {
-  nonce: '0x0',
-  gasPrice: '0x09184e72a000',
-  gasLimit: '0x2710',
-  to: '0x0000000000000000000000000000000000000000',
-  value: '0x00',
-  data: '0x7f7465737432000000000000000000000000000000000000000000000000000000600057',
-}
-
-const eip1559TxData: FeeMarketEIP1559TxData = {
-  data: '0x1a8451e600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
-  gasLimit: '0x02625a00',
-  maxPriorityFeePerGas: '0x01',
-  maxFeePerGas: '0xff',
-  nonce: '0x00',
-  to: '0xcccccccccccccccccccccccccccccccccccccccc',
-  value: '0x0186a0',
-  accessList: [],
-  type: '0x02',
-}
-
-const run = async () => {
-  // Signing a legacy tx
-  const tx1 = createLegacyTx(legacyTxData, { common })
-  const unsignedTx1 = tx1.getMessageToSign()
-  // Ledger signTransaction API expects it to be serialized
-  // Ledger returns unprefixed hex strings without 0x for v, r, s values
-  const { v, r, s } = await eth.signTransaction(
-    bip32Path,
-    bytesToHex(RLP.encode(unsignedTx1)).slice(2),
-    null,
-  )
-  const signedTx1 = tx1.addSignature(BigInt(`0x${v}`), BigInt(`0x${r}`), BigInt(`0x${s}`))
-  const from = signedTx1.getSenderAddress().toString()
-  console.log(`signedTx: ${bytesToHex(tx1.serialize())}\nfrom: ${from}`)
-
-  // Signing a 1559 tx
-  const tx2 = createFeeMarket1559Tx(eip1559TxData, { common })
-  // Ledger returns unprefixed hex strings without 0x for v, r, s values
-  const unsignedTx2 = tx2.getMessageToSign()
-  const { v2, r2, s2 } = await eth.signTransaction(
-    bip32Path,
-    bytesToHex(unsignedTx2).slice(2),
-    null,
-  )
-  const signedTx2 = tx2.addSignature(BigInt(`0x${v2}`), BigInt(`0x${r2}`), BigInt(`0x${s2}`))
-  const from2 = signedTx2.getSenderAddress().toString()
-  console.log(`signedTx: ${bytesToHex(tx2.serialize())}\nfrom: ${from2}`)
-}
-
-run()
-
-```
+The former Ethereum Ledger example has been retired. Hardware-wallet support for these local execution envelopes has not been validated. Native TRON transaction signing and broadcasting require java-tron transaction encoding and are outside this package's examples.
 
 ## API
 
@@ -357,6 +277,29 @@ const { TVMJSClass } = require('@tvmjs/[PACKAGE_NAME]')
 ```
 
 Using ESM will give you additional advantages over CJS beyond browser usage like static code analysis / Tree Shaking which CJS can not provide.
+
+## Development
+
+From the repository root, run:
+
+```shell
+npm run build --workspace @tvmjs/tx
+npm run tsc --workspace @tvmjs/tx
+npm run test --workspace @tvmjs/tx
+npm run lint --workspace @tvmjs/tx
+npm run spellcheck --workspace @tvmjs/tx
+npm run examples --workspace @tvmjs/tx
+```
+
+`test` runs the complete retained Node and Chromium Browser suites. `test:node:api` remains available for Node-only runs; the obsolete `test:node:tx:*` FORKS scripts have been removed.
+
+| v1.2.0 test migration | Coverage |
+| --- | --- |
+| Migrated | Legacy, EIP-2930 and EIP-1559 encoding, signing, RPC normalization, input validation and Common copying. Bundled signature vectors retain their original chain IDs through explicit TRON custom identities. |
+| Retired | Ethereum fork-matrix/T9N runners and the Ethereum Ledger example. Ledger compatibility with TRON signing was not verified. The official Ethereum transaction-vector runner was not executed; bundled vectors are a separate local regression suite. |
+| Replaced | Ethereum hardfork switching, warm/cold access-list pricing and EIP-7825 activation assumptions become TRON rejection/isolation tests, zero access-list charges and uint64 bounds. All three TRON networks cover signature replay rejection and large TRC-10 ID serialization. |
+
+These package tests validate local transaction envelopes. They do not represent new live java-tron differential results or native TRON transaction broadcasting.
 
 ## Upstream
 
