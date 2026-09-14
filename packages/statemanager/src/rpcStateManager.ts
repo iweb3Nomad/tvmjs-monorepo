@@ -58,18 +58,17 @@ export class RPCStateManager implements StateManagerInterface {
   }
 
   /**
-   * Note that the returned statemanager will share the same JSONRPCProvider as the original
+   * Returns independent empty caches at the same provider and block tag,
+   * preserving a copy of the execution configuration.
    *
    * @returns RPCStateManager
    */
   shallowCopy(): RPCStateManager {
-    const newState = new RPCStateManager({
+    return new RPCStateManager({
       provider: this._provider,
-      blockTag: BigInt(this._blockTag),
+      blockTag: this._blockTag === 'earliest' ? 'earliest' : BigInt(this._blockTag),
+      common: this.common.copy(),
     })
-    newState._caches = new Caches({ storage: { size: 100000 } })
-
-    return newState
   }
 
   /**
@@ -89,6 +88,7 @@ export class RPCStateManager implements StateManagerInterface {
    */
   clearCaches(): void {
     this._caches.clear()
+    this.originalStorageCache.clear()
   }
 
   /**
@@ -317,11 +317,10 @@ export class RPCStateManager implements StateManagerInterface {
    * Commits the current change-set to the instance since the
    * last call to checkpoint.
    *
-   * Partial implementation, called from the subclass.
+   * Account, code and storage caches advance to the same checkpoint.
    */
   async commit(): Promise<void> {
-    // setup cache checkpointing
-    this._caches.account?.commit()
+    this._caches.commit()
   }
 
   /**
@@ -378,6 +377,11 @@ export class RPCBlockChain {
     return {
       hash: () => hexToBytes(block.hash),
     }
+  }
+
+  /** This adapter only reads provider data; block writes are unsupported. */
+  async putBlock(_block: unknown): Promise<void> {
+    throw EthereumJSErrorWithoutCode('RPCBlockChain is read-only')
   }
 
   shallowCopy() {

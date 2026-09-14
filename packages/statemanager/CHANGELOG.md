@@ -15,12 +15,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Preserve RPCStateManager network, optional EIPs, custom crypto and `earliest` block tags across shallow copies while keeping caches independent.
+- Commit RPC account, code and storage caches together so an outer revert also restores changes committed in an inner checkpoint.
+- Clear the RPC original storage cache when changing the block tag or clearing caches, preventing reads from a previous snapshot.
+- Make RPCBlockChain satisfy the TVM blockchain interface while explicitly rejecting block writes, removing the need for unsafe casts in read-only execution examples.
 - Keep TRC-10 token registrations made inside nested checkpoints revertible. Only the outermost commit makes them permanent, so an enclosing revert no longer leaves `tokenIdExists()` reporting a discarded account's token.
 - Copy SimpleStateManager TRC-10 balance maps across checkpoints and shallow copies so reverted, failed and independently copied executions cannot leak token transfers.
 - Bind EIP-1186 account proofs to the StateManager state root and storage proofs to the authenticated account storage root; reject storage proofs for nonexistent accounts
 
 ### Chores
 
+- Migrate RPC execution tests to TRON configurations and enable the same offline RPC, storage dump and proof tests in Node and Browser. Replace unavailable Binary Tree activation tests with TRON profile rejection coverage and preserve fixed data vectors.
+- Clarify RPC provider requirements, state-root and Token limitations, and the retained standalone Binary Tree implementation in examples and documentation.
 - Update internal `@tvmjs/*` dependencies for the coordinated TVMJS release
 
 ## 1.0.0
