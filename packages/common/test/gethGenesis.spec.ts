@@ -12,7 +12,7 @@ import { parseGethGenesisState } from '../src/gethGenesis.ts'
 import { Common, Hardfork, parseGethGenesis } from '../src/index.ts'
 
 describe('[Common/genesis]', () => {
-  it('should properly generate stateRoot from gethGenesis', () => {
+  it('parses the historical deposit contract allocation without executing it', () => {
     const genesisState = parseGethGenesisState(kilnGethGenesis)
     // just check for deposit contract inclusion
     assert.exists(genesisState['0x4242424242424242424242424242424242424242'][1])
@@ -25,10 +25,40 @@ describe('[Common/genesis]', () => {
       'should have deposit contract',
     )
   })
+
+  it('normalizes allocation data while preserving balances above the safe integer range', () => {
+    const genesis = {
+      ...postMergeGethGenesis,
+      alloc: {
+        '00000000000000000000000000000000000000aB': {
+          balance: '9007199254740993',
+          code: '6000',
+          nonce: '0a',
+          storage: { '00': '01', '0x02': '0x03' },
+        },
+        '0x00000000000000000000000000000000000000CD': { balance: '0x10' },
+      },
+    }
+    const before = JSON.stringify(genesis)
+    assert.deepEqual(parseGethGenesisState(genesis), {
+      '0x00000000000000000000000000000000000000ab': [
+        '0x20000000000001',
+        '0x6000',
+        [
+          ['0x00', '0x01'],
+          ['0x02', '0x03'],
+        ],
+        '0x0a',
+      ],
+      '0x00000000000000000000000000000000000000cd': ['0x10', undefined, undefined, undefined],
+    })
+    assert.strictEqual(JSON.stringify(genesis), before)
+  })
 })
 
 describe('[Utils/Parse]', () => {
-  it('should parse geth params file', async () => {
+  it('should parse geth params file', () => {
+    // This historical fixture exercises raw data parsing, not Blob execution.
     const params = parseGethGenesis(eip4844GethGenesis)
     assert.strictEqual(
       params.genesis.nonce,
@@ -37,14 +67,14 @@ describe('[Utils/Parse]', () => {
     )
   })
 
-  it('should throw with invalid Spurious Dragon blocks', async () => {
+  it('should throw with invalid Spurious Dragon blocks', () => {
     const f = () => {
       parseGethGenesis(invalidSpuriousDragonGethGenesis, 'bad_params')
     }
     assert.throws(f, undefined, undefined, 'should throw')
   })
 
-  it('should import poa network params correctly', async () => {
+  it('should import poa network params correctly', () => {
     let params = parseGethGenesis(goerliGethGenesis, 'poa')
     assert.strictEqual(params.genesis.nonce, '0x0000000000000000', 'nonce is formatted correctly')
     assert.deepEqual(
@@ -67,12 +97,12 @@ describe('[Utils/Parse]', () => {
     )
   })
 
-  it('should generate expected hash with london block zero and base fee per gas defined', async () => {
+  it('preserves an explicit base fee in raw genesis data', () => {
     const params = parseGethGenesis(postMergeGethGenesis, 'post-merge')
     assert.strictEqual(params.genesis.baseFeePerGas, postMergeGethGenesis.baseFeePerGas)
   })
 
-  it('should successfully parse genesis file with no extraData', async () => {
+  it('should successfully parse genesis file with no extraData', () => {
     const params = parseGethGenesis({ ...postMergeGethGenesis, extraData: '' }, 'noExtraData')
     assert.strictEqual(params.genesis.extraData, '0x', 'extraData set to 0x')
     assert.strictEqual(params.genesis.nonce, '0x0000000000000042', 'nonce parsed correctly')

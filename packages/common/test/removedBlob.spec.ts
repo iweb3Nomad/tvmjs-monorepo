@@ -46,3 +46,43 @@ it('rejects removed Blob genesis fields before parsing or copying configuration 
     ).toThrow('blobSchedule is not supported')
   }
 })
+
+describe.each(['excessBlobGas', 'blobGasUsed'])('Geth genesis %s field presence', (field) => {
+  it.each(['inherited', 'non-enumerable'])(
+    'rejects %s fields before copying the input',
+    (placement) => {
+      for (const value of [undefined, null, 0, 0n, '0x0', {}]) {
+        const genesis =
+          placement === 'inherited'
+            ? Object.assign(Object.create({ [field]: value }), postMergeGethGenesis)
+            : Object.defineProperty({ ...postMergeGethGenesis }, field, { value })
+        expect(() => parseGethGenesis(genesis)).toThrow('Blob gas fields are not supported')
+      }
+    },
+  )
+
+  it('rejects the retired field before evaluating input getters', () => {
+    const genesis = {
+      ...postMergeGethGenesis,
+      [field]: undefined,
+      get extraData(): string {
+        throw new Error('Input must be rejected before reading extraData')
+      },
+    }
+    expect(() => parseGethGenesis(genesis)).toThrow('Blob gas fields are not supported')
+  })
+})
+
+it('rejects inherited and non-enumerable Blob schedules in raw data', () => {
+  for (const value of [undefined, null, {}]) {
+    const configs = [
+      Object.assign(Object.create({ blobSchedule: value }), postMergeGethGenesis.config),
+      Object.defineProperty({ ...postMergeGethGenesis.config }, 'blobSchedule', { value }),
+    ]
+    for (const config of configs) {
+      expect(() => parseGethGenesis({ ...postMergeGethGenesis, config })).toThrow(
+        'blobSchedule is not supported',
+      )
+    }
+  }
+})

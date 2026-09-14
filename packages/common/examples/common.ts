@@ -1,18 +1,16 @@
 import { Common, Hardfork, TronMainnet, createCustomCommon } from '@tvmjs/common'
 
-// With enums:
-const commonWithEnums = new Common({ chain: TronMainnet, hardfork: Hardfork.Tron })
+const common = new Common({ chain: TronMainnet, hardfork: Hardfork.Tron })
+console.log(`Network: ${common.chainName()}, chainId: ${common.chainId()}`)
+console.log(`Execution profile: ${common.hardfork()}, TRON: ${common.isTron()}`)
 
-// Instantiate with the chain (and the default hardfork)
-let c = new Common({ chain: TronMainnet })
-
-// Get bootstrap nodes for chain/network
-console.log('Below are the known bootstrap nodes')
-console.log(c.bootstrapNodes()) // Array with current nodes
+// Execution presets do not provide genesis, consensus or discovery metadata.
+console.log(`Genesis: ${common.hasGenesis()}, consensus: ${common.hasConsensus()}`)
+console.log('Bootstrap nodes:', common.bootstrapNodes()) // []
 
 // Explicitly activate the CLZ instruction
-c = new Common({ chain: TronMainnet, hardfork: Hardfork.Tron, eips: [7939] })
-console.log(`CLZ is active -- ${c.isActivatedEIP(7939)}`)
+common.setEIPs([7939])
+console.log(`CLZ is active -- ${common.isActivatedEIP(7939)}`)
 
 // Instantiate common with custom chainID
 const commonWithCustomChainId = createCustomCommon({ chainId: 1234 }, TronMainnet)

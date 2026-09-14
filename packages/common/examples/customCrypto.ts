@@ -9,7 +9,7 @@ const main = async () => {
   const common = new Common({ chain: TronMainnet, customCrypto: { keccak256 } })
   const block = createBlock({}, { common })
 
-  // Method invocations within EthereumJS library instantiations where the common
+  // Method invocations within TVMJS library instances where the common
   // instance above is passed will now use the custom keccak_256 implementation
   console.log(block.hash())
 }

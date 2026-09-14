@@ -25,12 +25,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Reject inherited and non-enumerable Blob gas fields in `parseGethGenesis()` before copying input properties or invoking their getters.
 - Use the TRON profile for both EIP selection and parameter queries, while allowing queries for supported optional EIPs without activating them.
 - Reject Geth blob schedules explicitly, including empty schedules and entries named `tron`, instead of reporting a misleading unknown-hardfork error.
 - Isolate copied configuration and validate execution compatibility across VM layers, including capabilities, proposals, crypto implementations and active parameters.
 - Treat differing genesis metadata as a configuration conflict in `isCompatibleWith()`, so an execution-only `tvmOpts.common` cannot silently replace a supplied network configuration. Consensus and genesis metadata are compared independent of property order.
 - Preserve caller parameters when execution packages load defaults with `updateParams(defaults, false)`. Explicitly selecting an already active EIP no longer replaces TRON parameter overrides.
 - Document the v1.2.0 configuration and Energy migration.
+
+### Tests and Documentation
+
+- Cover metadata ordering and conflicts, active parameter compatibility on all three TRON networks, and exact allocation parsing in the shared Node/Browser suite. Keep the published `Common.isTron()` API and retained raw Ethereum data tests.
+- Align public query documentation and browser examples with the TRON profile; distinguish allocation parsing from state-root calculation. Remove the unused Ethereum bootnode updater that targeted obsolete JSON configuration files.
 
 ## 1.1.0
 

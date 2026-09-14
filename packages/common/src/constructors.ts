@@ -94,7 +94,7 @@ const TRON_CHAIN_CONFIGS: Record<TronNetwork, ChainConfig> = {
  * Genesis, consensus and network discovery data are intentionally omitted.
  * Use Common.hasGenesis() / hasConsensus() before accessing network metadata.
  *
- * Full TRON chain configurations with verified genesis and network data will be added in a future release.
+ * Supply verified network metadata through a complete ChainConfig when needed.
  *
  * @param network - TRON network identifier ('mainnet', 'nile', or 'shasta')
  * @param opts - Optional configuration (e.g., activatedProposals, hardfork)

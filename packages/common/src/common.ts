@@ -218,8 +218,8 @@ export class Common {
   }
 
   /**
-   * Returns the hardfork either based on block number (older HFs) or
-   * timestamp (Shanghai upwards).
+   * Returns the TRON profile for a block or timestamp context.
+   * The block-zero marker is not a historical network activation schedule.
    *
    * @param opts Block number or timestamp
    * @returns The name of the HF
@@ -301,8 +301,8 @@ export class Common {
   }
 
   /**
-   * Sets a new hardfork either based on block number (older HFs) or
-   * timestamp (Shanghai upwards).
+   * Selects the TRON profile for a block or timestamp context.
+   * Ethereum upgrades cannot be selected through this method.
    *
    * @param opts Block number or timestamp
    * @returns The name of the HF set
@@ -359,7 +359,7 @@ export class Common {
     // Iterate through all hardforks up to hardfork set
     const hardfork = this.hardfork()
     for (const hfChanges of this.HARDFORK_CHANGES) {
-      // EIP-referencing HF config (e.g. for berlin)
+      // Shared implementation groups in the TRON profile's declared order.
       if ('eips' in hfChanges[1]) {
         const hfEIPs = hfChanges[1].eips ?? []
         for (const eip of hfEIPs) {
@@ -408,16 +408,14 @@ export class Common {
   /**
    * Returns a parameter for the current chain setup
    *
-   * If the parameter is present in an EIP, the EIP always takes precedence.
-   * Otherwise the parameter is taken from the latest applied HF with
-   * a change on the respective parameter.
+   * Shared implementation groups are applied in profile order, followed by
+   * the `tron` parameter group and explicitly activated optional EIPs.
+   * Explicitly selecting a baseline EIP does not override TRON parameters.
    *
    * @param name Parameter name (e.g. 'minGasLimit')
    * @returns The value requested (throws if not found)
    */
   param(name: string): bigint {
-    // TODO: consider the case that different active EIPs
-    // can change the same parameter
     if (!(name in this._paramsCache)) {
       throw EthereumJSErrorWithoutCode(`Missing parameter value for ${name}`)
     }
@@ -426,7 +424,7 @@ export class Common {
   }
 
   /**
-   * Returns the parameter corresponding to a hardfork
+   * Returns a TRON profile parameter without explicitly selected optional EIP overrides.
    * @param name Parameter name (e.g. 'minGasLimit')
    * @param hardfork Hardfork name
    * @returns The value requested (throws if not found)
@@ -467,11 +465,12 @@ export class Common {
   }
 
   /**
-   * Returns a parameter for the hardfork active on block number or
-   * optional provided total difficulty (Merge HF)
+   * Returns a TRON profile parameter for a block or timestamp context.
+   * Like paramByHardfork(), this excludes optional EIP overrides.
    * @param name Parameter name
    * @param blockNumber Block number
-   * @returns The value requested or `BigInt(0)` if not found
+   * @param timestamp Optional block timestamp
+   * @returns The value requested (throws if not found)
    */
   paramByBlock(name: string, blockNumber: BigIntLike, timestamp?: BigIntLike): bigint {
     const hardfork = this.getHardforkBy({ blockNumber, timestamp })
@@ -479,12 +478,8 @@ export class Common {
   }
 
   /**
-   * Checks if an EIP is activated by either being included in the EIPs
-   * manually passed in with the {@link CommonOpts.eips} or in a
-   * hardfork currently being active
-   *
-   * Note: this method only works for EIPs being supported
-   * by the {@link CommonOpts.eips} constructor option
+   * Checks baseline profile groups and explicitly selected optional EIPs.
+   * Governance proposals do not implicitly activate EIPs.
    * @param eip
    */
   isActivatedEIP(eip: number): boolean {
@@ -684,10 +679,9 @@ export class Common {
   }
 
   /**
-   * Returns the block number or timestamp at which the next hardfork will occur.
-   * For pre-merge hardforks, returns the block number.
-   * For post-merge hardforks, returns the timestamp.
-   * Returns null if there is no next hardfork.
+   * Returns the next scheduled hardfork block or timestamp, if any.
+   * The TRON execution profile has no subsequent scheduled transition,
+   * so this query returns null.
    * @param hardfork Hardfork name, optional if HF set
    * @returns Block number or timestamp, or null if not available
    */
@@ -853,7 +847,7 @@ export class Common {
    * Returns the consensus type of the network
    * Possible values: "pow"|"poa"|"pos"
    *
-   * Note: This value can update along a Hardfork.
+   * The TRON profile does not apply consensus transitions to supplied metadata.
    */
   consensusType(): string | ConsensusType {
     if (this._chainParams.consensus === undefined) {
@@ -880,7 +874,7 @@ export class Common {
    * "clique" for "poa" consensus type or
    * "casper" for "pos" consensus type.
    *
-   * Note: This value can update along a Hardfork.
+   * The TRON profile does not apply consensus transitions to supplied metadata.
    */
   consensusAlgorithm(): string | ConsensusAlgorithm {
     if (this._chainParams.consensus === undefined) {
@@ -911,7 +905,7 @@ export class Common {
    * clique: period, epoch
    * casper: empty object
    *
-   * Note: This value can update along a Hardfork.
+   * The TRON profile does not apply consensus transitions to supplied metadata.
    */
   consensusConfig(): { [key: string]: CliqueConfig | EthashConfig | CasperConfig } {
     if (this._chainParams.consensus === undefined) {

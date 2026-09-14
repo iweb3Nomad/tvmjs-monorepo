@@ -29,6 +29,20 @@ console.log(nile.chainId()) // 3448148188n
 
 Ethereum presets, Ethereum hardforks, custom hardfork schedules and the old `Mainnet + hardfork: 'tron'` combination are rejected. Unknown preset names or IDs also throw instead of selecting a different network.
 
+`getPresetChainConfig()` accepts the preset names in the table or their numeric chain IDs. The `createTronChainIdCommon()` factory takes the short names `mainnet`, `nile` and `shasta`.
+
+The published `Common.isTron()` and hardfork query APIs remain available:
+
+| Query | TRON execution result |
+| --- | --- |
+| `isTron()` | `true` for supported execution configurations, including custom TRON chain IDs. |
+| `getHardforkBy()` / `setHardforkBy()` | `tron` for supported block and timestamp contexts. |
+| `hardforkBlock()` / `hardforkTimestamp()` | `0n` / `null` for `tron`. |
+| `eipBlock()` / `eipTimestamp()` | `0n` / `null` for baseline groups; optional EIPs have no scheduled activation, even when explicitly enabled. |
+| `nextHardforkBlockOrTimestamp()` | `null`; no subsequent network transition is scheduled. |
+
+Use `isActivatedEIP()` and `isActivatedProposal()` for individual capabilities. The exported historical Ethereum `Hardfork` names remain available for raw data and diagnostics; they cannot select an execution profile.
+
 ## Execution capabilities and proposals
 
 The exported `tronExecutionProfile` lists the shared implementation groups explicitly. It has no inherited Ethereum hardfork schedule or consensus transition.
@@ -87,7 +101,9 @@ console.log(common.hasConsensus()) // false
 
 `createCommonFromGethGenesis()`, `GethConfigOpts` and `CreateCommonFromGethGenesisOpts` have been removed. Use `parseGethGenesis()` for raw network data and `parseGethGenesisState()` for allocations. Neither parser selects an execution profile or creates a `Common`; parsed Ethereum network data is not an executable `ChainConfig`.
 
-`parseGethGenesis()` explicitly rejects `blobSchedule`, `blobGasUsed` and `excessBlobGas`, including empty schedules and entries named `tron`. Other supported genesis fields can still be parsed as raw data.
+`parseGethGenesis()` explicitly rejects `blobSchedule`, `blobGasUsed` and `excessBlobGas`, including empty schedules and entries named `tron`. Rejection is based on field presence, including inherited or non-enumerable fields and explicit `undefined`. Blob gas fields are checked before copying input properties. Other supported genesis fields can still be parsed as raw data.
+
+`parseGethGenesisState()` normalizes allocation addresses, balances, code, storage and nonce into `GenesisState`. It preserves integer balances using `bigint` conversion and returns allocation data; it does not calculate a state root or execute contracts. Historical Ethereum fixtures used to validate these data tools do not imply Ethereum or Blob execution support.
 
 ## Blob removal in v1.2.0
 
@@ -202,7 +218,9 @@ The configuration migration affects `@tvmjs/common` and the historical fixture t
 
 ## VM/TVM configuration consistency
 
-When `common`, `tvmOpts.common` or `tvm.common` are supplied together, VM checks for conflicting network IDs, capabilities, proposals, crypto functions and supplied active parameter values. Equivalent configurations are accepted and the VM and TVM share the selected Common instance. Parameter defaults are checked again after initialization.
+When `common`, `tvmOpts.common` or `tvm.common` are supplied together, VM checks for conflicting network IDs, capabilities, proposals, crypto functions, genesis/consensus metadata and supplied active parameter values. Equivalent configurations are accepted and the VM and TVM share the selected Common instance. Genesis and consensus comparisons ignore object key order; missing metadata conflicts with explicitly supplied metadata.
+
+Parameter defaults are checked again after initialization. `isCompatibleWith()` compares overlapping active parameter values numerically: a missing default or a different inactive EIP parameter does not itself create a conflict. Different optional EIP selections do conflict; once both configurations activate that EIP, its supplied parameter values must also agree.
 
 ## Builds and development
 
@@ -210,8 +228,14 @@ ES modules, CommonJS and browser builds are supported. The repository validation
 
 ```sh
 npm run test:node --workspace @tvmjs/common
+npm run test:browser --workspace @tvmjs/common
+npm run tsc --workspace @tvmjs/common
 npm run examples --workspace @tvmjs/common
 ```
+
+Node and Browser run the same retained Common suite, including configuration rejection and raw data parsing. Browser tests require Playwright's Chromium headless shell (`npx playwright install chromium --only-shell` from the repository root).
+
+The four TypeScript examples cover basic configuration, custom identity, custom cryptography and the three TRON networks. After building the workspaces, run `npx vite` from this package and open `/examples/browser.html` for the browser configuration examples.
 
 ## Upstream
 

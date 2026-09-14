@@ -49,11 +49,6 @@ function parseGethParams(gethGenesis: GethGenesis) {
     nonce: unparsedNonce,
     timestamp: unparsedTimestamp,
   } = gethGenesis
-  if ('excessBlobGas' in gethGenesis || 'blobGasUsed' in gethGenesis) {
-    throw EthereumJSErrorWithoutCode(
-      'Blob gas fields are not supported by TRON configuration parsing',
-    )
-  }
   const genesisTimestamp = Number(unparsedTimestamp)
   const { chainId, depositContractAddress } = config
 
@@ -255,6 +250,13 @@ function parseGethParams(gethGenesis: GethGenesis) {
  */
 export function parseGethGenesis(gethGenesis: GethGenesis, name?: string) {
   try {
+    // Check the original object before spreading it: inherited and non-enumerable
+    // fields must be rejected rather than silently lost during copying.
+    if ('excessBlobGas' in gethGenesis || 'blobGasUsed' in gethGenesis) {
+      throw EthereumJSErrorWithoutCode(
+        'Blob gas fields are not supported by TRON configuration parsing',
+      )
+    }
     const required = ['config', 'difficulty', 'gasLimit', 'nonce', 'alloc']
     if (required.some((field) => !(field in gethGenesis))) {
       const missingField = required.filter((field) => !(field in gethGenesis))
@@ -277,7 +279,7 @@ export function parseGethGenesis(gethGenesis: GethGenesis, name?: string) {
 
 /**
  * Return the preset chain config for one of the predefined chain configurations
- * @param chain the representing a network name (e.g. 'mainnet') or number representing the chain ID
+ * @param chain TRON preset name (e.g. 'tron-mainnet') or numeric chain ID
  * @returns a {@link ChainConfig}
  */
 export const getPresetChainConfig = (chain: string | number) => {

@@ -1,7 +1,15 @@
 // cspell:ignore dpos
 import { assert, describe, it } from 'vitest'
 
-import { Common, Hardfork, Mainnet, TronMainnet, createCustomCommon } from '../src/index.ts'
+import {
+  Common,
+  Hardfork,
+  Mainnet,
+  TronMainnet,
+  TronNile,
+  TronShasta,
+  createCustomCommon,
+} from '../src/index.ts'
 
 import type { ChainConfig } from '../src/index.ts'
 
@@ -65,3 +73,85 @@ describe('[Common]: custom TRON configuration', () => {
     assert.isFalse(new Common({ chain: TronMainnet }).hasGenesis())
   })
 })
+
+describe.each([TronMainnet, TronNile, TronShasta])(
+  '[Common]: configuration compatibility on $name',
+  (base) => {
+    it('compares complete metadata independently of object key order', () => {
+      const genesis = {
+        gasLimit: 1000000,
+        difficulty: 0,
+        nonce: '0x0000000000000000',
+        extraData: '0x',
+      } as const
+      const consensus = {
+        type: 'poa',
+        algorithm: 'clique',
+        clique: { period: 3, epoch: 30000 },
+      }
+      const chain = { ...base, genesis, consensus }
+      const common = new Common({ chain })
+      const reordered = new Common({
+        chain: {
+          ...base,
+          genesis: {
+            extraData: '0x',
+            nonce: '0x0000000000000000',
+            difficulty: 0,
+            gasLimit: 1000000,
+          },
+          consensus: {
+            clique: { epoch: 30000, period: 3 },
+            algorithm: 'clique',
+            type: 'poa',
+          },
+        },
+      })
+      assert.isTrue(common.isCompatibleWith(reordered))
+      assert.isTrue(reordered.isCompatibleWith(common))
+
+      for (const conflictingChain of [
+        base,
+        { ...base, genesis },
+        { ...base, consensus },
+        { ...chain, genesis: { ...genesis, gasLimit: 2000000 } },
+        { ...chain, consensus: { ...consensus, clique: { period: 6, epoch: 30000 } } },
+      ]) {
+        const conflicting = new Common({ chain: conflictingChain })
+        assert.isFalse(common.isCompatibleWith(conflicting))
+        assert.isFalse(conflicting.isCompatibleWith(common))
+      }
+      assert.isTrue(common.isCompatibleWith(common.copy()))
+    })
+
+    it('compares active parameter values as defaults and optional capabilities are loaded', () => {
+      const common = new Common({
+        chain: base,
+        params: { tron: { callGas: 40 }, 7939: { clzGas: 5 } },
+      })
+      const other = new Common({
+        chain: base,
+        params: { tron: { callGas: '40', balanceGas: 20 }, 7939: { clzGas: 7 } },
+        eips: [607],
+      })
+      // Missing defaults and inactive parameter groups do not create conflicts.
+      assert.isTrue(common.isCompatibleWith(other))
+      assert.isTrue(other.isCompatibleWith(common))
+
+      other.setEIPs([7939])
+      assert.isFalse(common.isCompatibleWith(other))
+      assert.isFalse(other.isCompatibleWith(common))
+      common.setEIPs([7939])
+      assert.isFalse(common.isCompatibleWith(other))
+      assert.isFalse(other.isCompatibleWith(common))
+
+      other.updateParams({ 7939: { clzGas: 5 } })
+      assert.isTrue(common.isCompatibleWith(other))
+      assert.isTrue(other.isCompatibleWith(common))
+      other.updateParams({ tron: { callGas: 41 } })
+      assert.isFalse(common.isCompatibleWith(other))
+      assert.isFalse(other.isCompatibleWith(common))
+      assert.strictEqual(common.param('callGas'), 40n)
+    })
+  },
+)
