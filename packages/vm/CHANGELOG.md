@@ -20,6 +20,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Migrate the remaining VM API suites to TRON, including transaction fees and receipts, block rollback, code prefix validation, transient storage, account creation and full-width CHAINID results. Replace retired Ethereum activation tests with explicit rejection and no-side-effect regressions.
+- Run the VM API suite from the package's default `test` command. Share the complete API suite with Chromium and use pinned TRON Solidity fixtures instead of downloading and compiling contracts during tests.
+- Retire Ethereum state/blockchain FORKS runners, execution-spec fixture runners and their submodule, t8n/retesteth filling tools, and the Ethereum block benchmark. Remove their commands and unused development dependencies; Ethereum official execution vectors are not part of the TRON regression results. Keep local fixed vectors and their source attribution where still used.
+- Preserve execution trace regressions outside the retired filling tools and report memory size in bytes (32 per word).
 - Remove DAO balance migration and London activation-block builder defaults. Builders derive fees from the parent, retain explicit overrides and inherit the parent gas limit; historical Ethereum heights do not change TRON account balances.
 - Replace EIP-1283/2200/2929/3529/3651 pricing tests with TRON storage-transition, zero-refund, repeated-access, coinbase, nested-revert and Energy-boundary regressions. Preserve 17 storage transition sequences and ordinary signed transaction fee validation.
 - Migrate custom-state and Clique sealing regressions to explicit TRON configuration; preserve genesis/consensus compatibility checks after removal of Common's metadata overrides and Geth constructor.

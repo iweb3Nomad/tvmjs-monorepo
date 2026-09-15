@@ -159,7 +159,7 @@ Additionally to the `VM.runTx()` method there is an API method `VM.runBlock()` w
 
 ### RPC Integration
 
-The previous Ethereum Mainnet and Goerli execution examples have been retired. The TRON RPC Client PoC is a separate v1.2.0 development task; it must validate remote-state availability and the execution snapshot before reporting node consistency.
+The previous Ethereum Mainnet and Goerli execution examples have been retired. These examples use local TRON execution and explicit state inputs.
 
 ### Building a Block
 

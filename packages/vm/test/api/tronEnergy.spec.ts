@@ -23,7 +23,7 @@ const callToken = `0x6000600060006000620f4241600173${target.toString().slice(2)}
 async function initialize(state: StateManagerInterface, code: `0x${string}`) {
   await state.putAccount(SIGNER_A.address, new Account(0n, 10n ** 18n))
   const account = new Account(0n, 100n)
-  account.asset = { [Number(tokenId)]: 100n }
+  account.asset = { [tokenId.toString()]: 100n }
   await state.putAccount(contract, account)
   await state.putCode(contract, hexToBytes(code))
   await state.putAccount(target, new Account())
@@ -138,15 +138,15 @@ describe('TRON transaction access lists', () => {
         const data = {
           to: contract,
           gasLimit: 100000n,
-          gasPrice: 10n,
-          maxFeePerGas: 10n,
-          maxPriorityFeePerGas: 1n,
           accessList,
         }
         const tx = (
           type === '2930'
-            ? createAccessList2930Tx(data, { common })
-            : createFeeMarket1559Tx(data, { common })
+            ? createAccessList2930Tx({ ...data, gasPrice: 10n }, { common })
+            : createFeeMarket1559Tx(
+                { ...data, maxFeePerGas: 10n, maxPriorityFeePerGas: 1n },
+                { common },
+              )
         ).sign(SIGNER_A.privateKey)
         assert.isTrue(tx.verifySignature())
         const addressWarming = vi.spyOn(vm.tvm.journal, 'addAlwaysWarmAddress')

@@ -223,11 +223,7 @@ export default [
     },
   },
   {
-    files: [
-      'packages/vm/test/util.ts',
-      'packages/vm/test/tester/**/*.ts',
-      'packages/vm/examples/**/*.ts',
-    ],
+    files: ['packages/vm/test/util.ts', 'packages/vm/examples/**/*.ts'],
     rules: {
       'no-console': 'off',
     },

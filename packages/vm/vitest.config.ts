@@ -6,5 +6,6 @@ export default mergeConfig(
   baseConfig,
   defineConfig({
     plugins: [topLevelAwait()],
+    test: { include: ['test/api/**/*.spec.ts'] },
   }),
 )

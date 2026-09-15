@@ -146,6 +146,7 @@ describe('TRON rootTransactionId propagation', () => {
 
   it('rejects an Ethereum deployment configuration', () => {
     assert.throws(
+      // @ts-expect-error Ethereum data is deliberately passed to test rejection.
       () => new Common({ chain: Mainnet, hardfork: Hardfork.Constantinople }),
       /Only TRON execution configurations are supported/,
     )
