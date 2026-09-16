@@ -160,7 +160,7 @@ for (const StateManager of [SimpleStateManager, MerkleStateManager]) {
       [1n, [0n], 5000n],
       [1n, [1n], 5000n],
       [1n, [2n, 1n], 10000n],
-      [0n, [1n, 0n, 1n], 45000n],
+      [0n, [1n, 0n, 1n], 30000n],
     ] as const)(
       'charges current-value writes from %s through %s without refunds',
       async (initial, values, energy) => {

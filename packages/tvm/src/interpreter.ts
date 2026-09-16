@@ -741,6 +741,7 @@ export class Interpreter {
     }
 
     await this._stateManager.putStorage(this._env.address, key, value)
+    this.journal.recordStorageWrite(this._env.address, key)
 
     if (this._tvm.common.isActivatedEIP(7928)) {
       this._tvm.blockLevelAccessList?.addStorageWrite(

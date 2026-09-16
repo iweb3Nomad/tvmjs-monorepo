@@ -270,15 +270,16 @@ export function writeCallOutput(runState: RunState, outOffset: bigint, outLength
 }
 
 /**
- * TRON SSTORE Energy depends only on the current and new values. Clearing or
- * restoring a slot does not generate an Ethereum storage refund.
+ * TRON SSTORE charges a first nonzero write to an absent slot at the set rate.
+ * Written zero slots remain present until the transaction ends. There is no refund.
  */
 export function updateSstoreGas(
   currentStorage: Uint8Array,
   value: Uint8Array,
   common: Common,
+  writtenInTransaction = false,
 ): bigint {
-  if (currentStorage.length === 0 && value.length !== 0) {
+  if (currentStorage.length === 0 && value.length !== 0 && !writtenInTransaction) {
     return common.param('sstoreSetGas')
   }
   return common.param('sstoreResetGas')

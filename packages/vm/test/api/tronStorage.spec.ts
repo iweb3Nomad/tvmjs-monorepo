@@ -18,18 +18,18 @@ import { createVM, runTx } from '../../src/index.ts'
 const contract = createAddressFromString(`0x${'22'.repeat(20)}`)
 const slot = new Uint8Array(32)
 // Retain the 17 transition sequences from the former EIP-1283/2200/3529 tests.
-// Expected Energy is derived from java-tron GreatVoyage-v4.8.2 EnergyCost.java:
-// a current zero -> nonzero write costs 20000, every other write 5000, PUSH1 costs 3.
-// The pinned source and execution settings are in tvm/test/testdata/tronEnergy.json.
+// A first nonzero write to an absent slot costs 20000; written zero slots remain
+// present in the transaction and all subsequent writes cost 5000. PUSH1 costs 3.
+// See tvm/test/testdata/javaTronExecution.json for measured upstream execution.
 const transitions = [
   [0, [0, 0], 10012],
-  [0, [0, 1], 25012],
+  [0, [0, 1], 10012],
   [0, [1, 0], 25012],
   [0, [1, 2], 25012],
   [0, [1, 1], 25012],
   [1, [0, 0], 10012],
-  [1, [0, 1], 25012],
-  [1, [0, 2], 25012],
+  [1, [0, 1], 10012],
+  [1, [0, 2], 10012],
   [1, [2, 0], 10012],
   [1, [2, 3], 10012],
   [1, [2, 1], 10012],
@@ -37,8 +37,8 @@ const transitions = [
   [1, [1, 0], 10012],
   [1, [1, 2], 10012],
   [1, [1, 1], 10012],
-  [0, [1, 0, 1], 45018],
-  [1, [0, 1, 0], 30018],
+  [0, [1, 0, 1], 30018],
+  [1, [0, 1, 0], 15018],
 ] as const
 
 for (const StateManager of [SimpleStateManager, MerkleStateManager]) {

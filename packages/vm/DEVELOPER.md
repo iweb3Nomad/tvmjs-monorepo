@@ -35,6 +35,8 @@ Construct transactions with the VM's Common, sign the local TRON payload and sup
 
 The 1559/3198 tests verify retained local transaction and block formats. They do not model bandwidth, staking or network Energy pricing. Execution Energy expectations use the pinned source and configuration recorded in `../tvm/test/testdata/tronEnergy.json`. These source-derived expectations are not live-node measurements.
 
+`test/api/javaTronReference.spec.ts` also replays 71 externally measured java-tron reference cases through signed local transactions, with both SimpleStateManager and MerkleStateManager. It compares TVMJS execution Energy, errors, output, stack, logs and state with [the recorded results](../tvm/test/testdata/javaTronExecution.json). A zero-priced envelope isolates execution balance changes; intrinsic transaction overhead is asserted separately. The [fixed inputs](../tvm/test/testdata/javaTronExecutionInputs.json) and results record the upstream commit, configuration and provenance hashes. The external measurement used the java-tron VM engine with real repository caches and mocked empty backing stores, without live-node or full resource-model coverage. Repository tests read the fixed JSON and require no Java, Gradle or external checkout.
+
 The tests cover all three TRON presets, exact Token IDs, address derivation, storage transitions, transient storage, call forwarding, receipts and rollback. `retiredExecution.spec.ts` verifies rejected capabilities and the absence of Ethereum system calls and block rewards. `removedBlob`, `removedBeaconRoot` and `removed7702` cover physically removed inputs.
 
 ### Solidity contract fixtures

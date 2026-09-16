@@ -147,7 +147,7 @@ The default schedule follows java-tron [GreatVoyage-v4.8.2 EnergyCost](https://g
 | BALANCE, EXTCODESIZE, TOKENBALANCE, ISCONTRACT | 20 |
 | EXTCODEHASH | 400 |
 | SLOAD | 50 |
-| SSTORE, zero to nonzero | 20,000 |
+| SSTORE, first nonzero write to an absent slot | 20,000 |
 | Other SSTORE writes, including unchanged values | 5,000 |
 | CALL, CALLCODE, DELEGATECALL, STATICCALL, CALLTOKEN | 40 base |
 | Nonzero CALL/CALLTOKEN transfer | 9,000, plus 25,000 if the recipient is missing |
@@ -159,9 +159,13 @@ An explicit `runCall({ code })` override initializes a missing execution account
 
 There are no cold/warm access surcharges or SSTORE/SELFDESTRUCT refunds. Access-list reporting is diagnostic and does not warm state. Journal checkpoints and revert behavior remain active.
 
+A slot written to zero remains present for the rest of that transaction, matching java-tron's storage row cache. Subsequent writes to that slot cost 5,000 Energy, even when its current value is zero. For example, `0 → 1 → 0 → 1` costs 30,000 Energy for the three SSTORE instructions, plus instruction setup costs. Successful child calls preserve this presence; reverted child calls discard their changes. A later public execution starts with fresh storage-presence tracking.
+
 MLOAD, MSTORE and MSTORE8 charge memory expansion without an additional base fee in the original schedule. To reproduce java-tron's `allowHigherLimitForMaxCpuTimeOfOneTx` memory adjustment, set `params: { tron: { mloadGas: 1, mstoreGas: 1, mstore8Gas: 1 } }` on Common. CALLDATACOPY, CODECOPY and RETURNDATACOPY charge expansion and copying without an extra base fee in either schedule.
 
-The [Energy vectors](./test/testdata/tronEnergy.json) record the reference commit, settings, expected costs and pre-migration results. They are derived from source; live-node comparison, dynamic Energy penalties, version-1 contracts and the full bandwidth/staking/feeLimit resource model are outside this validation. `executionGasUsed` measures execution Energy; the VM wrapper's transaction overhead is reported separately in `totalGasSpent`.
+The original [Energy vectors](./test/testdata/tronEnergy.json) record source-derived costs and pre-migration results. The separate [execution fixture](./test/testdata/javaTronExecution.json) contains 71 reference results measured externally with the pinned java-tron VM engine, using real repository caches and mocked empty backing stores. The [fixed inputs](./test/testdata/javaTronExecutionInputs.json) and results record the upstream commit, execution configuration and provenance hashes. TVM tests compare Energy, errors, return values, stack, logs and account state across three TRON presets and two StateManagers; VM tests replay the same inputs through signed local transaction envelopes. These regression tests run TVMJS against the recorded results and require no Java, Gradle or external checkout.
+
+This validates the recorded execution settings. It does not run a live node or cover dynamic Energy penalties, version-1 contracts or the full bandwidth/staking/feeLimit resource model. `executionGasUsed` measures execution Energy; the VM wrapper's transaction overhead is reported separately in `totalGasSpent`.
 
 ### Storage parameter migration in v1.2.0
 

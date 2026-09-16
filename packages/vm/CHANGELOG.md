@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+- Verify 71 measured java-tron execution cases through signed local transactions with both StateManagers. Compare execution Energy and state separately from transaction-envelope overhead, and correct storage-transition expectations for zero slots already written in the transaction.
+
 ### Breaking Changes
 
 - Reject the removed `tvmOpts.allowUnlimitedContractSize` and `tvmOpts.allowUnlimitedInitCodeSize` options before initialization. Remove EIP-3860 deployment test assumptions and cover VM/TVM consistency for large deployments, exact code deposit Energy, failure receipts and state rollback across all three TRON networks and retained transaction types.

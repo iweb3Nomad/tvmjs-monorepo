@@ -997,6 +997,7 @@ export class TVM implements TVMInterface {
     if (opts.message) rejectRemovedExecutionOptions(opts.message)
     const messageDepth = opts.message?.depth ?? opts.depth ?? 0
     this._acquireExecutionLock()
+    this.journal.clearStorageWrites()
     try {
       return await this._runCall(opts, true, messageDepth)
     } catch (error) {
@@ -1005,6 +1006,7 @@ export class TVM implements TVMInterface {
       }
       throw error
     } finally {
+      this.journal.clearStorageWrites()
       this._activeExecutions--
     }
   }
@@ -1372,6 +1374,7 @@ export class TVM implements TVMInterface {
   async runCode(opts: TVMRunCodeOpts): Promise<ExecResult> {
     rejectRemovedExecutionOptions(opts)
     this._acquireExecutionLock()
+    this.journal.clearStorageWrites()
     try {
       this._block = opts.block ?? defaultBlock()
 
@@ -1401,6 +1404,7 @@ export class TVM implements TVMInterface {
 
       return await this.runInterpreter(message, { pc: opts.pc })
     } finally {
+      this.journal.clearStorageWrites()
       this._activeExecutions--
     }
   }

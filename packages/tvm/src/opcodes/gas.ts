@@ -247,11 +247,13 @@ export const dynamicGasHandlers: Map<number, AsyncDynamicGasHandler | SyncDynami
           runState.interpreter.getAddress().bytes,
           keyBytes,
         )
-        // java-tron charges from the current value, without original-value net metering.
+        // A zero written earlier in this transaction still exists in java-tron's row cache.
+        // Only an absent slot's first nonzero write incurs the set cost.
         gas += updateSstoreGas(
           setLengthLeftStorage(currentStorage),
           value === BIGINT_0 ? new Uint8Array() : bigIntToBytes(value),
           common,
+          runState.interpreter.journal.hasStorageWrite(runState.interpreter.getAddress(), keyBytes),
         )
         return gas
       },

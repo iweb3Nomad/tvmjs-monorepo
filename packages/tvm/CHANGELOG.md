@@ -10,6 +10,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+- Fix SSTORE overcharging after a slot has been written to zero in the same transaction. Track storage presence through successful child calls and nested rollback, and reset it at public execution boundaries, matching java-tron's storage row cache.
+- Add 71 externally measured java-tron reference vectors with the upstream commit, configuration and provenance hashes. Replay them in TVMJS Node/Browser tests across three TRON networks and both StateManagers without Java or Gradle dependencies.
+
 ### Tests
 
 - Migrate retained execution and precompile tests to TRON configuration, including transaction-ID-based creation, 21-byte CREATE2 results, Energy costs, sender funding, nonce boundaries and transient-storage cleanup. Remove the temporary Ethereum-input type suppressions from TVM tests.
