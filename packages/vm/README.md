@@ -477,7 +477,8 @@ The VM processes state changes at several levels:
   - Finalizes the block state (state root, receipts root, logs bloom).
   - Commits or reverts state changes based on success.
 - **[`runTx`](./src/runTx.ts)**: Processes a single transaction.
-  - Performs pre-execution checks: Sender balance sufficient for gas+value, sender nonce validity, transaction gas limit against block gas limit, supported transaction types and chainId.
+  - Performs pre-execution checks: Sender balance sufficient for gas+value, sender nonce validity, transaction gas limit against block gas limit and supported transaction types. Typed and EIP-155-protected transactions must match the VM chainId; unprotected legacy envelopes remain valid across networks.
+  - For nonzero TRC-10 transfers with normal balance validation, checks the local Token registry and sender balance. SimpleStateManager and MerkleStateManager populate their registries from supplied account assets; RPCStateManager does not implement Token existence lookup. See [StateManager capabilities](../statemanager/README.md#local-trc-10-registry).
   - Collects requested access diagnostics without prewarming addresses or storage.
   - Pays intrinsic gas cost.
   - Executes the transaction code using `vm.tvm.runCall` (or specific logic for contract creation).

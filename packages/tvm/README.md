@@ -267,6 +267,8 @@ The [TRON Energy schedule](#tron-energy-accounting) applies independently of Eth
 
 The TRON profile selects precompiles through explicit capabilities. The existing 0x01 through 0x08 implementations remain available, followed by TRON batch signature validation at 0x09 and multi-signature validation at 0x0a. Proposal 96 retains strict input checks for the TRON signature precompiles.
 
+Multi-signature validation at `0x0a` accepts at most 5 signatures and counts each recovered signer only once within that invocation. Batch validation at `0x09` accepts at most 16 signatures and returns individual verification results. These precompiles do not track messages across calls or transactions; contracts must enforce any required replay protection, such as a nonce or consumed-message record, in the signed payload and contract state.
+
 See [the MODEXP example](./examples/precompiles/05-modexp.ts) for a direct call. BLS, KZG and optional Ethereum hardfork activation examples have been retired with their configuration entry points.
 
 ### Custom Precompiles

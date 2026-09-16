@@ -63,6 +63,12 @@ This library by default uses JavaScript implementations for the basic standard c
 
 ## `MerkleStateManager`
 
+### Local TRC-10 registry
+
+`putAccount()` seeds an in-memory Token registry from `Account.asset` keys. `tokenIdExists()` queries these locally supplied IDs, not the network's asset issuance database. Checkpoints roll back new registrations along with account state; only the outermost commit makes registrations permanent. Loading a trie root or an account proof alone does not reconstruct this registry. When initializing a separate instance from external state, supply the required Token account data through `putAccount()` before executing Token transactions.
+
+`shallowCopy()` independently copies the registry at the state before the outermost open checkpoint, matching its copied trie root. Pending registrations from that checkpoint or any nested commit are excluded. Account caches are not copied; flush initialization writes before copying, or finish the outermost commit. Registrations and balances subsequently changed in one instance do not mutate the other instance's snapshot.
+
 ### Usage example
 
 ```ts
@@ -168,6 +174,10 @@ The `SimpleStateManager` is a dependency-minimized simple state manager implemen
 
 TRC-10 token IDs are exact `bigint` values throughout the `StateManagerInterface`: `tokenIdExists(tokenId: bigint)` replaces the former `number` parameter, and `Account.asset` is keyed by canonical decimal ID strings (see `tokenIdToKey()` in `@tvmjs/util`). Custom state manager implementations must update the `tokenIdExists()` signature and must not convert token IDs to `Number`, which merges IDs above `2^53 - 1`.
 
+`SimpleStateManager` implements a local in-memory Token registry seeded by `putAccount()` asset keys, including explicitly supplied zero balances. Unknown IDs return `false`. Known IDs remain registered when a balance is spent or a holder is deleted; registrations introduced in a reverted checkpoint are discarded. Nested commits remain reversible by their enclosing checkpoint. `shallowCopy()` copies the current account state and checkpoint stack, including independent registry snapshots, so each instance can commit or revert independently.
+
+This supports `runTx()` validation of nonzero TRC-10 transfers when the sender's Token balances are supplied locally. It does not fetch Token issuance records, implement proof/state-root operations, or add remote Token support to `RPCStateManager`.
+
 This state manager can be instantiated and used as follows:
 
 ```ts
@@ -191,7 +201,7 @@ void main()
 
 `RPCStateManager` requires `eth_getProof`, `eth_getCode` and `eth_getStorageAt` at the selected block tag. It uses the returned account fields as trusted input and caches local execution changes; it does not authenticate provider responses against a trusted chain root. `getRPCStateProof()` retrieves the provider's proof without verifying it.
 
-Use it with VM/TVM for local execution under the selected TRON profile. A TRON `Common` does not make this adapter compatible with java-tron RPC, supply remote TRC-10 assets, or permit replaying Ethereum transactions with a different chainId. The java-tron RPC PoC is separate work.
+Use it with VM/TVM for local execution under the selected TRON profile. A TRON `Common` does not make this adapter compatible with java-tron RPC or supply remote TRC-10 assets. Typed and EIP-155-protected transactions must match the VM chainId; unprotected legacy envelopes retain their existing cross-network behavior. java-tron RPC and client integration are outside this package's current scope.
 
 A simple example of usage:
 
@@ -274,7 +284,7 @@ Use the same provider and consistent block context for state and history reads. 
 - `checkpoint()`, `commit()` and `revert()` apply to account, code and storage caches together. Writes remain local and are not submitted to the provider.
 - `setBlockTag()` and `clearCaches()` clear both current and original storage caches. Change snapshots between executions, outside active checkpoints.
 - A full state trie is unavailable. `getStateRoot()` returns a placeholder of 32 zero bytes, `setStateRoot()` is a no-op, and `hasStateRoot()` is not implemented. A successful local block run does not validate the remote state root or consensus.
-- Remote TRC-10 registry lookup is not implemented: `tokenIdExists()` throws. Use a suitable local StateManager or a custom adapter for Token state.
+- Remote TRC-10 registry lookup is not implemented: `tokenIdExists()` throws, including during normal `runTx()` validation of a nonzero Token transfer. Use locally seeded SimpleStateManager/MerkleStateManager or a custom adapter for Token state. `skipBalance` disables validation and is not a replacement for registry support.
 - VM results include the retained transaction envelope's intrinsic gas. They are not by themselves measurements of java-tron on-chain Energy.
 
 The offline tests in [rpcStateManager.spec.ts](./test/rpcStateManager.spec.ts) cover fixed historical data fixtures, and [rpcStateManager.tron.spec.ts](./test/rpcStateManager.tron.spec.ts) covers signed local execution on all three TRON presets. They do not contact or validate a live node.

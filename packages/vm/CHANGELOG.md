@@ -22,6 +22,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Cover signed TRC-10 transfers with SimpleStateManager and copied MerkleStateManager instances on all three TRON presets, including exact high IDs, unknown-ID rejection, failed execution rollback and subsequent transactions.
+
 - Migrate the remaining VM API suites to TRON, including transaction fees and receipts, block rollback, code prefix validation, transient storage, account creation and full-width CHAINID results. Replace retired Ethereum activation tests with explicit rejection and no-side-effect regressions.
 - Run the VM API suite from the package's default `test` command. Share the complete API suite with Chromium and use pinned TRON Solidity fixtures instead of downloading and compiling contracts during tests.
 - Retire Ethereum state/blockchain FORKS runners, execution-spec fixture runners and their submodule, t8n/retesteth filling tools, and the Ethereum block benchmark. Remove their commands and unused development dependencies; Ethereum official execution vectors are not part of the TRON regression results. Keep local fixed vectors and their source attribution where still used.

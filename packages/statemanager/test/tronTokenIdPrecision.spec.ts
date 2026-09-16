@@ -40,23 +40,27 @@ for (const StateManager of [SimpleStateManager, MerkleStateManager]) {
   })
 }
 
-describe('MerkleStateManager token registry', () => {
-  it('tracks token existence by exact ID through commit and revert', async () => {
-    const sm = new MerkleStateManager()
-    await sm.checkpoint()
-    await sm.putAccount(address, createAccount({ asset: { [tokenIdToKey(HIGH)]: 5n } }))
-    assert.isTrue(await sm.tokenIdExists(HIGH))
-    assert.isFalse(await sm.tokenIdExists(LOW))
-    await sm.revert()
-    assert.isFalse(await sm.tokenIdExists(HIGH))
+for (const StateManager of [MerkleStateManager, SimpleStateManager]) {
+  describe(`${StateManager.name} token registry`, () => {
+    it('tracks token existence by exact ID through commit and revert', async () => {
+      const sm = new StateManager()
+      await sm.checkpoint()
+      await sm.putAccount(address, createAccount({ asset: { [tokenIdToKey(HIGH)]: 5n } }))
+      assert.isTrue(await sm.tokenIdExists(HIGH))
+      assert.isFalse(await sm.tokenIdExists(LOW))
+      await sm.revert()
+      assert.isFalse(await sm.tokenIdExists(HIGH))
 
-    await sm.checkpoint()
-    await sm.putAccount(address, createAccount({ asset: { [tokenIdToKey(MAX)]: 5n } }))
-    await sm.commit()
-    assert.isTrue(await sm.tokenIdExists(MAX))
-    assert.isFalse(await sm.tokenIdExists(MAX - 1n))
+      await sm.checkpoint()
+      await sm.putAccount(address, createAccount({ asset: { [tokenIdToKey(MAX)]: 5n } }))
+      await sm.commit()
+      assert.isTrue(await sm.tokenIdExists(MAX))
+      assert.isFalse(await sm.tokenIdExists(MAX - 1n))
+    })
   })
+}
 
+describe('MerkleStateManager token storage', () => {
   it('round-trips high IDs through the trie', async () => {
     const sm = new MerkleStateManager()
     await sm.putAccount(

@@ -747,16 +747,23 @@ export class MerkleStateManager implements StateManagerInterface {
 
     const cacheSize = !downlevelCaches ? this._trie['_opts']['cacheSize'] : 0
     const trie = this._trie.shallowCopy(false, { cacheSize })
+    // The copy has no checkpoint scratch data. Its root and token registrations
+    // must both refer to the state before the outermost open checkpoint.
+    const checkpoint = this._trie.database().checkpoints[0]
+    if (checkpoint !== undefined) trie.root(checkpoint.root)
     const prefixCodeHashes = this._prefixCodeHashes
     const prefixStorageTrieKeys = this._prefixStorageTrieKeys
 
-    return new MerkleStateManager({
+    const copy = new MerkleStateManager({
       common,
       trie,
       prefixStorageTrieKeys,
       prefixCodeHashes,
       caches: this._caches?.shallowCopy(downlevelCaches),
     })
+    copy._tokenIds = new Map(this._tokenIds)
+    copy._tokenIdsCache = new Map(this._tokenIdsCacheStack[0] ?? this._tokenIdsCache)
+    return copy
   }
 
   /**

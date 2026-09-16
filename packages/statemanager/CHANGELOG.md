@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Implement SimpleStateManager's local TRC-10 registry using exact IDs from account assets, with nested checkpoint rollback and independent shallow copies. Normal Token transfers through `runTx()` no longer fail with an unimplemented-method error.
+- Preserve MerkleStateManager Token registrations in shallow copies. Copy the registry and trie root from before the outermost open checkpoint, excluding uncommitted registrations and keeping subsequent writes isolated.
+
 - Preserve RPCStateManager network, optional EIPs, custom crypto and `earliest` block tags across shallow copies while keeping caches independent.
 - Commit RPC account, code and storage caches together so an outer revert also restores changes committed in an inner checkpoint.
 - Clear the RPC original storage cache when changing the block tag or clearing caches, preventing reads from a previous snapshot.
