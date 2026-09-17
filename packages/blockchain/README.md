@@ -1,4 +1,4 @@
-# @tvmjs/blockchain `1.0.1`
+# @tvmjs/blockchain `1.2.0`
 
 Header validation uses the parent-derived base fee and ordinary gas-limit bounds at every height. Ethereum London activation heights do not override these checks. Invalid fees or doubled gas limits are rejected without advancing the canonical head.
 

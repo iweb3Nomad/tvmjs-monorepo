@@ -1,4 +1,4 @@
-# @tvmjs/block `1.0.1`
+# @tvmjs/block `1.2.0`
 
 TRON execution headers retain their base-fee container and parent gas-limit checks without London activation-block adjustments or DAO extra-data requirements. The protected `_validateDAOExtraData()` hook is removed; public PoW/Clique tools still require explicit consensus metadata.
 

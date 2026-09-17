@@ -1,4 +1,4 @@
-# @tvmjs/tx `1.0.1`
+# @tvmjs/tx `1.2.0`
 
 EIP-3860 initcode limits and word metering are removed. Omit `TxOptions.allowUnlimitedInitCodeSize`; this key now throws even with `false` or `undefined`. `paramsTx[3860]` is removed. Ordinary data byte fees, creation overhead, signing and serialization remain unchanged. See [contract size migration](../common/README.md#contract-size-configuration-in-v120).
 

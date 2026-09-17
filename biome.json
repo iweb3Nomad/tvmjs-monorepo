@@ -19,7 +19,8 @@
       "**/rlp/bin/**",
       "**/benchmarks/fixture/**",
       "**/soljson.js",
-      "**/test/**/output/*TEST.json"
+      "**/test/**/output/*TEST.json",
+      "**/docs/**"
     ]
   },
   "formatter": {

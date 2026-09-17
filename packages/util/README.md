@@ -1,4 +1,4 @@
-# @tvmjs/util `1.1.0`
+# @tvmjs/util `1.2.0`
 
 v1.2.0 removes the Blob and KZG modules, their public helpers and dedicated dependencies. Generic hashes, signatures, bytes and TRON address tools remain available. See [Blob migration and affected packages](../common/README.md#blob-removal-in-v120).
 

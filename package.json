@@ -1,6 +1,7 @@
 {
   "name": "root",
   "private": true,
+  "license": "MPL-2.0",
   "workspaces": ["packages/*"],
   "scripts": {
     "biome": "npx @biomejs/biome check",
@@ -13,22 +14,22 @@
     "e2e:resolutions": "node ./scripts/e2e-resolutions.js",
     "examples": "npm run examples --workspaces --if-present",
     "examples:build": "npm run examples:build --workspaces --if-present",
-    "install-browser-deps": "npm install playwright@1.62.1 @vitest/browser@4.1.11 @vitest/browser-playwright@4.1.11",
-    "lint": "npm run biome && eslint  --config ./eslint.config.mjs .",
-    "lint:fix": "npm run biome:fix && eslint --fix --config ./eslint.config.mjs .",
-    "lint:diff": "./config/cli/lint-diff.sh",
-    "test": "npm run test --workspaces --if-present",
-    "test:node": "npm run test:node --workspaces --if-present",
-    "test:browser": "npm run test:browser --workspaces --if-present",
     "preinstall": "npm run checkNpmVersion",
     "postinstall": "npm run build --workspaces --if-present",
+    "install-browser-deps": "npm install playwright@1.62.1 @vitest/browser@4.1.11 @vitest/browser-playwright@4.1.11",
+    "lint": "npm run biome && eslint  --config ./eslint.config.mjs .",
+    "lint:diff": "./config/cli/lint-diff.sh",
+    "lint:fix": "npm run biome:fix && eslint --fix --config ./eslint.config.mjs .",
     "prepare": "git config --local core.hooksPath .githooks",
     "release:simple": "tsx ./scripts/simple-release.ts",
     "sc": "npm run spellcheck",
     "sort-package-json": "sort-package-json \"package.json\" \"packages/*/package.json\"",
     "spellcheck": "npm run spellcheck:ts && npm run spellcheck:md",
-    "spellcheck:ts": "npx cspell --gitignore -e \"./packages/ethereum-tests\" -e \"./packages/wallet/test\" -e \"./packages/client/archive\" -c ./config/cspell-ts.json \"./packages/**/*.ts\" --cache --show-suggestions --show-context",
     "spellcheck:md": "npx cspell --gitignore -e \"./packages/ethereum-tests\" -e \"./packages/client/withdrawals-testnet/**\" -e \"./packages/**/docs\" -c ./config/cspell-md.json \"**.md\" --cache --show-suggestions --show-context",
+    "spellcheck:ts": "npx cspell --gitignore -e \"./packages/ethereum-tests\" -e \"./packages/wallet/test\" -e \"./packages/client/archive\" -c ./config/cspell-ts.json \"./packages/**/*.ts\" --cache --show-suggestions --show-context",
+    "test": "npm run test --workspaces --if-present",
+    "test:browser": "npm run test:browser --workspaces --if-present",
+    "test:node": "npm run test:node --workspaces --if-present",
     "tsc": "npm run tsc --workspaces --if-present"
   },
   "devDependencies": {
@@ -60,6 +61,10 @@
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "*"
   },
+  "engines": {
+    "node": ">=20",
+    "npm": ">=9"
+  },
   "overrides": {
     "axios": "1.18.0",
     "brace-expansion@1": "1.1.18",
@@ -73,10 +78,5 @@
     "postcss": "8.5.25",
     "tmp": "0.2.7",
     "ws": "8.21.1"
-  },
-  "engines": {
-    "node": ">=20",
-    "npm": ">=9"
-  },
-  "license": "MPL-2.0"
+  }
 }
