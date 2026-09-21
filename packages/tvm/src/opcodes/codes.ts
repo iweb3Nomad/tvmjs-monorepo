@@ -432,7 +432,12 @@ export function getOpcodesForHF(common: Common, customOpcodes?: CustomOpcode[]):
   }
 
   for (const key in opcodeBuilder) {
-    const baseFee = Number(common.param(`${opcodeBuilder[key].name.toLowerCase()}Gas`))
+    const opcode = Number(key)
+    const higherMemoryCost =
+      common.isActivatedProposal(65) && (opcode === 0x51 || opcode === 0x52 || opcode === 0x53)
+    const baseFee =
+      Number(common.param(`${opcodeBuilder[key].name.toLowerCase()}Gas`)) +
+      (higherMemoryCost ? 1 : 0)
     // explicitly verify that we have defined a base fee
     if (baseFee === undefined) {
       throw EthereumJSErrorWithoutCode(`base fee not defined for: ${opcodeBuilder[key].name}`)

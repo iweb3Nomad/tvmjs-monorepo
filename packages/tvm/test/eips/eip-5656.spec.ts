@@ -86,6 +86,7 @@ describe('TRON MCOPY', () => {
 
       const common = new Common({
         chain: TronMainnet,
+        activatedProposals: [],
       })
 
       const tvm = await createTVM({

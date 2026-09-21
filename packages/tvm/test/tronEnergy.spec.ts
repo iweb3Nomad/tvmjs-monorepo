@@ -1,4 +1,10 @@
-import { Common, TronMainnet, TronNile, TronShasta } from '@tvmjs/common'
+import {
+  Common,
+  TronMainnet,
+  TronNile,
+  TronShasta,
+  createCurrentTronMainnetCommon,
+} from '@tvmjs/common'
 import { MerkleStateManager, SimpleStateManager } from '@tvmjs/statemanager'
 import {
   Account,
@@ -47,7 +53,8 @@ describe('TRON Energy source vectors', () => {
   for (const chain of [TronMainnet, TronNile, TronShasta]) {
     for (const vector of energyVectors.vectors) {
       it(`${chain.name}: ${vector.name}`, async () => {
-        const tvm = await createTVM({ common: new Common({ chain }) })
+        // These pinned vectors predate proposal-specific adjustments.
+        const tvm = await createTVM({ common: new Common({ chain, activatedProposals: [] }) })
         await initialize(tvm, hexToBytes(vector.code as `0x${string}`))
         const result = await tvm.runCall({ to: source, gasLimit: 100000n })
         assert.isUndefined(result.execResult.exceptionError)
@@ -106,11 +113,40 @@ describe('TRON Energy source vectors', () => {
   it('allows the java-tron higher CPU limit memory schedule through explicit parameters', async () => {
     const common = new Common({
       chain: TronMainnet,
+      activatedProposals: [],
       params: { tron: { mloadGas: 1, mstoreGas: 1, mstore8Gas: 1 } },
     })
     const tvm = await createTVM({ common })
     const result = await tvm.runCode({ code: hexToBytes('0x600060005200') })
     assert.strictEqual(result.executionGasUsed, 10n)
+  })
+
+  it('applies java-tron proposal 65 to all three memory opcodes', async () => {
+    // Each memory instruction runs after the first MSTORE has expanded memory,
+    // so proposal 65 contributes exactly one Energy per instruction.
+    const code = hexToBytes('0x600060005260005150600060005300')
+    for (const [activatedProposals, expected] of [
+      [[], 20n],
+      [[65], 23n],
+    ] as const) {
+      const tvm = await createTVM({
+        common: new Common({ chain: TronMainnet, activatedProposals: [...activatedProposals] }),
+      })
+      const result = await tvm.runCode({ code })
+      assert.isUndefined(result.exceptionError)
+      assert.strictEqual(result.executionGasUsed, expected)
+      for (const opcode of [0x51, 0x52, 0x53]) {
+        assert.strictEqual(tvm.getActiveOpcodes().get(opcode)?.fee, activatedProposals.length)
+      }
+    }
+  })
+
+  it('uses the current mainnet memory schedule from the Common factory', async () => {
+    const tvm = await createTVM({ common: createCurrentTronMainnetCommon() })
+    const result = await tvm.runCode({ code: hexToBytes('0x600060005200') })
+    assert.isUndefined(result.exceptionError)
+    assert.strictEqual(result.executionGasUsed, 10n)
+    assert.isTrue(tvm.common.isActivatedEIP(7939))
   })
 
   it('reports accesses without warming addresses or slots', async () => {

@@ -31,7 +31,7 @@ for (const chain of [TronMainnet, TronNile, TronShasta]) {
         it(vector.name, async () => {
           assert.strictEqual(measured.cases[index].name, vector.name)
           const tvm = await createTVM({
-            common: new Common({ chain }),
+            common: new Common({ chain, activatedProposals: [] }),
             stateManager: new StateManager(),
           })
           await initializeReferenceState(tvm.stateManager, vector)
@@ -55,7 +55,7 @@ for (const chain of [TronMainnet, TronNile, TronShasta]) {
         'does not carry zero-slot presence into a later %s execution',
         async (entry) => {
           const tvm = await createTVM({
-            common: new Common({ chain }),
+            common: new Common({ chain, activatedProposals: [] }),
             stateManager: new StateManager(),
           })
           await initializeReferenceState(tvm.stateManager, referenceInputs.cases[0])
