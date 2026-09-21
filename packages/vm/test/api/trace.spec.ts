@@ -1,3 +1,4 @@
+import { Common, TronMainnet } from '@tvmjs/common'
 import { SIGNER_A } from '@tvmjs/testdata'
 import { createLegacyTx } from '@tvmjs/tx'
 import { Account, bytesToHex, createAddressFromString, hexToBytes } from '@tvmjs/util'
@@ -6,7 +7,9 @@ import { createVM, runTx } from '../../src/index.ts'
 import { stepTraceJSON, summaryTraceJSON } from '../trace.ts'
 
 it('reports TRON instruction, memory and receipt traces', async () => {
-  const vm = await createVM()
+  const vm = await createVM({
+    common: new Common({ chain: TronMainnet, activatedProposals: [] }),
+  })
   const contract = createAddressFromString('0x' + '44'.repeat(20))
   await vm.stateManager.putCode(contract, hexToBytes('0x604260005260206000f3'))
   await vm.stateManager.putAccount(SIGNER_A.address, new Account(0n, 1000000n))

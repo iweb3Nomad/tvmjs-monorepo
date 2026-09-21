@@ -33,8 +33,17 @@ for (const StateManager of [SimpleStateManager, MerkleStateManager]) {
   describe(`VM/TVM Energy consistency with ${StateManager.name}`, () => {
     for (const vector of energyVectors.vectors) {
       it(vector.name, async () => {
-        const vm = await createVM({ stateManager: new StateManager() })
-        const tvm = await createTVM({ stateManager: new StateManager() })
+        const common = new Common({ chain: TronMainnet, activatedProposals: [] })
+        const vmCommon = common.copy()
+        const tvmCommon = common.copy()
+        const vm = await createVM({
+          common: vmCommon,
+          stateManager: new StateManager({ common: vmCommon }),
+        })
+        const tvm = await createTVM({
+          common: tvmCommon,
+          stateManager: new StateManager({ common: tvmCommon }),
+        })
         for (const state of [vm.stateManager, tvm.stateManager]) {
           await initialize(state, vector.code as `0x${string}`)
         }

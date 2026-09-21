@@ -5,7 +5,7 @@ import { createVM } from '../../../src/index.ts'
 
 describe.each([TronMainnet, TronNile, TronShasta])('CHAINID on $name', (chain) => {
   it('returns the complete chain ID in a 32-byte word', async () => {
-    const vm = await createVM({ common: new Common({ chain }) })
+    const vm = await createVM({ common: new Common({ chain, activatedProposals: [] }) })
     const result = await vm.tvm.runCode({
       code: hexToBytes('0x4660005260206000f3'),
       gasLimit: 100n,

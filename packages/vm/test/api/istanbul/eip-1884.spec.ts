@@ -5,7 +5,7 @@ import { createVM } from '../../../src/index.ts'
 
 describe.each([TronMainnet, TronNile, TronShasta])('SELFBALANCE on $name', (chain) => {
   it.each([0n, 0x123456789abcdefn])('returns the full balance %s', async (balance) => {
-    const vm = await createVM({ common: new Common({ chain }) })
+    const vm = await createVM({ common: new Common({ chain, activatedProposals: [] }) })
     const to = createAddressFromString('0x' + '21'.repeat(20))
     await vm.stateManager.putAccount(to, new Account(0n, balance))
     const result = await vm.tvm.runCode({

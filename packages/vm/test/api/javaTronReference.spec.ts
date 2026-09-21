@@ -1,4 +1,5 @@
 import { createBlock } from '@tvmjs/block'
+import { Common, TronMainnet } from '@tvmjs/common'
 import { MerkleStateManager, SimpleStateManager } from '@tvmjs/statemanager'
 import { SIGNER_A } from '@tvmjs/testdata'
 import { createLegacyTx } from '@tvmjs/tx'
@@ -16,7 +17,8 @@ for (const StateManager of [SimpleStateManager, MerkleStateManager]) {
   describe(`java-tron execution through runTx / ${StateManager.name}`, () => {
     for (const [index, vector] of referenceInputs.cases.entries()) {
       it(vector.name, async () => {
-        const vm = await createVM({ stateManager: new StateManager() })
+        const common = new Common({ chain: TronMainnet, activatedProposals: [] })
+        const vm = await createVM({ common, stateManager: new StateManager({ common }) })
         await initializeReferenceState(vm.stateManager, vector)
         assert.strictEqual(SIGNER_A.address.toString(), referenceInputs.context.caller)
         assert.strictEqual(measured.cases[index].name, vector.name)

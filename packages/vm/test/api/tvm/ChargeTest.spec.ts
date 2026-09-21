@@ -1,3 +1,4 @@
+import { Common, TronMainnet } from '@tvmjs/common'
 import { createAddressFromString, hexToBytes } from '@tvmjs/util'
 import { utils } from 'tronweb'
 import { assert, describe, it } from 'vitest'
@@ -22,7 +23,9 @@ import { deployContract } from './utils.ts'
 describe('ChargeTest', async () => {
   it('testOverflow', async () => {
     const account = utils.accounts.generateAccount()
-    const vm = await createVM({})
+    const vm = await createVM({
+      common: new Common({ chain: TronMainnet, activatedProposals: [] }),
+    })
     const totalBalance = 100_000_000_000_000n
     const address = createAddressFromString(
       account.address.hex.replace(utils.constants.ADDRESS_PREFIX_REGEX, '0x'),

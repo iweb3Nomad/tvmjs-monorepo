@@ -17,7 +17,7 @@ interface Test {
 }
 
 describe('EIP 1153: transient storage', () => {
-  const common = new Common({ chain: TronMainnet, eips: [1153] })
+  const common = new Common({ chain: TronMainnet, activatedProposals: [], eips: [1153] })
 
   const runTest = async function (test: Test) {
     let i = 0
