@@ -469,14 +469,14 @@ export interface TVMMockBlockchainInterface {
 }
 
 export class TVMMockBlockchain implements TVMMockBlockchainInterface {
-  async getBlock() {
+  async getBlock(_blockId: number) {
     return {
       hash() {
         return new Uint8Array(32)
       },
     }
   }
-  async putBlock() {}
+  async putBlock(_block: TVMMockBlock) {}
   shallowCopy() {
     return this
   }

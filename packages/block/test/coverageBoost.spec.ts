@@ -1,5 +1,5 @@
 import { Common, TronMainnet, createCustomCommon } from '@tvmjs/common'
-import { Address } from '@tvmjs/util'
+import { Address, type WithdrawalBytes } from '@tvmjs/util'
 import { describe, expect, it, vi } from 'vitest'
 
 import { cliqueSigHash, requireClique } from '../src/consensus/clique.ts'
@@ -7,6 +7,7 @@ import { executionPayloadFromBeaconPayload } from '../src/from-beacon-payload.ts
 import { getDifficulty, numberToHex } from '../src/helpers.ts'
 import {
   Block,
+  type BlockBytes,
   BlockHeader,
   createBlock,
   createBlockFromBytesArray,
@@ -339,13 +340,16 @@ describe('Block Package Coverage Boost', () => {
 
     // Extra extension fields
     expect(() =>
-      createBlockFromBytesArray([header.raw(), [], [], [], new Uint8Array([1]) as any], { common }),
+      createBlockFromBytesArray(
+        [header.raw(), [], [], [], new Uint8Array([1])] as unknown as BlockBytes,
+        { common },
+      ),
     ).toThrow(
       'Unsupported block body extension: additional fields are not active in this execution profile',
     )
 
     // Valid withdrawals array from bytes
-    const withdrawalByteEntry = [
+    const withdrawalByteEntry: WithdrawalBytes = [
       new Uint8Array([1]),
       new Uint8Array([2]),
       new Uint8Array(20),

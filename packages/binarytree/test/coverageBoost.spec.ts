@@ -6,7 +6,7 @@ import { verifyBinaryProof } from '../src/proof.ts'
 
 describe('BinaryTree Coverage Boost', () => {
   it('covers CheckpointDB stats, open, shallowCopy, setCheckpoints, and batch with checkpoints', async () => {
-    const memDb = new MapDB()
+    const memDb = new MapDB<string, string | Uint8Array>()
     const db = new CheckpointDB({ db: memDb, cacheSize: 10 })
     await db.open()
 

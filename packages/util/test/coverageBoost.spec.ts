@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   Address,
   BinaryTreeLeafType,
+  type PrefixedHexString,
   bigInt64ToBytes,
   bytesToBigInt64,
   bytesToInt32,
@@ -73,9 +74,7 @@ describe('Util Coverage Boost Tests', () => {
 
     // encode/decode BinaryTreeLeafBasicData
     const account = createAccount({
-      version: 0,
       nonce: 5n,
-      codeSize: 0,
       balance: 1000n,
     })
     const encoded = encodeBinaryTreeLeafBasicData(account)
@@ -104,8 +103,8 @@ describe('Util Coverage Boost Tests', () => {
 
   it('covers bal.ts cleanupSelfdestructed and compareLexicographicHexOrBytes', () => {
     const bal = createBlockLevelAccessList()
-    const addr1 = '0x' + '11'.repeat(20)
-    const addr2 = '0x' + '22'.repeat(20)
+    const addr1 = ('0x' + '11'.repeat(20)) as PrefixedHexString
+    const addr2 = ('0x' + '22'.repeat(20)) as PrefixedHexString
 
     bal.addAddress(addr1)
     bal.addStorageWrite(addr1, new Uint8Array([1]), new Uint8Array([10]), 0)
@@ -126,7 +125,7 @@ describe('Util Coverage Boost Tests', () => {
     expect(bal.accesses[addr2].balanceChanges.size).toBe(0)
 
     // isNoOp storage write (writing same value as original)
-    const addr3 = '0x' + '33'.repeat(20)
+    const addr3 = ('0x' + '33'.repeat(20)) as PrefixedHexString
     const slot1 = new Uint8Array([5])
     bal.addAddress(addr3)
     bal.addStorageWrite(addr3, slot1, new Uint8Array([99]), 0)
@@ -245,7 +244,10 @@ describe('Util Coverage Boost Tests', () => {
       }))
       vi.stubGlobal('fetch', mock)
 
-      const res = await fetchFromProvider('https://rpc.mock', { method: 'eth_blockNumber' })
+      const res = await fetchFromProvider('https://rpc.mock', {
+        method: 'eth_blockNumber',
+        params: [],
+      })
       expect(res).toBe('0x123')
       vi.restoreAllMocks()
     } finally {

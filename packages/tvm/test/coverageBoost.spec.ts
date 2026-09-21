@@ -18,6 +18,7 @@ import { Interpreter } from '../src/interpreter.ts'
 
 import { secp256k1 } from '@noble/curves/secp256k1.js'
 import { sha256 } from '@noble/hashes/sha2.js'
+import debugDefault from 'debug'
 import {
   BinaryTreeAccessWitness,
   decodeBinaryAccessState,
@@ -80,6 +81,13 @@ function createTronCommon() {
   const common = new Common({ chain: TronMainnet })
   common.updateParams(paramsTVM)
   return common
+}
+
+function createDebugSpy() {
+  const logger = debugDefault('tvmjs:coverage-test')
+  logger.enabled = true
+  logger.log = vi.fn()
+  return logger
 }
 
 function createMockRunState(
@@ -329,37 +337,43 @@ describe('TVM Coverage Boost Suite', () => {
   })
 
   describe('Precompiles Boost', () => {
-    it('precompile20003 (ripemd160)', () => {
+    it('precompile20003 (ripemd160)', async () => {
       const common = createTronCommon()
+      const tvm = await createTVM({ common })
       const data = hexToBytes('0x12345678')
-      const debugLogs: string[] = []
+      const debugLogger = createDebugSpy()
 
       const res = precompile20003({
         data,
         gasLimit: 100000n,
         common,
-        _debug: (msg) => debugLogs.push(msg),
+        _TVM: tvm,
+        _debug: debugLogger,
       })
       expect(res.returnValue.length).toBe(32)
       expect(res.executionGasUsed).toBeGreaterThan(0n)
-      expect(debugLogs.length).toBeGreaterThan(0)
+      expect(debugLogger.log).toHaveBeenCalled()
 
       const oog = precompile20003({
         data,
         gasLimit: 1n,
         common,
+        _TVM: tvm,
       })
       expect(oog.executionGasUsed).toBe(1n)
     })
 
-    it('precompile20009 (blake2f) and F function', () => {
+    it('precompile20009 (blake2f) and F function', async () => {
       const common = createTronCommon()
+      const tvm = await createTVM({ common })
+      const debugLogger = createDebugSpy()
       // Missing length
       const errLen = precompile20009({
         data: new Uint8Array(100),
         gasLimit: 100000n,
         common,
-        _debug: () => {},
+        _TVM: tvm,
+        _debug: debugLogger,
       })
       expect(errLen.exceptionError).toBeDefined()
 
@@ -370,7 +384,8 @@ describe('TVM Coverage Boost Suite', () => {
         data: invalidFinal,
         gasLimit: 100000n,
         common,
-        _debug: () => {},
+        _TVM: tvm,
+        _debug: debugLogger,
       })
       expect(errFinal.exceptionError).toBeDefined()
 
@@ -383,19 +398,20 @@ describe('TVM Coverage Boost Suite', () => {
         data: validData,
         gasLimit: 0n,
         common,
+        _TVM: tvm,
       })
       expect(oog.executionGasUsed).toBe(0n)
 
       // Valid execution
-      const debugLogs: string[] = []
       const validRes = precompile20009({
         data: validData,
         gasLimit: 100000n,
         common,
-        _debug: (msg) => debugLogs.push(msg),
+        _TVM: tvm,
+        _debug: debugLogger,
       })
       expect(validRes.returnValue.length).toBe(64)
-      expect(debugLogs.length).toBeGreaterThan(0)
+      expect(debugLogger.log).toHaveBeenCalled()
 
       // With f = true and 2 rounds
       validData[212] = 1
@@ -404,6 +420,7 @@ describe('TVM Coverage Boost Suite', () => {
         data: validData,
         gasLimit: 100000n,
         common,
+        _TVM: tvm,
       })
       expect(validRes2.returnValue.length).toBe(64)
 
@@ -418,6 +435,7 @@ describe('TVM Coverage Boost Suite', () => {
     it('precompile06, 07, 08 error paths and debug', async () => {
       const common = createTronCommon()
       const tvm = await createTVM({ common })
+      const debugLogger = createDebugSpy()
 
       // OOG check
       const oog6 = precompile06({
@@ -450,7 +468,7 @@ describe('TVM Coverage Boost Suite', () => {
         gasLimit: 100000n,
         common,
         _TVM: tvm,
-        _debug: () => {},
+        _debug: debugLogger,
       })
       expect(errLen8.exceptionError).toBeDefined()
 
@@ -464,7 +482,7 @@ describe('TVM Coverage Boost Suite', () => {
         gasLimit: 100000n,
         common,
         _TVM: tvm,
-        _debug: () => {},
+        _debug: debugLogger,
       })
       expect(addErr.exceptionError).toBeDefined()
       tvm['_bn254'].add = origAdd
@@ -479,7 +497,7 @@ describe('TVM Coverage Boost Suite', () => {
         gasLimit: 100000n,
         common,
         _TVM: tvm,
-        _debug: () => {},
+        _debug: debugLogger,
       })
       expect(mulErr.exceptionError).toBeDefined()
       tvm['_bn254'].mul = origMul
@@ -494,7 +512,7 @@ describe('TVM Coverage Boost Suite', () => {
         gasLimit: 100000n,
         common,
         _TVM: tvm,
-        _debug: () => {},
+        _debug: debugLogger,
       })
       expect(pairErr.exceptionError).toBeDefined()
       tvm['_bn254'].pairing = origPair
@@ -523,14 +541,17 @@ describe('TVM Coverage Boost Suite', () => {
       expect(resOog.executionGasUsed).toBe(10n)
     })
 
-    it('precompile100 (p256verify)', () => {
+    it('precompile100 (p256verify)', async () => {
       const common = createTronCommon()
+      const tvm = await createTVM({ common })
+      const debugLogger = createDebugSpy()
 
       // OOG
       const oog = precompile100({
         data: new Uint8Array(160),
         gasLimit: 1n,
         common,
+        _TVM: tvm,
       })
       expect(oog.executionGasUsed).toBe(1n)
 
@@ -539,7 +560,8 @@ describe('TVM Coverage Boost Suite', () => {
         data: new Uint8Array(100),
         gasLimit: 100000n,
         common,
-        _debug: () => {},
+        _TVM: tvm,
+        _debug: debugLogger,
       })
       expect(invalidLen.returnValue.length).toBe(0)
 
@@ -550,7 +572,8 @@ describe('TVM Coverage Boost Suite', () => {
         data,
         gasLimit: 100000n,
         common,
-        _debug: () => {},
+        _TVM: tvm,
+        _debug: debugLogger,
       })
       expect(notOnCurve.returnValue.length).toBe(0)
     })
@@ -1168,7 +1191,7 @@ describe('TVM Coverage Boost Suite', () => {
       const mb = new TVMMockBlockchain()
       const b = await mb.getBlock(1)
       expect(b.hash().length).toBe(32)
-      await mb.putBlock(b as any)
+      await mb.putBlock(b)
       expect(mb.shallowCopy()).toBe(mb)
     })
 
@@ -1289,7 +1312,7 @@ describe('TVM Coverage Boost Suite', () => {
       expect(container.body.sections().length).toBe(3)
       expect(container.body.size().typeSize).toBe(2)
       expect(container.body.sectionSizes().length).toBe(3)
-      expect(() => container.header.getCodeSection(100000)).toThrow()
+      expect(() => container.header.getSectionFromProgramCounter(100000)).toThrow()
 
       expect(() => new EOFContainer(new Uint8Array(10))).toThrow()
       expect(() => new EOFContainer(new Uint8Array(40000))).toThrow()
@@ -1451,33 +1474,33 @@ describe('TVM Coverage Boost Suite', () => {
       runState.interpreter.isStatic = () => true
       runState.stack.push(1n)
       runState.stack.push(1n)
-      await expect(dynamicGasHandlers.get(0x55)!(runState, common)).rejects.toThrow()
+      await expect(dynamicGasHandlers.get(0x55)!(runState, 0n, common)).rejects.toThrow()
 
       runState.stack.push(1n)
       runState.stack.push(1n)
       runState.stack.push(1n)
-      await expect(dynamicGasHandlers.get(0xf0)!(runState, common)).rejects.toThrow()
+      await expect(dynamicGasHandlers.get(0xf0)!(runState, 0n, common)).rejects.toThrow()
 
       runState.stack.push(1n)
       runState.stack.push(1n)
       runState.stack.push(1n)
       runState.stack.push(1n)
-      await expect(dynamicGasHandlers.get(0xf5)!(runState, common)).rejects.toThrow()
+      await expect(dynamicGasHandlers.get(0xf5)!(runState, 0n, common)).rejects.toThrow()
 
       runState.stack.push(1n)
-      await expect(dynamicGasHandlers.get(0xff)!(runState, common)).rejects.toThrow()
+      await expect(dynamicGasHandlers.get(0xff)!(runState, 0n, common)).rejects.toThrow()
 
       // CALL with value in static mode
       for (const val of [0n, 0n, 0n, 0n, 10n, 1n, 1000n]) {
         runState.stack.push(val)
       }
-      await expect(dynamicGasHandlers.get(0xf1)!(runState, common)).rejects.toThrow()
+      await expect(dynamicGasHandlers.get(0xf1)!(runState, 0n, common)).rejects.toThrow()
 
       // CALLTOKEN with value in static mode
       for (const val of [0n, 0n, 0n, 0n, 1000001n, 10n, 1n, 1000n]) {
         runState.stack.push(val)
       }
-      await expect(dynamicGasHandlers.get(0xd0)!(runState, common)).rejects.toThrow()
+      await expect(dynamicGasHandlers.get(0xd0)!(runState, 0n, common)).rejects.toThrow()
     })
 
     it('EOF opcodes rejection when eof is undefined', async () => {
@@ -1499,23 +1522,29 @@ describe('TVM Coverage Boost Suite', () => {
       for (const op of gasLegacyOpcodes) {
         const gasHandler = dynamicGasHandlers.get(op)
         if (gasHandler) {
-          await expect(gasHandler(runState, common)).rejects.toThrow()
+          await expect(gasHandler(runState, 0n, common)).rejects.toThrow()
         }
       }
     })
 
     it('Journal uncovered branches', async () => {
+      const common = createTronCommon()
       const mockSM: any = {
         checkpoint: async () => {},
         commit: async () => {},
         revert: async () => {},
         getAppliedKey: undefined,
       }
-      const j = new Journal(mockSM)
-      j.preimages = new Map()
-      expect(() => j.touchAccount('0x1234')).toThrow()
+      const j = new Journal(mockSM, common)
+      j.startReportingPreimages()
+      await expect(
+        j.putAccount(
+          createAddressFromString('0x1111111111111111111111111111111111111111'),
+          undefined,
+        ),
+      ).rejects.toThrow('stateManager.getAppliedKey can not be undefined')
 
-      const j2 = new Journal(mockSM)
+      const j2 = new Journal(mockSM, common)
       const addrBytes = hexToBytes('0x1111111111111111111111111111111111111111')
       const slotBytes = hexToBytes(
         '0x0000000000000000000000000000000000000000000000000000000000000001',
@@ -1546,26 +1575,30 @@ describe('TVM Coverage Boost Suite', () => {
 
     it('Precompiles 01, 04, 05, 0a additional coverage', async () => {
       const common = createTronCommon()
-      const debugFn = vi.fn()
+      const tvm = await createTVM({ common })
+      const debugLogger = createDebugSpy()
 
       precompile01({
         data: new Uint8Array(128),
         gasLimit: 100000n,
         common,
-        _debug: debugFn,
+        _TVM: tvm,
+        _debug: debugLogger,
       })
-      expect(debugFn).toHaveBeenCalled()
+      expect(debugLogger.log).toHaveBeenCalled()
 
       precompile04({
         data: new Uint8Array(32),
         gasLimit: 100000n,
         common,
-        _debug: debugFn,
+        _TVM: tvm,
+        _debug: debugLogger,
       })
       const oog04 = precompile04({
         data: new Uint8Array(32),
         gasLimit: 1n,
         common,
+        _TVM: tvm,
       })
       expect(oog04.executionGasUsed).toBe(1n)
 
@@ -1573,18 +1606,19 @@ describe('TVM Coverage Boost Suite', () => {
       data100.set(setLengthLeft(hexToBytes('0x20'), 32), 0)
       data100.set(setLengthLeft(hexToBytes('0x20'), 32), 32)
       data100.set(setLengthLeft(hexToBytes('0x64'), 32), 64)
-      precompile05({ data: data100, gasLimit: 10000000n, common })
+      precompile05({ data: data100, gasLimit: 10000000n, common, _TVM: tvm })
 
       const data1200 = new Uint8Array(96 + 32 + 32 + 1200)
       data1200.set(setLengthLeft(hexToBytes('0x20'), 32), 0)
       data1200.set(setLengthLeft(hexToBytes('0x20'), 32), 32)
       data1200.set(setLengthLeft(hexToBytes('0x04b0'), 32), 64)
-      precompile05({ data: data1200, gasLimit: 100000000n, common })
+      precompile05({ data: data1200, gasLimit: 100000000n, common, _TVM: tvm })
 
       const oog0a = await precompile0a({
         data: new Uint8Array(320),
         gasLimit: 1n,
         common,
+        _TVM: tvm,
       })
       expect(oog0a.executionGasUsed).toBe(1n)
 
@@ -1592,6 +1626,7 @@ describe('TVM Coverage Boost Suite', () => {
         data: new Uint8Array(160),
         gasLimit: 1000000n,
         common,
+        _TVM: tvm,
       })
       expect(zeroCount0a.returnValue.length).toBe(32)
     })
@@ -1602,9 +1637,9 @@ describe('TVM Coverage Boost Suite', () => {
       expect(tvm.getActiveOpcodes().size).toBeGreaterThan(0)
       expect(tvm.opcodes.size).toBeGreaterThan(0)
 
-      const perfLogs = tvm.performanceLogger.getLogs()
+      const perfLogs = tvm.getPerformanceLogs()
       expect(perfLogs).toBeDefined()
-      tvm.performanceLogger.clear()
+      tvm.clearPerformanceLogs()
 
       const badEipCommon = new Common({ chain: TronMainnet })
       badEipCommon.setEIPs = () => {}
@@ -1648,7 +1683,7 @@ describe('TVM Coverage Boost Suite', () => {
     it('interpreter methods and debugging', async () => {
       const common = createTronCommon()
       const tvm = await createTVM({ common })
-      tvm.DEBUG = true
+      ;(tvm as any).DEBUG = true
       const to = createAddressFromString('0x1111111111111111111111111111111111111111')
       const caller = createAddressFromString('0x2222222222222222222222222222222222222222')
       const env: any = {
@@ -1681,7 +1716,7 @@ describe('TVM Coverage Boost Suite', () => {
         env,
         1000000n,
         tvm.journal,
-        tvm.performanceLogger,
+        new TVMPerformanceLogger(),
       )
 
       interp.refundGas(100n, 'test')
@@ -1921,7 +1956,7 @@ describe('TVM Coverage Boost Suite', () => {
         tokenId: 1000001n,
         tokenValue: 1000n,
       })
-      const resToken = await tvm.runCall(msgInsufficientToken)
+      const resToken = await tvm.runCall({ message: msgInsufficientToken })
       expect(resToken.execResult.exceptionError?.error).toBe('insufficient token balance')
 
       // VALUE_OVERFLOW (TRX)
@@ -1936,7 +1971,7 @@ describe('TVM Coverage Boost Suite', () => {
         createAccount({ nonce: 0n, balance: (1n << 256n) - 1n }),
       )
       await tvm.stateManager.putAccount(to, createAccount({ nonce: 0n, balance: 100n }))
-      const resOverflow = await tvm.runCall(msgValueOverflow)
+      const resOverflow = await tvm.runCall({ message: msgValueOverflow })
       expect(resOverflow.execResult.exceptionError?.error).toBe('value overflow')
 
       // EIP-7708 logs
@@ -1953,7 +1988,7 @@ describe('TVM Coverage Boost Suite', () => {
       expect(res7708.execResult.logs?.length).toBeGreaterThan(0)
 
       // Precompile timer & debug in TVM
-      tvm.DEBUG = true
+      ;(tvm as any).DEBUG = true
       const precompileTo = createAddressFromString('0x0000000000000000000000000000000000000004')
       const pRes = await tvm.runCall({
         to: precompileTo,
@@ -1967,10 +2002,10 @@ describe('TVM Coverage Boost Suite', () => {
     it('gas.ts EOF dynamic gas handlers', async () => {
       const common = createTronCommon()
       const origParam = common.param.bind(common)
-      common.param = (topic: any, name?: any) => {
+      common.param = (topic: any, _name?: any) => {
         if (topic === 'minRetainedGas') return 5000n
         if (topic === 'minCalleeGas') return 2300n
-        return origParam(topic, name)
+        return origParam(topic)
       }
       const runState = createMockRunState({ common })
       const eofCode = hexToBytes('0xef000101000402000100030400010000800001305000ef')
@@ -2024,9 +2059,10 @@ describe('TVM Coverage Boost Suite', () => {
       expect(extStaticCallGas).toBeGreaterThanOrEqual(0n)
     })
 
-    it('modexp and p256verify edge cases and debug', () => {
+    it('modexp and p256verify edge cases and debug', async () => {
       const common = createTronCommon()
-      const debugFn = vi.fn()
+      const tvm = await createTVM({ common })
+      const debugLogger = createDebugSpy()
 
       const modexpDataM0 = new Uint8Array(96 + 32 + 32 + 32)
       modexpDataM0.set(setLengthLeft(hexToBytes('0x20'), 32), 0)
@@ -2038,9 +2074,10 @@ describe('TVM Coverage Boost Suite', () => {
         data: modexpDataM0,
         gasLimit: 1000000n,
         common,
-        _debug: debugFn,
+        _TVM: tvm,
+        _debug: debugLogger,
       })
-      expect(debugFn).toHaveBeenCalled()
+      expect(debugLogger.log).toHaveBeenCalled()
       expect(resM0.returnValue.length).toBe(32)
 
       const modexpDataM5 = new Uint8Array(modexpDataM0)
@@ -2049,20 +2086,22 @@ describe('TVM Coverage Boost Suite', () => {
         data: modexpDataM5,
         gasLimit: 1000000n,
         common,
-        _debug: debugFn,
+        _TVM: tvm,
+        _debug: debugLogger,
       })
       expect(resM5.returnValue.length).toBe(32)
 
-      const debugP256 = vi.fn()
+      const debugP256 = createDebugSpy()
       const outOfBoundsData = new Uint8Array(160)
       outOfBoundsData.fill(0xff, 32, 64)
       precompile100({
         data: outOfBoundsData,
         gasLimit: 100000n,
         common,
+        _TVM: tvm,
         _debug: debugP256,
       })
-      expect(debugP256).toHaveBeenCalled()
+      expect(debugP256.log).toHaveBeenCalled()
 
       const notOnCurveData = new Uint8Array(160)
       notOnCurveData[63] = 1
@@ -2071,6 +2110,7 @@ describe('TVM Coverage Boost Suite', () => {
         data: notOnCurveData,
         gasLimit: 100000n,
         common,
+        _TVM: tvm,
         _debug: debugP256,
       })
 
@@ -2079,6 +2119,7 @@ describe('TVM Coverage Boost Suite', () => {
         data: infinityData,
         gasLimit: 100000n,
         common,
+        _TVM: tvm,
         _debug: debugP256,
       })
     })
@@ -2811,7 +2852,7 @@ describe('TVM Coverage Boost Suite', () => {
         interpState.env,
         100000n,
         tvm.journal,
-        tvm.performanceLogger,
+        new TVMPerformanceLogger(),
       )
       try {
         interp.log(new Uint8Array(0), -1, [])
@@ -2850,8 +2891,8 @@ describe('TVM Coverage Boost Suite', () => {
 
       const witness = new BinaryTreeAccessWitness({ hashFunction: sha256 })
       const stemStr = '0x' + '00'.repeat(31)
-      witness['chunks'].set(stemStr + '01', 0n)
-      witness['chunks'].set(stemStr + '02', 0n)
+      witness.chunks.set((stemStr + '01') as `0x${string}`, { write: true })
+      witness.chunks.set((stemStr + '02') as `0x${string}`, { write: true })
       const mockSM: any = {
         _tree: {
           root: (_root: any) => {},
@@ -3140,6 +3181,7 @@ describe('TVM Coverage Boost Suite', () => {
 
     it('precompiles deep coverage for BLS12-381, BN254, and validate-multi-sign', async () => {
       const common = createTronCommon()
+      const tvm = await createTVM({ common })
 
       // 1. BLS12-381 precompiles OOG
       const blsCommon = createTronCommon()
@@ -3196,17 +3238,18 @@ describe('TVM Coverage Boost Suite', () => {
       expect(oog11.executionGasUsed).toBe(10n)
 
       // 2. Precompile 01 debug
-      const dbg01 = vi.fn()
+      const dbg01 = createDebugSpy()
       precompile01({
         data: new Uint8Array(128),
         gasLimit: 100000n,
         common,
+        _TVM: tvm,
         _debug: dbg01,
       })
-      expect(dbg01).toHaveBeenCalled()
+      expect(dbg01.log).toHaveBeenCalled()
 
       // 3. Precompile 06, 07, 08 output length mismatch (OOG)
-      const dbgBn = vi.fn()
+      const dbgBn = createDebugSpy()
       const mockTvmbn: any = {
         _bn254: {
           add: () => new Uint8Array(10),
@@ -3361,7 +3404,7 @@ describe('TVM Coverage Boost Suite', () => {
       expect(cost7864).toBe(100n)
 
       // 4. precompile01 ecrecover debug paths
-      const dbgRec = vi.fn()
+      const dbgRec = createDebugSpy()
       precompile01({
         data: concatBytes(
           new Uint8Array(64),
@@ -3370,9 +3413,10 @@ describe('TVM Coverage Boost Suite', () => {
         ),
         gasLimit: 100000n,
         common,
+        _TVM: tvm,
         _debug: dbgRec,
       })
-      expect(dbgRec).toHaveBeenCalled()
+      expect(dbgRec.log).toHaveBeenCalled()
 
       // 5. EXTDELEGATECALL and EXTSTATICCALL with inLength > 0 and EOF code
       const extCallState = createMockRunState()

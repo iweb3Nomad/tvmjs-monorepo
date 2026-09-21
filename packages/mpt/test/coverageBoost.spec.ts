@@ -46,7 +46,7 @@ describe('MPT Coverage Boost Tests', () => {
     assert.isDefined(trie2)
 
     // With db and useRootPersistence (without root)
-    const db = new MapDB()
+    const db = new MapDB<string, string | Uint8Array>()
     const trie3 = await createMPT({
       db,
       useRootPersistence: true,

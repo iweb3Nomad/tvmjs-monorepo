@@ -91,7 +91,7 @@ describe('Blockchain Consensus and Helpers Coverage Boost', () => {
           difficulty: 0,
           nonce: '0x0000000000000000',
           extraData: '0x',
-          timestamp: 0,
+          timestamp: '0x00',
         },
       },
     })
@@ -112,7 +112,7 @@ describe('Blockchain Consensus and Helpers Coverage Boost', () => {
           difficulty: 0,
           nonce: '0x0000000000000000',
           extraData: '0x',
-          timestamp: 0,
+          timestamp: '0x00',
         },
       },
     })
@@ -153,7 +153,7 @@ describe('Blockchain Consensus and Helpers Coverage Boost', () => {
           extraData: bytesToHex(
             concatBytes(new Uint8Array(32), new Uint8Array(20), new Uint8Array(65)),
           ),
-          timestamp: 0,
+          timestamp: '0x00',
         },
       },
     })

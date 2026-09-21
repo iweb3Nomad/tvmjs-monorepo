@@ -4,6 +4,7 @@ import { TransactionType, createTx } from '@tvmjs/tx'
 import {
   Account,
   Address,
+  type BALJSONBlockAccessList,
   CLRequestType,
   bytesToHex,
   createAddressFromString,
@@ -36,13 +37,14 @@ describe('VM Coverage Boost Suite', () => {
   describe('consumeBal.ts', () => {
     it('handles empty account changes, balance, nonce, code, and storage changes', async () => {
       const vm = await setupVM()
-      const addrHex = '0x1111111111111111111111111111111111111111'
+      const addrHex = '0x1111111111111111111111111111111111111111' as const
       const addr = createAddressFromString(addrHex)
 
       // 1. empty account changes
       await consumeBal(vm, [
         {
           address: addrHex,
+          storageReads: [],
           balanceChanges: [],
           nonceChanges: [],
           codeChanges: [],
@@ -51,16 +53,17 @@ describe('VM Coverage Boost Suite', () => {
       ])
 
       // 2. with changes
-      const bal = [
+      const bal: BALJSONBlockAccessList = [
         {
           address: addrHex,
-          balanceChanges: [{ postBalance: '0x1000' }],
-          nonceChanges: [{ postNonce: '0x05' }],
-          codeChanges: [{ newCode: '0x6001600201' }],
+          storageReads: [],
+          balanceChanges: [{ blockAccessIndex: '0x00', postBalance: '0x1000' }],
+          nonceChanges: [{ blockAccessIndex: '0x00', postNonce: '0x05' }],
+          codeChanges: [{ blockAccessIndex: '0x00', newCode: '0x6001600201' }],
           storageChanges: [
             {
               slot: '0x01',
-              slotChanges: [{ postValue: '0x09' }],
+              slotChanges: [{ blockAccessIndex: '0x00', postValue: '0x09' }],
             },
           ],
         },
