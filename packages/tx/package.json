@@ -61,7 +61,7 @@
     "@noble/curves": "2.0.1",
     "@noble/hashes": "2.0.1",
     "@tvmjs/common": "1.2.0",
-    "@tvmjs/rlp": "1.2.0",
+    "@tvmjs/rlp": "1.0.0",
     "@tvmjs/util": "1.2.0"
   },
   "engines": {

@@ -97,7 +97,7 @@
   "dependencies": {
     "@noble/curves": "2.0.1",
     "@noble/hashes": "2.0.1",
-    "@tvmjs/rlp": "1.2.0",
+    "@tvmjs/rlp": "1.0.0",
     "bs58": "6.0.0"
   },
   "devDependencies": {},

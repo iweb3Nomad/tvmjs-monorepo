@@ -6,10 +6,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 (modification: no type change headlines) and this project adheres to
 [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## Unreleased
-
-- Restore Node CLI and cross-context regressions that were accidentally skipped by a function-valued browser check, and execute the CLI decode test instead of registering it as a todo. Keep Node-only checks in the browser-excluded CLI suite; run fixed JSON-compatible vectors with argument-safe process execution.
-
 ## 1.0.0
 
 ### Bug Fixes
@@ -21,5 +17,4 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Rename package namespace from `@ethereumjs/rlp` to `@tvmjs/rlp`
 - Bump package version to `1.0.0`
 - Lock all dependency versions by removing `^` and `~` prefixes
-
 

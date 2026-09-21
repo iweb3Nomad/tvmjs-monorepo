@@ -53,8 +53,8 @@
   "dependencies": {
     "@tvmjs/block": "1.2.0",
     "@tvmjs/common": "1.2.0",
-    "@tvmjs/mpt": "1.2.0",
-    "@tvmjs/rlp": "1.2.0",
+    "@tvmjs/mpt": "1.0.1",
+    "@tvmjs/rlp": "1.0.0",
     "@tvmjs/util": "1.2.0",
     "debug": "4.4.0",
     "eventemitter3": "5.0.1",
