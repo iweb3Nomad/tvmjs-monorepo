@@ -263,7 +263,7 @@ CLI startup output and account-administration endpoints include development mnem
 
 Store mnemonic and private-key values in local files excluded from version control. Keep credential-bearing logs private and restrict access to account-administration endpoints.
 
-The HTTP server exposes CORS on the standard TRON surface. Development controls under `/admin` and `/tre` accept only loopback Host values and reject browser cross-origin requests. Use `TronNode` / `TronProvider`, TronBox, or another local non-browser client for those controls.
+The HTTP server exposes CORS on the standard TRON surface. Development controls under `/admin` and `/tre` accept loopback Host values by default, the configured Host when an explicit address is used, and any valid Host when `host: '*'` is selected. They still reject browser cross-origin requests. Use `TronNode` / `TronProvider`, TronBox, or another non-browser client for those controls.
 
 ## License
 

@@ -1,3 +1,4 @@
+import { request as httpRequest } from 'node:http'
 import { assert, describe, expectTypeOf, it } from 'vitest'
 
 import * as api from '../../src/index.ts'
@@ -7,6 +8,33 @@ import type { AddressInfo } from 'node:net'
 
 const addressOf = (started: api.StartedServer): string =>
   (started.server.address() as AddressInfo).address
+
+async function requestStatus(
+  url: string,
+  host: string,
+  headers: Record<string, string> = {},
+): Promise<{ status: number; cors: string | undefined }> {
+  return new Promise((resolve, reject) => {
+    const request = httpRequest(url, { headers: { host, ...headers } }, (response) => {
+      response.resume()
+      response.once('end', () =>
+        resolve({
+          status: response.statusCode ?? 0,
+          cors: response.headers['access-control-allow-origin'],
+        }),
+      )
+    })
+    request.once('error', reject)
+    request.end()
+  })
+}
+
+async function closeServer(server: api.StartedServer['server']): Promise<void> {
+  server.closeAllConnections()
+  await new Promise<void>((resolve, reject) =>
+    server.close((error) => (error === undefined ? resolve() : reject(error))),
+  )
+}
 
 describe('the public surface', () => {
   it('is the list the packaged builds are held to, name for name', () => {
@@ -86,6 +114,47 @@ describe('the public surface', () => {
       assert.oneOf(addressOf(open), ['::', '0.0.0.0'])
     } finally {
       open.server.close()
+    }
+  })
+
+  it('matches control Host checks to explicit and wildcard bindings', async () => {
+    const node = await api.TronNode.create()
+    const provider = new api.TronProvider(node)
+
+    const namedServer = api.createHttpServer(provider, { host: 'node.example' })
+    await new Promise<void>((resolve, reject) => {
+      namedServer.once('error', reject)
+      namedServer.listen(0, '127.0.0.1', resolve)
+    })
+    const namedPort = (namedServer.address() as AddressInfo).port
+    const namedUrl = `http://127.0.0.1:${namedPort}/admin/accounts-json`
+    try {
+      assert.deepEqual(await requestStatus(namedUrl, 'node.example'), {
+        status: 200,
+        cors: undefined,
+      })
+      assert.deepEqual(await requestStatus(namedUrl, 'other.example'), {
+        status: 403,
+        cors: undefined,
+      })
+    } finally {
+      await closeServer(namedServer)
+    }
+
+    const wildcard = await api.startHttpServer(provider, { host: '*', port: 0 })
+    try {
+      assert.deepEqual(
+        await requestStatus(`${wildcard.url}/admin/accounts-json`, 'other.example'),
+        { status: 200, cors: undefined },
+      )
+      assert.deepEqual(
+        await requestStatus(`${wildcard.url}/admin/accounts-json`, 'other.example', {
+          origin: 'https://other.example',
+        }),
+        { status: 403, cors: undefined },
+      )
+    } finally {
+      await closeServer(wildcard.server)
     }
   })
 

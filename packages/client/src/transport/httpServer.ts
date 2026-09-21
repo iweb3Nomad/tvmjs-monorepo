@@ -119,9 +119,23 @@ function requestHostname(host: string | undefined): string | undefined {
   }
 }
 
-function isLoopbackHost(host: string | undefined): boolean {
-  const hostname = requestHostname(host)
+function isLoopbackHostname(hostname: string): boolean {
   return hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '[::1]'
+}
+
+function isWildcardBindHost(host: string): boolean {
+  return host === '*' || host === '0.0.0.0' || host === '::'
+}
+
+function bindHostname(host: string): string {
+  return isIP(host) === 6 ? `[${host.toLowerCase()}]` : host.toLowerCase()
+}
+
+function isAllowedControlHost(requestHost: string | undefined, bindHost: string): boolean {
+  const hostname = requestHostname(requestHost)
+  if (hostname === undefined) return false
+  if (isWildcardBindHost(bindHost)) return true
+  return isLoopbackHostname(hostname) || hostname === bindHostname(bindHost)
 }
 
 function sendForbidden(res: ServerResponse): void {
@@ -260,7 +274,12 @@ async function serveRPC(
   }
 }
 
-async function handle(provider: TronProvider, req: IncomingMessage, res: ServerResponse) {
+async function handle(
+  provider: TronProvider,
+  req: IncomingMessage,
+  res: ServerResponse,
+  bindHost: string,
+) {
   const log = providerCore(provider).log
   setCommonHeaders(res)
   // a version this connection cannot speak is answered before the target is
@@ -283,7 +302,7 @@ async function handle(provider: TronProvider, req: IncomingMessage, res: ServerR
   if (controlRoute) {
     const fetchSite = req.headers['sec-fetch-site']
     if (
-      !isLoopbackHost(req.headers.host) ||
+      !isAllowedControlHost(req.headers.host, bindHost) ||
       req.headers.origin !== undefined ||
       fetchSite === 'cross-site'
     ) {
@@ -415,15 +434,16 @@ async function handle(provider: TronProvider, req: IncomingMessage, res: ServerR
   }
 }
 
-export function createHttpServer(provider: TronProvider): Server {
+export function createHttpServer(provider: TronProvider, opts: { host?: string } = {}): Server {
   const log = providerCore(provider).log
+  const bindHost = opts.host ?? '127.0.0.1'
   const server = createServer({ maxHeaderSize: MAX_HEADER_BYTES }, (req, res) => {
     const http = { method: 'HTTP', path: '' }
     void log.scope(async () => {
       try {
         http.method = req.method ?? 'GET'
         http.path = targetURL(req.url ?? '/').pathname
-        await handle(provider, req, res)
+        await handle(provider, req, res, bindHost)
       } catch (err) {
         log.failure('HTTP response failed', 'ERROR')
         if (!res.headersSent) {
@@ -462,7 +482,7 @@ export async function startHttpServer(
   opts: { host?: string; port?: number } = {},
 ): Promise<StartedServer> {
   const host = opts.host ?? '127.0.0.1'
-  const server = createHttpServer(provider)
+  const server = createHttpServer(provider, { host })
   try {
     await new Promise<void>((resolve, reject) => {
       server.once('error', reject)
