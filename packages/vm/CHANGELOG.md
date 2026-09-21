@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+- Add an experimental java-tron RPC Client PoC that loads blocks, transactions, accounts,
+  balances, code and storage for local read-only TVM execution, compares the result with
+  `triggerconstantcontract`, and reports snapshot consistency and Energy differences.
+
 - Verify 71 measured java-tron execution cases through signed local transactions with both StateManagers. Compare execution Energy and state separately from transaction-envelope overhead, and correct storage-transition expectations for zero slots already written in the transaction.
 
 ### Breaking Changes

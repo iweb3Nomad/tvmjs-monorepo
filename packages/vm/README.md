@@ -225,6 +225,10 @@ EIP-2930 and EIP-1559 transactions remain available as TVMJS transaction formats
 
 ## Examples
 
+For a read-only java-tron RPC state adapter, local TVM execution, and a
+`triggerconstantcontract` result comparison, see the experimental
+[TRON RPC Client PoC](./examples/TRON_RPC_POC.md).
+
 See the [examples](./examples/) folder for different meaningful examples on how to use the VM package and invoke certain aspects of it, e.g. running a complete block, a certain tx or using event listeners, among others. Some noteworthy examples to point out:
 
 1. [./examples/run-blockchain](./examples/run-blockchain.ts): Loads tests data, including accounts and blocks, and runs all of them in the VM.
