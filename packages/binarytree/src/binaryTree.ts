@@ -15,7 +15,7 @@ import debug from 'debug'
 
 import { CheckpointDB } from './db/index.ts'
 import { InternalBinaryNode } from './node/internalNode.ts'
-import { StemBinaryNode } from './node/stemNode.ts'
+import { StemBinaryNode, assertValidSuffixIndex } from './node/stemNode.ts'
 import { decodeBinaryNode, isInternalBinaryNode, isStemBinaryNode } from './node/util.ts'
 import { type BinaryTreeOpts, ROOT_DB_KEY } from './types.ts'
 
@@ -137,6 +137,7 @@ export class BinaryTree {
   async get(stem: Uint8Array, suffixes: number[]): Promise<(Uint8Array | null)[]> {
     if (stem.length !== 31)
       throw EthereumJSErrorWithoutCode(`expected stem with length 31; got ${stem.length}`)
+    suffixes.forEach(assertValidSuffixIndex)
     this.DEBUG && this.debug(`Stem: ${bytesToHex(stem)}; Suffix: ${suffixes}`, ['get'])
     const stemPath = await this.findPath(stem)
     if (stemPath.node instanceof StemBinaryNode) {
@@ -171,6 +172,7 @@ export class BinaryTree {
       throw EthereumJSErrorWithoutCode(
         `expected number of values (${values.length}) to equal number of suffixes (${suffixes.length})`,
       )
+    suffixes.forEach(assertValidSuffixIndex)
 
     this.DEBUG && this.debug(`Stem: ${bytesToHex(stem)}`, ['put'])
     const putStack: [Uint8Array, BinaryNode | null][] = [] // A stack of updated nodes starting with the stem node being updated/created to be saved to the DB
