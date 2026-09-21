@@ -115,9 +115,10 @@ export class Common {
     if (opts.eips) {
       this.setEIPs(opts.eips)
     }
-    if (opts.activatedProposals !== undefined) {
+    const activatedProposals = opts.activatedProposals ?? chain.defaultActivatedProposals ?? []
+    if (activatedProposals.length > 0) {
       const supported = Object.keys(tronProposalsDict).join(', ')
-      for (const proposalId of opts.activatedProposals) {
+      for (const proposalId of activatedProposals) {
         if (!Number.isSafeInteger(proposalId) || proposalId <= 0) {
           throw EthereumJSErrorWithoutCode(
             `Invalid proposal ID: ${proposalId} (must be a positive safe integer), supported proposals: ${supported}`,
@@ -129,7 +130,7 @@ export class Common {
           )
         }
       }
-      this._activatedProposals = [...new Set(opts.activatedProposals)].sort((a, b) => a - b)
+      this._activatedProposals = [...new Set(activatedProposals)].sort((a, b) => a - b)
     }
     this.customCrypto = { ...opts.customCrypto }
 
@@ -500,8 +501,8 @@ export class Common {
   }
 
   /**
-   * Checks if a TRON governance proposal is activated, i.e. was passed in
-   * with the {@link CommonOpts.activatedProposals} constructor option.
+   * Checks if a TRON governance proposal is activated by the chain preset or
+   * the {@link CommonOpts.activatedProposals} constructor option.
    *
    * Common exposes proposal state without mutating EIPs or params. Execution
    * consumers may use this state to gate protocol behavior. Unknown proposal

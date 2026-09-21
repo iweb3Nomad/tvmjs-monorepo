@@ -502,8 +502,9 @@ export const eipsDict: EIPsDict = {
    */
   7708: {
     minimumHardfork: Hardfork.Chainstart,
-    // Original Ethereum prerequisites; EIP-7708 is unavailable in the TRON profile.
-    requiredEIPs: [1559, 4788, 6780],
+    // EIP-7708 is unavailable in the TRON profile; keep only metadata for the
+    // still-defined shared prerequisites so the removed 4788 ID is not leaked.
+    requiredEIPs: [1559, 6780],
   },
   /**
    * Description : SLOTNUM opcode

@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Features
+
+- Default `TronMainnet` to Proposal 65 so direct TVM use applies its current memory-opcode Energy. Add `createCurrentTronMainnetCommon()` with the complete v1.2.0 client settings (proposals 65/96 and CLZ), and retain explicit historical overrides including `activatedProposals: []`.
+
 ### Breaking Changes
 
 - Require `ChainConfig.execution: 'tron'`; type historical Ethereum presets as non-executable `EthereumChainData`. Restrict `createCustomCommon()` to `CustomChainConfig` identity/discovery overrides and reject metadata, schedule or options-based chain replacement; supply explicit metadata through a complete configuration.

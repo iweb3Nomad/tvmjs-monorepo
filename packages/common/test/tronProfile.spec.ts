@@ -7,6 +7,7 @@ import {
   TronMainnet,
   TronNile,
   TronShasta,
+  createCurrentTronMainnetCommon,
   createTronChainIdCommon,
   tronExecutionProfile,
 } from '../src/index.ts'
@@ -103,6 +104,24 @@ describe('[Common]: independent TRON execution profile', () => {
     for (const network of ['invalid', '__proto__', 'toString']) {
       assert.throws(() => createTronChainIdCommon(network as any), /Invalid TRON network/)
     }
+  })
+
+  it('offers current mainnet execution settings with historical overrides', () => {
+    const baseline = new Common({ chain: TronMainnet })
+    const current = createCurrentTronMainnetCommon()
+    assert.deepEqual(baseline.activatedProposals(), [65])
+    assert.deepEqual(current.activatedProposals(), [65, 96])
+    assert.isTrue(current.isActivatedEIP(7939))
+    assert.strictEqual(current.chainId(), baseline.chainId())
+    assert.deepEqual(createCurrentTronMainnetCommon().copy().activatedProposals(), [65, 96])
+    assert.deepEqual(
+      createCurrentTronMainnetCommon({ activatedProposals: undefined }).activatedProposals(),
+      [65, 96],
+    )
+
+    const historical = createCurrentTronMainnetCommon({ activatedProposals: [], eips: [] })
+    assert.deepEqual(historical.activatedProposals(), [])
+    assert.isFalse(historical.isActivatedEIP(7939))
   })
 
   it('compares independent execution settings before VM initialization', () => {

@@ -35,6 +35,8 @@ export interface ChainConfig {
   chainId: number | string
   /** Execution profile family. Ethereum network configurations are not executable. */
   execution: 'tron'
+  /** Proposals enabled when the caller does not supply activatedProposals. */
+  defaultActivatedProposals?: number[]
   defaultHardfork?: string
   comment?: string
   url?: string
@@ -169,7 +171,8 @@ export interface BaseOpts {
    * Common stores proposal state without mutating EIPs or params. Execution
    * consumers can use `Common.isActivatedProposal()` to gate protocol
    * behavior. IDs are deduplicated and kept in ascending order; unknown IDs
-   * throw on instantiation. No proposal is activated by default.
+   * throw on instantiation. An explicit array, including `[]`, overrides the
+   * chain preset's defaults.
    */
   activatedProposals?: number[]
 }

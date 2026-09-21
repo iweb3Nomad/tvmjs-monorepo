@@ -10,11 +10,18 @@ import {
 } from '../src/index.ts'
 
 describe('[Common]: TRON proposal gating state', () => {
-  it('should default to no activated proposals', () => {
+  it('should default mainnet to proposal 65', () => {
     const c = new Common({ chain: TronMainnet })
-    assert.deepEqual(c.activatedProposals(), [], 'no proposal should be activated by default')
+    assert.deepEqual(c.activatedProposals(), [65])
+    assert.isTrue(c.isActivatedProposal(65))
     assert.isFalse(c.isActivatedProposal(95))
     assert.isFalse(c.isActivatedProposal(96))
+  })
+
+  it('should allow historical execution to clear mainnet defaults', () => {
+    const c = new Common({ chain: TronMainnet, activatedProposals: [] })
+    assert.deepEqual(c.activatedProposals(), [])
+    assert.isFalse(c.isActivatedProposal(65))
   })
 
   it('should activate proposal 95 only', () => {
@@ -100,7 +107,8 @@ describe('[Common]: TRON proposal gating state', () => {
     )
   })
 
-  it('should register proposals 95/96 in tronProposalsDict', () => {
+  it('should register proposals 65/95/96 in tronProposalsDict', () => {
+    assert.strictEqual(tronProposalsDict[65].name, 'ALLOW_HIGHER_LIMIT_FOR_MAX_CPU_TIME_OF_ONE_TX')
     assert.strictEqual(tronProposalsDict[95].name, 'ALLOW_TVM_PRAGUE')
     assert.strictEqual(tronProposalsDict[96].name, 'ALLOW_TVM_OSAKA')
   })
@@ -111,7 +119,7 @@ describe('[Common]: TRON proposal gating state', () => {
     assert.isTrue(c.isActivatedProposal(96))
     assert.deepEqual(c.activatedProposals(), [95, 96])
     const without = createCustomCommon({ chainId: 123 }, TronMainnet)
-    assert.deepEqual(without.activatedProposals(), [], 'should stay empty when not passed')
+    assert.deepEqual(without.activatedProposals(), [65], 'should inherit the base-chain default')
   })
 
   it('rejects Ethereum genesis configuration even when TRON proposals are supplied', () => {

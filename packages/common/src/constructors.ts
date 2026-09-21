@@ -120,3 +120,15 @@ export function createTronChainIdCommon(network: TronNetwork, opts: BaseOpts = {
     chain: TRON_CHAIN_CONFIGS[network],
   })
 }
+
+/**
+ * Mainnet execution settings used by the local development client in v1.2.0.
+ * For historical replay, supply the proposals and EIPs active at that block instead.
+ */
+export function createCurrentTronMainnetCommon(opts: BaseOpts = {}): Common {
+  return createTronChainIdCommon('mainnet', {
+    ...opts,
+    activatedProposals: opts.activatedProposals ?? [65, 96],
+    eips: opts.eips ?? [7939],
+  })
+}

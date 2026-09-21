@@ -183,11 +183,18 @@ export const Mainnet: EthereumChainData = {
  * The profile applies to the supplied execution context. Block zero is a profile
  * marker, not a historical TRON protocol activation or Ethereum fork hash.
  */
-function createTronExecutionChainConfig(name: string, chainId: number): TronExecutionChainConfig {
+function createTronExecutionChainConfig(
+  name: string,
+  chainId: number,
+  defaultActivatedProposals: number[] = [],
+): TronExecutionChainConfig {
   return {
     execution: 'tron',
     name,
     chainId,
+    ...(defaultActivatedProposals.length === 0
+      ? {}
+      : { defaultActivatedProposals: [...defaultActivatedProposals] }),
     defaultHardfork: 'tron',
     hardforks: [{ name: 'tron', block: 0 }],
     comment: `Execution-only ${name} chainId preset; not a complete TRON network configuration`,
@@ -196,10 +203,11 @@ function createTronExecutionChainConfig(name: string, chainId: number): TronExec
   }
 }
 
-/** Execution-only TRON Mainnet chainId configuration. */
+/** Execution-only TRON Mainnet configuration, defaulting its established Proposal 65 rule. */
 export const TronMainnet: TronExecutionChainConfig = createTronExecutionChainConfig(
   'tron-mainnet',
   728126428,
+  [65],
 )
 
 /** Execution-only TRON Nile testnet chainId configuration. */
