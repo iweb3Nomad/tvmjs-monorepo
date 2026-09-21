@@ -97,7 +97,7 @@ describe('Block Package Coverage Boost', () => {
   })
 
   it('covers createBlockFromJSONRPCProvider tag variations and uncle fetching', async () => {
-    const mockRpcData = {
+    const mockRPCData = {
       ...testdataFromRPCData,
       uncles: ['0x' + 'aa'.repeat(32)],
     }
@@ -112,7 +112,7 @@ describe('Block Package Coverage Boost', () => {
         return {
           ok: true,
           status: 200,
-          json: async () => ({ result: mockRpcData }),
+          json: async () => ({ result: mockRPCData }),
         }
       }
       if (method === 'eth_getUncleByBlockHashAndIndex') {
