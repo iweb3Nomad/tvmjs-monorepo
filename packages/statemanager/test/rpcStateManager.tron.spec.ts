@@ -1,16 +1,23 @@
 import { createBlock } from '@tvmjs/block'
 import { Common, TronMainnet, TronNile, TronShasta } from '@tvmjs/common'
 import { createTVM } from '@tvmjs/tvm'
-import { createFeeMarket1559Tx, createTxFromJSONRPCProvider, createTxFromRPC } from '@tvmjs/tx'
+import {
+  createFeeMarket1559Tx,
+  createLegacyTx,
+  createTxFromJSONRPCProvider,
+  createTxFromRPC,
+} from '@tvmjs/tx'
 import {
   Account,
   bigIntToBytes,
   bytesToBigInt,
   bytesToHex,
+  createAccount,
   createAddressFromPrivateKey,
   createAddressFromString,
   hexToBytes,
   setLengthLeft,
+  tokenIdToKey,
 } from '@tvmjs/util'
 import { createVM, runBlock, runTx } from '@tvmjs/vm'
 import { assert, afterEach, describe, expect, it, vi } from 'vitest'
@@ -252,9 +259,86 @@ describe.each([TronMainnet, TronNile, TronShasta])('RPC state on $name', (chain)
     },
   )
 
-  it('keeps unsupported remote Token registry and state-root operations explicit', async () => {
+  it('returns false for unseeded Token IDs and keeps state-root operations explicit', async () => {
     const state = new RPCStateManager({ common: new Common({ chain }), provider, blockTag })
-    await expect(state.tokenIdExists(1000088n)).rejects.toThrow('Method not implemented')
+    assert.isFalse(await state.tokenIdExists(1000088n))
     assert.throws(() => state.hasStateRoot(), 'function not implemented')
+  })
+
+  it('validates exact locally seeded TRC-10 IDs during runTx', async () => {
+    const common = new Common({ chain })
+    const { block } = await fixture(common)
+    const tokenId = 2n ** 53n + 1n
+    const state = new RPCStateManager({
+      common,
+      provider,
+      blockTag,
+    })
+    // eth_getProof cannot supply TRC-10 balances; the replay caller seeds them locally.
+    await state.putAccount(
+      sender,
+      createAccount({ balance: 1000000n, asset: { [tokenIdToKey(tokenId)]: 5n } }),
+    )
+    const tx = createLegacyTx(
+      { to: recipient, gasLimit: 50000n, gasPrice: 0n, tokenId, tokenValue: 2n },
+      { common },
+    ).sign(privateKey)
+    const result = await runTx(await createVM({ common, stateManager: state }), { tx, block })
+    assert.isUndefined(result.execResult.exceptionError)
+    assert.strictEqual((await state.getAccount(recipient))!.getTokenBalance(tokenId), 2n)
+    assert.isTrue(await state.tokenIdExists(tokenId))
+  })
+
+  it('keeps the local Token registry aligned with cache checkpoints and resets', async () => {
+    const first = 1000088n
+    const second = 1000089n
+    const state = new RPCStateManager({ common: new Common({ chain }), provider, blockTag })
+    await state.putAccount(sender, createAccount({ asset: { [tokenIdToKey(first)]: 1n } }))
+    await state.checkpoint()
+    await state.putAccount(sender, createAccount({ asset: { [tokenIdToKey(second)]: 1n } }))
+    assert.isTrue(await state.tokenIdExists(second))
+    await state.revert()
+    assert.isTrue(await state.tokenIdExists(first))
+    assert.isFalse(await state.tokenIdExists(second))
+
+    await state.checkpoint()
+    await state.putAccount(sender, createAccount({ asset: { [tokenIdToKey(second)]: 1n } }))
+    await state.commit()
+    assert.isTrue(await state.tokenIdExists(second))
+    state.clearCaches()
+    assert.isFalse(await state.tokenIdExists(first))
+    assert.isFalse(await state.tokenIdExists(second))
+  })
+
+  it('queries a snapshot-aware registry resolver and preserves it across copies', async () => {
+    const tokenId = 2n ** 53n + 1n
+    const lookups: [bigint, bigint | 'earliest'][] = []
+    const state = new RPCStateManager({
+      common: new Common({ chain }),
+      provider,
+      blockTag,
+      tokenIdExists: (id, at) => {
+        lookups.push([id, at])
+        return id === tokenId
+      },
+    })
+    const copy = state.shallowCopy()
+    assert.isFalse(await copy.tokenIdExists(tokenId - 1n))
+    copy.setBlockTag(blockTag + 1n)
+    assert.isTrue(await copy.tokenIdExists(tokenId))
+    assert.deepEqual(lookups, [
+      [tokenId - 1n, blockTag],
+      [tokenId, blockTag + 1n],
+    ])
+  })
+
+  it('rejects a registry resolver that returns a non-boolean value', async () => {
+    const state = new RPCStateManager({
+      common: new Common({ chain }),
+      provider,
+      blockTag,
+      tokenIdExists: () => undefined as unknown as boolean,
+    })
+    await expect(state.tokenIdExists(1000088n)).rejects.toThrow('must return a boolean')
   })
 })

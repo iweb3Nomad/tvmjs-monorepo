@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## Unreleased
 
+### Features
+
+- Give `RPCStateManager` a checkpoint-aware local TRC-10 registry seeded by `putAccount()`, so exact Token transfers can run from explicitly supplied replay state. Allow callers to supplement it with a snapshot-aware `tokenIdExists` resolver, preserved across shallow copies and block-tag changes; require explicit local Token balances because `eth_getProof` does not provide them.
+
 ### Breaking Changes
 
 - Change `tokenIdExists()` to take an exact `bigint` TRC-10 token ID and track the MerkleStateManager token registry by `bigint`. Custom `StateManagerInterface` implementations must update the signature.

@@ -14,6 +14,7 @@ import {
   intToHex,
   isDebugEnabled,
   toBytes,
+  tokenIdFromKey,
 } from '@tvmjs/util'
 import debugDefault from 'debug'
 
@@ -35,6 +36,8 @@ export class RPCStateManager implements StateManagerInterface {
   protected _debug: Debugger
   protected DEBUG: boolean
   private keccakFunction: Function
+  private readonly _tokenIdExists?: RPCStateManagerOpts['tokenIdExists']
+  private _tokenIdStack: Set<bigint>[] = [new Set()]
   public readonly common: Common
 
   constructor(opts: RPCStateManagerOpts) {
@@ -49,6 +52,10 @@ export class RPCStateManager implements StateManagerInterface {
     }
 
     this._blockTag = opts.blockTag === 'earliest' ? opts.blockTag : bigIntToHex(opts.blockTag)
+    if (opts.tokenIdExists !== undefined && typeof opts.tokenIdExists !== 'function') {
+      throw EthereumJSErrorWithoutCode('tokenIdExists must be a function')
+    }
+    this._tokenIdExists = opts.tokenIdExists
 
     this._caches = new Caches({ storage: { size: 100000 }, code: { size: 100000 } })
 
@@ -68,6 +75,7 @@ export class RPCStateManager implements StateManagerInterface {
       provider: this._provider,
       blockTag: this._blockTag === 'earliest' ? 'earliest' : BigInt(this._blockTag),
       common: this.common.copy(),
+      tokenIdExists: this._tokenIdExists,
     })
   }
 
@@ -89,6 +97,7 @@ export class RPCStateManager implements StateManagerInterface {
   clearCaches(): void {
     this._caches.clear()
     this.originalStorageCache.clear()
+    this._tokenIdStack = [new Set()]
   }
 
   /**
@@ -252,11 +261,14 @@ export class RPCStateManager implements StateManagerInterface {
         }`,
       )
     }
+    const tokenIds = account === undefined ? [] : Object.keys(account.asset).map(tokenIdFromKey)
     if (account !== undefined) {
       this._caches.account!.put(address, account)
     } else {
       this._caches.account!.del(address)
     }
+    const registry = this._tokenIdStack[this._tokenIdStack.length - 1]
+    for (const tokenId of tokenIds) registry.add(tokenId)
   }
 
   /**
@@ -311,6 +323,7 @@ export class RPCStateManager implements StateManagerInterface {
    */
   async checkpoint(): Promise<void> {
     this._caches.checkpoint()
+    this._tokenIdStack.push(new Set(this._tokenIdStack[this._tokenIdStack.length - 1]))
   }
 
   /**
@@ -321,6 +334,7 @@ export class RPCStateManager implements StateManagerInterface {
    */
   async commit(): Promise<void> {
     this._caches.commit()
+    this._tokenIdStack.splice(-2, 1)
   }
 
   /**
@@ -331,6 +345,7 @@ export class RPCStateManager implements StateManagerInterface {
    */
   async revert(): Promise<void> {
     this._caches.revert()
+    this._tokenIdStack.pop()
   }
 
   async flush(): Promise<void> {
@@ -356,9 +371,17 @@ export class RPCStateManager implements StateManagerInterface {
     throw EthereumJSErrorWithoutCode('function not implemented')
   }
 
-  // TODO TRON implement token in rpc state manager
-  async tokenIdExists(_tokenId: bigint): Promise<boolean> {
-    throw EthereumJSErrorWithoutCode('Method not implemented.')
+  async tokenIdExists(tokenId: bigint): Promise<boolean> {
+    if (this._tokenIdStack[this._tokenIdStack.length - 1].has(tokenId)) return true
+    if (this._tokenIdExists === undefined) {
+      return false
+    }
+    const blockTag = this._blockTag === 'earliest' ? 'earliest' : BigInt(this._blockTag)
+    const exists = await this._tokenIdExists(tokenId, blockTag)
+    if (typeof exists !== 'boolean') {
+      throw EthereumJSErrorWithoutCode('tokenIdExists must return a boolean')
+    }
+    return exists
   }
 }
 
