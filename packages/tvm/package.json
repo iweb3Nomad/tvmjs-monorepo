@@ -72,7 +72,7 @@
     "rollup-plugin-visualizer": "5.14.0",
     "rustbn-wasm": "0.4.0",
     "split": "1.0.1",
-    "tronweb": "6.4.0"
+    "tronweb": "6.5.1"
   },
   "engines": {
     "node": ">=20"
