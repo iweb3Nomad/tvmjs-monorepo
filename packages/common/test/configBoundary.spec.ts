@@ -159,4 +159,13 @@ describe('TRON configuration boundaries', () => {
     const overrides = Object.assign(Object.create(null), { chainId: 123 })
     assert.strictEqual(createCustomCommon(overrides, TronMainnet).chainId(), 123n)
   })
+
+  it('rejects non-array activatedProposals', () => {
+    for (const invalid of [123, '65', new Set([65]), {}]) {
+      assert.throws(
+        () => new Common({ chain: TronMainnet, activatedProposals: invalid as any }),
+        /activatedProposals must be an array of proposal IDs/,
+      )
+    }
+  })
 })

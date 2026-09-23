@@ -938,6 +938,23 @@ describe('TVM Coverage Boost Suite', () => {
       cti(runState, common)
       expect(runState.stack.pop()).toBe(1000001n)
 
+      runState.interpreter.getCallTokenValue = () => 1n << 63n
+      let tokenValueError: unknown
+      try {
+        ctv(runState, common)
+      } catch (error) {
+        tokenValueError = error
+      }
+      expect(tokenValueError).toMatchObject({ error: TVMError.errorMessages.VALUE_OVERFLOW })
+      runState.interpreter.getCallTokenId = () => 1n << 63n
+      let tokenIdError: unknown
+      try {
+        cti(runState, common)
+      } catch (error) {
+        tokenIdError = error
+      }
+      expect(tokenIdError).toMatchObject({ error: TVMError.errorMessages.INVALID_TOKENID })
+
       const isContract = handlers.get(0xd4)!
       runState.stack.push(1n)
       await isContract(runState, common)
@@ -3368,6 +3385,10 @@ describe('TVM Coverage Boost Suite', () => {
 
       // 1. message.ts uncovered error branches and getters
       expect(() => new Message({ gasLimit: 1000n, tokenId: 10n })).toThrow(/less than/)
+      expect(() => new Message({ gasLimit: 1000n, tokenId: 1n << 63n })).toThrow(/signed 64-bit/)
+      expect(
+        () => new Message({ gasLimit: 1000n, tokenId: 1000001n, tokenValue: 1n << 63n }),
+      ).toThrow(/signed 64-bit/)
       expect(() => new Message({ gasLimit: 1000n, tokenId: 0n, tokenValue: 100n })).toThrow(
         /must be zero/,
       )

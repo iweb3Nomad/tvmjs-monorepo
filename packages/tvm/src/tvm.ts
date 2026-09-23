@@ -8,6 +8,7 @@ import {
   EthereumJSErrorWithoutCode,
   KECCAK256_NULL,
   KECCAK256_RLP,
+  MAX_INT64,
   MAX_INTEGER,
   bytesToUnprefixedHex,
   createBlockLevelAccessList,
@@ -1517,6 +1518,9 @@ export class TVM implements TVMInterface {
   }
 
   protected async _reduceSenderTokenBalance(account: Account, message: Message): Promise<void> {
+    if (message.tokenValue === BIGINT_0) {
+      return
+    }
     const newBalance = this._getTokenBalance(account, message.tokenId) - message.tokenValue
     if (newBalance < BIGINT_0) {
       throw new TVMError(TVMError.errorMessages.INSUFFICIENT_TOKEN_BALANCE)
@@ -1557,8 +1561,11 @@ export class TVM implements TVMInterface {
   }
 
   protected async _addToTokenBalance(toAccount: Account, message: MessageWithTo): Promise<void> {
+    if (message.tokenValue === BIGINT_0) {
+      return
+    }
     const newBalance = this._getTokenBalance(toAccount, message.tokenId) + message.tokenValue
-    if (newBalance > MAX_INTEGER) {
+    if (newBalance > MAX_INT64) {
       throw new TVMError(TVMError.errorMessages.VALUE_OVERFLOW)
     }
     if (toAccount.asset && message.tokenId !== BIGINT_0) {

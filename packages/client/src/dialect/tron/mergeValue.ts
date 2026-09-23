@@ -141,6 +141,7 @@ function tokensAt(body: string, start: number): MergeToken[] {
   const tokens: MergeToken[] = []
   let at = start + 1
   while (at < body.length) {
+    const prevAt = at
     const skip = body.slice(at).search(/\S/)
     if (skip < 0) break
     at += skip
@@ -151,6 +152,7 @@ function tokensAt(body: string, start: number): MergeToken[] {
     if (next < 0) break
     at += next
     if (body[at] === ',') at += 1
+    if (at <= prevAt) break
   }
   return tokens
 }

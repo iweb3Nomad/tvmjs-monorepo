@@ -1,4 +1,5 @@
 import { Common, TronMainnet, TronNile, TronShasta } from '@tvmjs/common'
+import { MerklePatriciaTrie } from '@tvmjs/mpt'
 import { MerkleStateManager, SimpleStateManager } from '@tvmjs/statemanager'
 import { SIGNER_A } from '@tvmjs/testdata'
 import { createLegacyTx } from '@tvmjs/tx'
@@ -10,6 +11,32 @@ import { createVM, runTx } from '../../src/index.ts'
 const LOW = 2n ** 53n
 const HIGH = LOW + 1n
 const recipient = createAddressFromString('0x2000000000000000000000000000000000000002')
+
+it('accepts a TRC-10 transfer after rebuilding MerkleStateManager from persisted account state', async () => {
+  const common = new Common({ chain: TronMainnet })
+  const trie = new MerklePatriciaTrie({ useKeyHashing: true, common })
+  const initial = new MerkleStateManager({ common, trie })
+  await initial.putAccount(
+    SIGNER_A.address,
+    createAccount({
+      balance: 10n ** 18n,
+      asset: { [tokenIdToKey(1000001n)]: 5n },
+    }),
+  )
+
+  // A new manager has no write-derived registry, but reads the account from
+  // the persisted trie. The sender asset entry must be enough to validate it.
+  const restarted = new MerkleStateManager({ common, trie })
+  const vm = await createVM({ common, stateManager: restarted })
+  const tx = createLegacyTx(
+    { to: recipient, gasLimit: 100000n, gasPrice: 10n, tokenId: 1000001n, tokenValue: 3n },
+    { common },
+  ).sign(SIGNER_A.privateKey)
+
+  const result = await runTx(vm, { tx })
+  assert.isUndefined(result.execResult.exceptionError)
+  assert.strictEqual((await restarted.getAccount(recipient))!.getTokenBalance(1000001n), 3n)
+})
 
 for (const chain of [TronMainnet, TronNile, TronShasta]) {
   for (const StateManager of [SimpleStateManager, MerkleStateManager]) {

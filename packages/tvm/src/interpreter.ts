@@ -1053,6 +1053,7 @@ export class Interpreter {
       value,
       data,
       isStatic: this._env.isStatic,
+      callcode: true,
       depth: this._env.depth + 1,
       accessWitness: this._env.accessWitness,
     })
@@ -1117,7 +1118,7 @@ export class Interpreter {
     msg.gasRefund = this._runState.gasRefund
     msg.tronTransactionContext = this._env.tronTransactionContext
 
-    if (this._env.address.equals(msg.codeAddress)) {
+    if (!msg.delegatecall && !msg.callcode && msg.to !== undefined && msg.caller.equals(msg.to)) {
       if (msg.value > BIGINT_0) {
         trap(TVMError.errorMessages.CAN_NOT_TRANSFER_TRX_YOURSELF)
       }

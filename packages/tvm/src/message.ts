@@ -1,4 +1,10 @@
-import { BIGINT_0, EthereumJSErrorWithoutCode, MIN_TOKEN_ID, createZeroAddress } from '@tvmjs/util'
+import {
+  BIGINT_0,
+  EthereumJSErrorWithoutCode,
+  MAX_INT64,
+  MIN_TOKEN_ID,
+  createZeroAddress,
+} from '@tvmjs/util'
 
 import type { BinaryTreeAccessWitnessInterface } from '@tvmjs/common'
 import type { Address, PrefixedHexString } from '@tvmjs/util'
@@ -15,6 +21,7 @@ const defaults = {
   isStatic: false,
   isCompiled: false,
   delegatecall: false,
+  callcode: false,
   gasRefund: BIGINT_0,
 }
 
@@ -42,6 +49,7 @@ interface MessageOpts {
    */
   createdAddresses?: Set<PrefixedHexString>
   delegatecall?: boolean
+  callcode?: boolean
   gasRefund?: bigint
   accessWitness?: BinaryTreeAccessWitnessInterface
   tronTransactionContext?: TronTransactionContext
@@ -99,6 +107,7 @@ export class Message {
    */
   createdAddresses?: Set<PrefixedHexString>
   delegatecall: boolean
+  callcode: boolean
   gasRefund: bigint // Keeps track of the gasRefund at the start of the frame (used for journaling purposes)
   accessWitness?: BinaryTreeAccessWitnessInterface
   tronTransactionContext?: TronTransactionContext
@@ -122,6 +131,7 @@ export class Message {
     this.selfdestruct = opts.selfdestruct
     this.createdAddresses = opts.createdAddresses
     this.delegatecall = opts.delegatecall ?? defaults.delegatecall
+    this.callcode = opts.callcode ?? defaults.callcode
     this.gasRefund = opts.gasRefund ?? defaults.gasRefund
     this.accessWitness = opts.accessWitness
     this.tronTransactionContext = opts.tronTransactionContext
@@ -138,6 +148,16 @@ export class Message {
     if (this.tokenValue < BIGINT_0) {
       throw EthereumJSErrorWithoutCode(
         `tokenValue field cannot be negative, received ${this.tokenValue}`,
+      )
+    }
+    if (this.tokenId > MAX_INT64) {
+      throw EthereumJSErrorWithoutCode(
+        `tokenId field must fit in a signed 64-bit integer, received ${this.tokenId}`,
+      )
+    }
+    if (this.tokenValue > MAX_INT64) {
+      throw EthereumJSErrorWithoutCode(
+        `tokenValue field must fit in a signed 64-bit integer, received ${this.tokenValue}`,
       )
     }
     if (this.value < BIGINT_0) {

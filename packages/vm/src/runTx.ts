@@ -573,13 +573,18 @@ async function _runTx(
     }
 
     if (tokenId !== BIGINT_0 && tokenValue > BIGINT_0) {
-      const tokenExists = await state.tokenIdExists(tokenId)
+      // The sender's persisted asset map is authoritative for a transfer. The
+      // in-memory token registry is only a supplement and is empty after a
+      // state manager is reconstructed from an existing trie root.
+      const tokenKey = tokenIdToKey(tokenId)
+      const senderHasToken = Object.prototype.hasOwnProperty.call(fromAccount.asset, tokenKey)
+      const tokenExists = senderHasToken || (await state.tokenIdExists(tokenId))
       if (!tokenExists) {
         throw EthereumJSErrorWithoutCode('No asset !')
       }
 
       if (fromAccount.asset && Object.keys(fromAccount.asset).length !== 0) {
-        const senderTokenBalance = fromAccount.asset[tokenIdToKey(tokenId)]
+        const senderTokenBalance = fromAccount.asset[tokenKey]
         if (senderTokenBalance === undefined) {
           throw EthereumJSErrorWithoutCode('assetBalance must greater than 0.')
         }

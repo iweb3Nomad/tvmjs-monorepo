@@ -126,6 +126,18 @@ describe('[BaseTransaction]', () => {
     assert.strictEqual(legacyTx.tokenValue, 1n)
   })
 
+  it('rejects TRON token fields above signed int64', () => {
+    const maxInt64 = (1n << 63n) - 1n
+    assert.throws(
+      () => createLegacyTx({ tokenId: maxInt64 + 1n }, { common }),
+      /tokenId must fit in a signed 64-bit integer/,
+    )
+    assert.throws(
+      () => createLegacyTx({ tokenValue: maxInt64 + 1n }, { common }),
+      /tokenValue must fit in a signed 64-bit integer/,
+    )
+  })
+
   it('Initialization', () => {
     for (const txType of txTypes) {
       let tx = txType.create.txData({}, { common })

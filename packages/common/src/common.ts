@@ -115,6 +115,11 @@ export class Common {
     if (opts.eips) {
       this.setEIPs(opts.eips)
     }
+    if (opts.activatedProposals !== undefined && !Array.isArray(opts.activatedProposals)) {
+      throw EthereumJSErrorWithoutCode(
+        `activatedProposals must be an array of proposal IDs, received ${typeof opts.activatedProposals}`,
+      )
+    }
     const activatedProposals = opts.activatedProposals ?? chain.defaultActivatedProposals ?? []
     if (activatedProposals.length > 0) {
       const supported = Object.keys(tronProposalsDict).join(', ')

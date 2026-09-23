@@ -16,6 +16,7 @@ import {
   BIGINT_224,
   BIGINT_255,
   BIGINT_256,
+  MAX_INT64,
   MAX_INTEGER_BIGINT,
   MIN_TOKEN_ID,
   TWO_POW256,
@@ -65,7 +66,7 @@ export type OpHandler = SyncOpHandler | AsyncOpHandler
 
 // java-tron converts TRC-10 token IDs with BigInteger.longValueExact(), so values above the
 // positive signed 64-bit range are invalid even though the TVM stack itself stores uint256 values.
-const MAX_TRON_TOKEN_ID = (BIGINT_1 << 63n) - BIGINT_1
+const MAX_TRON_TOKEN_ID = MAX_INT64
 
 function isValidTronTokenId(tokenId: bigint): boolean {
   return tokenId > MIN_TOKEN_ID && tokenId <= MAX_TRON_TOKEN_ID
@@ -1616,6 +1617,10 @@ export const handlers: Map<number, OpHandler> = new Map([
         trap(TVMError.errorMessages.STATIC_STATE_CHANGE)
       }
 
+      if (value < BIGINT_0 || value > MAX_INT64) {
+        trap(TVMError.errorMessages.VALUE_OVERFLOW)
+      }
+
       if (tokenId !== BIGINT_0 && !isValidTronTokenId(tokenId)) {
         trap(TVMError.errorMessages.INVALID_TOKENID)
       }
@@ -1670,14 +1675,22 @@ export const handlers: Map<number, OpHandler> = new Map([
   [
     0xd2,
     function (runState: RunState) {
-      runState.stack.push(runState.interpreter.getCallTokenValue())
+      const tokenValue = runState.interpreter.getCallTokenValue()
+      if (tokenValue < BIGINT_0 || tokenValue > MAX_INT64) {
+        trap(TVMError.errorMessages.VALUE_OVERFLOW)
+      }
+      runState.stack.push(tokenValue)
     },
   ],
   // 0xd3: CALLTOKENID
   [
     0xd3,
     function (runState: RunState) {
-      runState.stack.push(runState.interpreter.getCallTokenId())
+      const tokenId = runState.interpreter.getCallTokenId()
+      if (tokenId < BIGINT_0 || tokenId > MAX_INT64) {
+        trap(TVMError.errorMessages.INVALID_TOKENID)
+      }
+      runState.stack.push(tokenId)
     },
   ],
   // 0xd4: ISCONTRACT

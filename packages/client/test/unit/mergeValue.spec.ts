@@ -317,4 +317,12 @@ describe('locating a field in the request text', () => {
     assert.strictEqual(tokens[count - 1].column, (member.length + 1) * (count - 1) + 6)
     assert.isBelow(elapsed, 2_000)
   }, 30_000)
+
+  it('terminates and does not hang on malformed array with unexpected token', () => {
+    const raw = '{"amount":[}]}&amount=1'
+    const params: HandlerParams = { amount: 1 }
+    params[RAW_BODY] = raw
+    const tokens = fieldTokens(params, 'amount')
+    assert.isTrue(tokens.length >= 1)
+  })
 })

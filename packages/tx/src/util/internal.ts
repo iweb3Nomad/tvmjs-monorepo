@@ -3,6 +3,7 @@ import {
   Address,
   BIGINT_0,
   EthereumJSErrorWithoutCode,
+  MAX_INT64,
   MAX_INTEGER,
   MAX_UINT64,
   bigIntToHex,
@@ -220,6 +221,17 @@ export function sharedConstructor(
 
   // EIP-2681 limits nonce to 2^64-1 (cannot equal 2^64-1)
   valueOverflowCheck({ nonce: tx.nonce }, 64, true)
+
+  // TRON legacy transactions carry token_id and call_token_value as signed
+  // protobuf int64 values. Keep them bounded before they reach the TVM stack.
+  for (const [key, value] of [
+    ['tokenId', tx.tokenId],
+    ['tokenValue', tx.tokenValue],
+  ] as const) {
+    if (value < BIGINT_0 || value > MAX_INT64) {
+      throw EthereumJSErrorWithoutCode(`${key} must fit in a signed 64-bit integer, given ${value}`)
+    }
+  }
 
   // EIP-7825: Transaction Gas Limit Cap
   if (tx.common.isActivatedEIP(7825)) {
