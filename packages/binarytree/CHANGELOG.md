@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
+- Clear child references and update ancestor hashes when deleting a stem's last value, including nested branches, so deleted values cannot remain reachable
 - Keep checkpoint reads and final batch commits coherent with the optional LRU cache so speculative puts and deletions cannot be masked by stale cached values
 
 ### Chores

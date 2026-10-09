@@ -218,7 +218,8 @@ export class BinaryTree {
     }
 
     // If all values are null then we treat this as a deletion.
-    if (stemNode.values.every((val) => val === null)) {
+    const deletingStem = stemNode.values.every((val) => val === null)
+    if (deletingStem) {
       if (foundPath.node !== null) {
         this.DEBUG && this.debug(`Deleting stem node for stem: ${bytesToHex(stem)}`, ['put'])
         putStack.push([this.merkelize(stemNode), null])
@@ -233,11 +234,12 @@ export class BinaryTree {
     // Get the bit representation of the stem.
     const stemBits = bytesToBits(stemNode.stem)
     // We keep a reference to the current "parent" node path as we update up the tree.
-    let lastUpdatedParentPath: number[] = []
+    let lastUpdatedParentPath = stemBits
 
     // Step 2: Add any needed new internal nodes if inserting a new stem.
     //         If updating an existing stem, just update the parent internal node reference
-    if (foundPath.stack.length > 1) {
+    //         Deletions clear existing parent references in Step 3 instead.
+    if (!deletingStem && foundPath.stack.length > 1) {
       // Pop the nearest node on the path.
       const [nearestNode, nearestNodePath] = foundPath.stack.pop()!
       const parentPath = foundPath.stack[foundPath.stack.length - 1]?.[1] ?? []
@@ -258,12 +260,14 @@ export class BinaryTree {
     while (foundPath.stack.length > 1) {
       const [node, path] = foundPath.stack.pop()!
       if (isInternalBinaryNode(node)) {
-        // Set child pointer to the last internal node in the putStack (last updated internal node)
-        node.setChild(lastUpdatedParentPath[lastUpdatedParentPath.length - 1], {
-          hash: putStack[putStack.length - 1][0], // Reuse hash already computed above
-          path: lastUpdatedParentPath,
-        })
-        putStack.push([this.merkelize(node), node]) // Update node hash and add to putStack
+        // Update or clear the child reference, propagating empty branches toward the root.
+        const [childHash, childNode] = putStack[putStack.length - 1]
+        node.setChild(
+          stemBits[path.length],
+          childNode === null ? null : { hash: childHash, path: lastUpdatedParentPath },
+        )
+        const updatedNode = node.children.every((child) => child === null) ? null : node
+        putStack.push([this.merkelize(updatedNode), updatedNode])
         lastUpdatedParentPath = path
         this.DEBUG &&
           this.debug(`Updated parent internal node hash for path ${path.join(',')}`, ['put'])
@@ -321,17 +325,15 @@ export class BinaryTree {
       }
     } else {
       // For an internal root node, we assign the last update child reference to the root.
-      if (childReference !== null) {
-        rootNode.setChild(
-          stemBits[0],
-          childReference !== null
-            ? {
-                hash: this.merkelize(childReference),
-                path: isStemBinaryNode(childReference) ? stemBits : lastUpdatedParentPath,
-              }
-            : null,
-        )
-      }
+      rootNode.setChild(
+        stemBits[0],
+        childReference !== null
+          ? {
+              hash: this.merkelize(childReference),
+              path: isStemBinaryNode(childReference) ? stemBits : lastUpdatedParentPath,
+            }
+          : null,
+      )
     }
 
     this.root(this.merkelize(rootNode))
