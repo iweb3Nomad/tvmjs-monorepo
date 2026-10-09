@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
+- Reject non-empty `put()` writes when a referenced node on the target path is missing, preserving the state root and database instead of writing the new value into an ancestor branch.
 - Release the trie write lock when `put()`, `del()`, `commit()` or `revert()` throws, so later mutations can proceed after recovery. Publish this fix in `1.0.2`; the already published `1.0.1` does not contain it.
 - Reject an empty Merkle proof when root verification is requested for a non-empty trie. This validation is included in `1.0.2` and is absent from the published `1.0.1`.
 - Keep checkpoint reads and final batch commits coherent with the optional LRU cache so speculative puts and deletions cannot be masked by stale cached values

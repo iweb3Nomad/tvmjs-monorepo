@@ -215,6 +215,7 @@ export class MerklePatriciaTrie {
    * @param key
    * @param value
    * @returns A Promise that resolves once value is stored.
+   * @throws If a node required to store the value is missing from the database.
    */
   async put(
     key: Uint8Array,
@@ -240,7 +241,9 @@ export class MerklePatriciaTrie {
       if (equalsBytes(this.root(), this.EMPTY_TRIE_ROOT)) {
         await this._createInitialNode(appliedKey, value)
       } else {
-        const { remaining, stack } = await this.findPath(appliedKey)
+        // A missing referenced node is an incomplete trie, not an absent key.
+        // Reject it before updating or pruning any part of the path.
+        const { remaining, stack } = await this.findPath(appliedKey, true)
         let ops: BatchDBOp[] = []
         if (this._opts.useNodePruning) {
           const val = await this.get(key)
