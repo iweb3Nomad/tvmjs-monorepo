@@ -51,7 +51,7 @@
     "@noble/hashes": "2.0.1",
     "@tvmjs/binarytree": "1.2.0",
     "@tvmjs/common": "1.2.0",
-    "@tvmjs/mpt": "1.0.1",
+    "@tvmjs/mpt": "1.0.2",
     "@tvmjs/rlp": "1.0.0",
     "@tvmjs/util": "1.2.0",
     "debug": "4.4.0",

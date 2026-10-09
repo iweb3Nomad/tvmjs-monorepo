@@ -50,7 +50,7 @@
     "@noble/hashes": "2.0.1",
     "@tvmjs/block": "1.2.0",
     "@tvmjs/common": "1.2.0",
-    "@tvmjs/mpt": "1.0.1",
+    "@tvmjs/mpt": "1.0.2",
     "@tvmjs/rlp": "1.0.0",
     "@tvmjs/statemanager": "1.2.0",
     "@tvmjs/tvm": "1.2.0",
