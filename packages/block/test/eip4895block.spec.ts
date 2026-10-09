@@ -61,6 +61,7 @@ describe.each([TronMainnet, TronNile, TronShasta])('Unavailable withdrawals on $
     expect(common.isActivatedEIP(4895)).toBe(false)
     expect(() => common.setEIPs([4895])).toThrow()
     expect(block.withdrawals).toBeUndefined()
+    await expect(block.withdrawalsTrieIsValid()).rejects.toThrow('EIP 4895 is not activated')
     expect(block.toJSON()).not.toHaveProperty('withdrawals')
     expect(() => createBlockHeader({ withdrawalsRoot: KECCAK256_RLP }, { common })).toThrow(
       'EIP4895',
@@ -83,5 +84,124 @@ describe.each([TronMainnet, TronNile, TronShasta])('Unavailable withdrawals on $
     expect(() => createBlockFromRLP(RLP.encode(raw), { common })).toThrow(
       'Unsupported block body extension',
     )
+  })
+})
+
+describe.each([true, false])('retained withdrawals trie revalidation (freeze: %s)', (freeze) => {
+  // All supported profiles disable EIP-4895. Stub it only to test the retained validator.
+  const createWithdrawalsCommon = (): Common => {
+    const common = new Common({ chain: TronMainnet })
+    const isActivatedEIP = common.isActivatedEIP.bind(common)
+    common.isActivatedEIP = (eip) => eip === 4895 || isActivatedEIP(eip)
+    common.copy = createWithdrawalsCommon
+    return common
+  }
+  const withdrawal = (index: bigint) =>
+    createWithdrawal({
+      index,
+      validatorIndex: index + 10n,
+      address: `0x${'20'.repeat(20)}`,
+      amount: 1000n + index,
+    })
+
+  it.each(['replace', 'append', 'remove', 'reorder'] as const)(
+    'rejects a changed withdrawal list after %s',
+    async (operation) => {
+      const common = createWithdrawalsCommon()
+      const first = withdrawal(0n)
+      const second = withdrawal(1n)
+      const original = operation === 'remove' || operation === 'reorder' ? [first, second] : [first]
+      const block = createBlock(
+        {
+          header: { withdrawalsRoot: await genWithdrawalsTrieRoot(original) },
+          withdrawals: original,
+        },
+        { common, freeze },
+      )
+      const initialWithdrawals = block.withdrawals!.slice()
+      await expect(block.validateData()).resolves.toBeUndefined()
+
+      // Factories copy the input array; mutate the block's own withdrawal list.
+      switch (operation) {
+        case 'replace':
+          block.withdrawals![0] = second
+          break
+        case 'append':
+          block.withdrawals!.push(second)
+          break
+        case 'remove':
+          block.withdrawals!.pop()
+          break
+        case 'reorder':
+          block.withdrawals!.reverse()
+          break
+      }
+
+      expect(await genWithdrawalsTrieRoot(block.withdrawals!)).not.toEqual(
+        block.header.withdrawalsRoot,
+      )
+      const restored = createBlockFromRLP(block.serialize(), { common, freeze })
+      await expect(restored.validateData()).rejects.toThrow('invalid withdrawals trie')
+      await expect(block.validateData()).rejects.toThrow('invalid withdrawals trie')
+      await expect(block.withdrawalsTrieIsValid()).resolves.toBe(false)
+
+      block.withdrawals!.splice(0, block.withdrawals!.length, ...initialWithdrawals)
+      await expect(block.validateData()).resolves.toBeUndefined()
+    },
+  )
+
+  it('accepts a corrected withdrawal list after a failed validation', async () => {
+    const expected = withdrawal(0n)
+    const block = createBlock(
+      {
+        header: { withdrawalsRoot: await genWithdrawalsTrieRoot([expected]) },
+        withdrawals: [withdrawal(1n)],
+      },
+      { common: createWithdrawalsCommon(), freeze },
+    )
+    await expect(block.validateData()).rejects.toThrow('invalid withdrawals trie')
+
+    block.withdrawals![0] = expected
+
+    await expect(block.validateData()).resolves.toBeUndefined()
+    await expect(block.withdrawalsTrieIsValid()).resolves.toBe(true)
+  })
+
+  it('rechecks withdrawal contents even when array entries are unchanged', async () => {
+    const first = withdrawal(0n)
+    const block = createBlock(
+      {
+        header: { withdrawalsRoot: await genWithdrawalsTrieRoot([first]) },
+        withdrawals: [first],
+      },
+      { common: createWithdrawalsCommon(), freeze },
+    )
+    await expect(block.validateData()).resolves.toBeUndefined()
+
+    block.withdrawals![0].address.bytes[0] = 1
+
+    expect(await genWithdrawalsTrieRoot(block.withdrawals!)).not.toEqual(
+      block.header.withdrawalsRoot,
+    )
+    await expect(block.withdrawalsTrieIsValid()).resolves.toBe(false)
+    await expect(block.validateData()).rejects.toThrow('invalid withdrawals trie')
+  })
+
+  it('does not reuse a previous root after clearing and refilling the list', async () => {
+    const first = withdrawal(0n)
+    const block = createBlock(
+      {
+        header: { withdrawalsRoot: await genWithdrawalsTrieRoot([first]) },
+        withdrawals: [first],
+      },
+      { common: createWithdrawalsCommon(), freeze },
+    )
+    await expect(block.validateData()).resolves.toBeUndefined()
+
+    block.withdrawals!.length = 0
+    await expect(block.validateData()).rejects.toThrow('invalid withdrawals trie')
+    block.withdrawals!.push(withdrawal(1n))
+
+    await expect(block.validateData()).rejects.toThrow('invalid withdrawals trie')
   })
 })

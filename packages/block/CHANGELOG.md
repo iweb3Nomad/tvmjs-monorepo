@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Recompute the transaction trie root on every validation so changes to a Block's transaction list or serialized transaction contents cannot reuse a stale root and bypass header/body consistency checks.
+- Recompute the withdrawals trie root on every validation to avoid stale roots in the retained EIP-4895 validator. Withdrawals remain unavailable in TRON execution profiles.
 - Preserve large decimal RPC difficulty values with direct bigint conversion.
 - Reject inactive RLP block-body extensions instead of silently dropping withdrawals or other trailing fields.
 - Reject RPC transaction-hash arrays with an actionable message requiring full transaction objects; header-only decoding remains available.

@@ -63,11 +63,6 @@ export class Block {
   protected keccakFunction: (msg: Uint8Array) => Uint8Array
   protected sha256Function: (msg: Uint8Array) => Uint8Array
 
-  protected cache: {
-    txTrieRoot?: Uint8Array
-    withdrawalsTrieRoot?: Uint8Array
-  } = {}
-
   /**
    * This constructor takes the values, validates them, assigns them and freezes the object.
    *
@@ -193,17 +188,14 @@ export class Block {
    * @returns True if the transaction trie is valid, false otherwise
    */
   async transactionsTrieIsValid(): Promise<boolean> {
-    let result
     if (this.transactions.length === 0) {
-      result = equalsBytes(this.header.transactionsTrie, KECCAK256_RLP)
-      return result
+      return equalsBytes(this.header.transactionsTrie, KECCAK256_RLP)
     }
 
-    if (this.cache.txTrieRoot === undefined) {
-      this.cache.txTrieRoot = await this.genTxTrie()
-    }
-    result = equalsBytes(this.cache.txTrieRoot, this.header.transactionsTrie)
-    return result
+    // Freezing the Block does not freeze its transaction array or transaction byte fields.
+    // Always compute the root from the current body when validating it.
+    const txTrieRoot = await this.genTxTrie()
+    return equalsBytes(txTrieRoot, this.header.transactionsTrie)
   }
 
   /**
@@ -337,20 +329,16 @@ export class Block {
       throw EthereumJSErrorWithoutCode('EIP 4895 is not activated')
     }
 
-    let result
     if (this.withdrawals!.length === 0) {
-      result = equalsBytes(this.header.withdrawalsRoot!, KECCAK256_RLP)
-      return result
+      return equalsBytes(this.header.withdrawalsRoot!, KECCAK256_RLP)
     }
 
-    if (this.cache.withdrawalsTrieRoot === undefined) {
-      this.cache.withdrawalsTrieRoot = await genWithdrawalsTrieRoot(
-        this.withdrawals!,
-        new MerklePatriciaTrie({ common: this.common }),
-      )
-    }
-    result = equalsBytes(this.cache.withdrawalsTrieRoot, this.header.withdrawalsRoot!)
-    return result
+    // The withdrawal array and its contents remain mutable even when the Block is frozen.
+    const withdrawalsTrieRoot = await genWithdrawalsTrieRoot(
+      this.withdrawals!,
+      new MerklePatriciaTrie({ common: this.common }),
+    )
+    return equalsBytes(withdrawalsTrieRoot, this.header.withdrawalsRoot!)
   }
 
   /**
