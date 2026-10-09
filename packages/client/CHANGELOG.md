@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Reject chain parameters outside JavaScript's safe integer range during node creation and CLI configuration loading, preventing silently rounded fees and resource limits.
 - Preserve the previous mining interval and scheduled tick when switching to instant mining fails. Keep earlier committed blocks and queued transactions retryable, and report their IDs through `BlockTimeChangeError` and JSON-RPC error data.
 
 ## 1.0.0

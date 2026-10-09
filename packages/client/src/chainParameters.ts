@@ -16,7 +16,8 @@ export const TRON_VM_GAS_PRICE = 0n
  * maxDelegateLockPeriod up to one year of blocks). `unfreezeDelayDays` uses
  * the config-side clamp [0, 365]; gate flags hold 0 or 1. Floors of 1 on
  * energyFee and maxDelegateLockPeriod are this node's own: an energy price of
- * 0 breaks the budget arithmetic.
+ * 0 breaks the budget arithmetic. Configuration values must also fit within
+ * JavaScript's safe integer range, even when the protocol ceiling is higher.
  */
 const CHAIN_PARAMETER_RANGES: Record<keyof ChainParameters, { floor: number; ceiling?: number }> = {
   energyFee: { floor: 1 },
@@ -57,11 +58,15 @@ export function chainParameterFault(name: string, value: unknown): string | unde
   const range = CHAIN_PARAMETER_RANGES[name as keyof ChainParameters]
   if (
     typeof value === 'number' &&
-    Number.isInteger(value) &&
+    Number.isSafeInteger(value) &&
     value >= range.floor &&
     (range.ceiling === undefined || value <= range.ceiling)
   ) {
     return undefined
+  }
+  // JSON parsing may already have rounded an unsafe integer before validation.
+  if (typeof value === 'number' && Number.isInteger(value) && !Number.isSafeInteger(value)) {
+    return `must be a safe integer, got ${String(value)}`
   }
   return range.ceiling === undefined
     ? `must be an integer of at least ${range.floor}, got ${String(value)}`

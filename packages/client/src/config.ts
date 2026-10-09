@@ -51,6 +51,7 @@ export interface MnemonicConfig {
 /**
  * The chain parameters this dev chain is born with — one source feeding
  * getchainparameters, the price endpoints and fee charging alike.
+ * Every value must be a non-negative safe integer within its parameter's bounds.
  */
 export interface ChainParameters {
   /** sun per energy unit (getEnergyFee) */

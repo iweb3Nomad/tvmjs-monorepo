@@ -43,6 +43,39 @@ describe('startup configuration validation', () => {
     assert.deepEqual(node.runtime, fromJSON.runtime)
   })
 
+  it('rejects an unsafe chain parameter rounded while parsing JSON', async () => {
+    const config = JSON.parse('{"chainParameters":{"transactionFee":9007199254740993}}')
+    assert.strictEqual(config.chainParameters.transactionFee, 9_007_199_254_740_992)
+    await rejects(TronNode.create(config), {
+      name: 'RangeError',
+      message: 'chainParameters.transactionFee must be a safe integer, got 9007199254740992',
+    })
+  })
+
+  it.each([
+    'transactionFee',
+    'energyFee',
+    'maxFeeLimit',
+    'totalEnergyCurrentLimit',
+    'totalSignNum',
+  ] as const)('rejects unsafe chain parameter %s in programmatic configuration', async (name) => {
+    await rejects(TronNode.create({ chainParameters: { [name]: Number.MAX_SAFE_INTEGER + 1 } }), {
+      name: 'RangeError',
+      message: `chainParameters.${name} must be a safe integer, got 9007199254740992`,
+    })
+  })
+
+  it.each(['transactionFee', 'energyFee'] as const)(
+    'preserves the maximum safe integer for chain parameter %s',
+    async (name) => {
+      const node = await TronNode.create({
+        chainParameters: { [name]: Number.MAX_SAFE_INTEGER },
+      })
+      assert.strictEqual(node.config.chainParameters[name], Number.MAX_SAFE_INTEGER)
+      assert.strictEqual(BigInt(node.config.chainParameters[name]), 9_007_199_254_740_991n)
+    },
+  )
+
   it('accepts optional variables together while retaining configured values', async () => {
     const node = await TronNode.create({
       mnemonic: undefined,

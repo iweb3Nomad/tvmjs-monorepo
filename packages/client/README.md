@@ -154,7 +154,7 @@ Use `chainParameters` to override individual local-chain settings:
 }
 ```
 
-`chainParameters` values are JSON numbers. Parameters omitted from the configuration retain their defaults.
+`chainParameters` values must be non-negative safe integers represented as JSON numbers, at most `9007199254740991` (`Number.MAX_SAFE_INTEGER`). Each parameter's own limits also apply. Node creation rejects larger numbers because parsing them can lose precision. Parameters omitted from the configuration retain their defaults.
 
 ### Program runtime
 

@@ -491,6 +491,11 @@ describe('the command line entry point', () => {
         'chainParameters.freeNetLimit must be an integer between 0 and 100000, got 200000',
       )
       assert.include(
+        await rerun('{"chainParameters":{"transactionFee":9007199254740993}}'),
+        'chainParameters.transactionFee must be a safe integer, got 9007199254740992',
+      )
+      assert.strictEqual(process.exitCode, 1)
+      assert.include(
         await rerun(JSON.stringify({ accounts: [{ privateKey: 'xy', balance: 1 }] })),
         'accounts[0].privateKey holds characters that are not hex digits',
       )
