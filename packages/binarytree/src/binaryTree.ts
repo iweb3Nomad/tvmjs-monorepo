@@ -21,7 +21,7 @@ import { type BinaryTreeOpts, ROOT_DB_KEY } from './types.ts'
 
 import type { PutBatch } from '@tvmjs/util'
 import type { Debugger } from 'debug'
-import type { BinaryNode } from './node/types.ts'
+import type { BinaryNode, ChildBinaryNode } from './node/types.ts'
 
 interface Path {
   node: BinaryNode | null
@@ -218,18 +218,14 @@ export class BinaryTree {
     }
 
     // If all values are null then we treat this as a deletion.
-    const deletingStem = stemNode.values.every((val) => val === null)
-    if (deletingStem) {
-      if (foundPath.node !== null) {
-        this.DEBUG && this.debug(`Deleting stem node for stem: ${bytesToHex(stem)}`, ['put'])
-        putStack.push([this.merkelize(stemNode), null])
-      } else {
-        return // nothing to delete
-      }
-    } else {
-      // Otherwise, we add the new or updated stemNode to the putStack
-      putStack.push([this.merkelize(stemNode), stemNode])
+    if (stemNode.values.every((val) => val === null)) {
+      if (foundPath.node === null) return // nothing to delete
+      this.DEBUG && this.debug(`Deleting stem node for stem: ${bytesToHex(stem)}`, ['put'])
+      await this._deleteStem(stem, foundPath.stack)
+      return
     }
+    // Otherwise, we add the new or updated stemNode to the putStack
+    putStack.push([this.merkelize(stemNode), stemNode])
 
     // Get the bit representation of the stem.
     const stemBits = bytesToBits(stemNode.stem)
@@ -238,8 +234,7 @@ export class BinaryTree {
 
     // Step 2: Add any needed new internal nodes if inserting a new stem.
     //         If updating an existing stem, just update the parent internal node reference
-    //         Deletions clear existing parent references in Step 3 instead.
-    if (!deletingStem && foundPath.stack.length > 1) {
+    if (foundPath.stack.length > 1) {
       // Pop the nearest node on the path.
       const [nearestNode, nearestNodePath] = foundPath.stack.pop()!
       const parentPath = foundPath.stack[foundPath.stack.length - 1]?.[1] ?? []
@@ -260,14 +255,12 @@ export class BinaryTree {
     while (foundPath.stack.length > 1) {
       const [node, path] = foundPath.stack.pop()!
       if (isInternalBinaryNode(node)) {
-        // Update or clear the child reference, propagating empty branches toward the root.
-        const [childHash, childNode] = putStack[putStack.length - 1]
-        node.setChild(
-          stemBits[path.length],
-          childNode === null ? null : { hash: childHash, path: lastUpdatedParentPath },
-        )
-        const updatedNode = node.children.every((child) => child === null) ? null : node
-        putStack.push([this.merkelize(updatedNode), updatedNode])
+        // Set child pointer to the last internal node in the putStack (last updated internal node)
+        node.setChild(stemBits[path.length], {
+          hash: putStack[putStack.length - 1][0], // Reuse hash already computed above
+          path: lastUpdatedParentPath,
+        })
+        putStack.push([this.merkelize(node), node]) // Update node hash and add to putStack
         lastUpdatedParentPath = path
         this.DEBUG &&
           this.debug(`Updated parent internal node hash for path ${path.join(',')}`, ['put'])
@@ -340,6 +333,66 @@ export class BinaryTree {
     putStack.push([this._root, rootNode])
     this.DEBUG && this.debug(`Updated root hash to ${bytesToHex(this._root)}`, ['put'])
     await this.saveStack(putStack)
+    await this.persistRoot()
+  }
+
+  /**
+   * Removes an emptied stem and collapses branches left with a single stem, so the
+   * resulting root equals the root of a tree built from the remaining stems only.
+   * @param stem - the stem being removed
+   * @param stack - the path from the root to the stem's parent as returned by `findPath`
+   */
+  private async _deleteStem(stem: Uint8Array, stack: Array<[BinaryNode, number[]]>) {
+    const stemBits = bytesToBits(stem)
+    // A stem root is the stem being deleted itself.
+    if (stack.length === 1 && isStemBinaryNode(stack[0][0])) stack = []
+
+    const putStack: [Uint8Array, BinaryNode | null][] = []
+    // Reference that replaces the subtree below the current node (null if it is empty).
+    let replacement: ChildBinaryNode | null = null
+    // Whether `replacement` may still be lifted further up (empty or single stem subtree).
+    let collapsing = true
+
+    while (stack.length > 0) {
+      const [node, path] = stack.pop()!
+      if (!isInternalBinaryNode(node)) {
+        throw EthereumJSErrorWithoutCode(
+          `Expected internal node at path ${path.join(',')}, got ${node}`,
+        )
+      }
+      node.setChild(stemBits[path.length], replacement)
+
+      if (collapsing) {
+        const remaining = node.children.filter((child) => child !== null)
+        if (remaining.length === 0) {
+          replacement = null
+          continue
+        }
+        if (remaining.length === 1) {
+          const sibling = await this._loadNode(remaining[0].hash)
+          if (isStemBinaryNode(sibling)) {
+            replacement = { hash: remaining[0].hash, path: bytesToBits(sibling.stem) }
+            continue
+          }
+        }
+        collapsing = false
+      }
+
+      const hash = this.merkelize(node)
+      putStack.push([hash, node])
+      replacement = { hash, path }
+    }
+
+    this.root(replacement === null ? this.EMPTY_TREE_ROOT : replacement.hash)
+    this.DEBUG && this.debug(`Updated root hash to ${bytesToHex(this._root)}`, ['put'])
+    await this.saveStack(putStack)
+    await this.persistRoot()
+  }
+
+  private async _loadNode(hash: Uint8Array): Promise<BinaryNode> {
+    const rawNode = await this._db.get(hash)
+    if (rawNode === undefined) throw EthereumJSErrorWithoutCode(`missing node ${bytesToHex(hash)}`)
+    return decodeBinaryNode(rawNode)
   }
 
   /**

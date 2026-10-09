@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Bug Fixes
 
 - Clear child references and update ancestor hashes when deleting a stem's last value, including nested branches, so deleted values cannot remain reachable
+- Collapse branches left with a single stem after deletion, so the state root equals the root of a tree built from the remaining stems only
+- Accept non-existence proofs that end at an internal node or at an empty root in `verifyBinaryProof()` instead of throwing a `TypeError`
+- Persist the root after every `put()`/`del()` when `useRootPersistence` is enabled, and read the persisted root back with the key encoding used for writing
 - Keep checkpoint reads and final batch commits coherent with the optional LRU cache so speculative puts and deletions cannot be masked by stale cached values
 
 ### Chores

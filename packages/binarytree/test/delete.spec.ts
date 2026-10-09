@@ -1,3 +1,4 @@
+import { MapDB } from '@tvmjs/util'
 import { assert, describe, it } from 'vitest'
 
 import { createBinaryTree } from '../src/index.ts'
@@ -124,5 +125,60 @@ describe('delete', () => {
     assert.deepEqual(await tree.get(stem, [1]), [])
     assert.deepEqual(await tree.shallowCopy(false).get(stem, [1]), [])
     assert.deepEqual(await tree.get(siblingStem, [0]), [value])
+  })
+
+  it('matches the root of a tree built from the remaining stems', async () => {
+    // Deterministic LCG so failures are reproducible.
+    let seed = 7
+    const nextByte = () => {
+      seed = (Math.imul(seed, 1103515245) + 12345) >>> 0
+      return seed >>> 24
+    }
+    for (let trial = 0; trial < 100; trial++) {
+      const unique = new Map<string, Uint8Array>()
+      for (let i = 0; i < 2 + (trial % 7); i++) {
+        const stem = new Uint8Array(31).map(nextByte)
+        // Every third trial shares a 240-bit prefix to exercise deep branches.
+        if (trial % 3 === 0) stem.fill(0, 0, 30)
+        unique.set(stem.join(','), stem)
+      }
+      const stems = [...unique.values()]
+      const valueFor = (stem: Uint8Array) => new Uint8Array(32).fill(stem[30] | 1)
+      const tree = await createBinaryTree({ cacheSize: trial % 2 === 0 ? 0 : 32 })
+      for (const stem of stems) await tree.put(stem, [stem[30]], [valueFor(stem)])
+
+      const removed = stems.filter((_, i) => (i + trial) % 2 === 0)
+      const kept = stems.filter((_, i) => (i + trial) % 2 !== 0)
+      for (const stem of removed) await tree.del(stem, [stem[30]])
+
+      const expected = await createBinaryTree()
+      for (const stem of kept) await expected.put(stem, [stem[30]], [valueFor(stem)])
+      assert.deepEqual(tree.root(), expected.root(), `trial ${trial}`)
+      for (const stem of kept) assert.deepEqual(await tree.get(stem, [stem[30]]), [valueFor(stem)])
+      for (const stem of removed) assert.deepEqual(await tree.get(stem, [stem[30]]), [])
+    }
+  })
+
+  it('persists the root after puts and deletions', async () => {
+    const db = new MapDB<string, Uint8Array>()
+    const tree = await createBinaryTree({ db, useRootPersistence: true })
+    const stems = [new Uint8Array(31), new Uint8Array(31).fill(0xff)]
+    const value = new Uint8Array(32).fill(1)
+
+    for (const stem of stems) {
+      await tree.put(stem, [0], [value])
+      assert.deepEqual(
+        (await createBinaryTree({ db, useRootPersistence: true })).root(),
+        tree.root(),
+      )
+    }
+    for (const stem of stems) {
+      await tree.del(stem, [0])
+      assert.deepEqual(
+        (await createBinaryTree({ db, useRootPersistence: true })).root(),
+        tree.root(),
+      )
+    }
+    assert.deepEqual(tree.root(), tree.EMPTY_TREE_ROOT)
   })
 })
