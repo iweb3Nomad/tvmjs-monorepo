@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Flush StatefulBinaryTreeStateManager account, code and storage changes directly to the binary tree so committed updates and account deletions survive cache clearing. Keep storage read-cache values RLP-encoded for subsequent reads.
 - Implement SimpleStateManager's local TRC-10 registry using exact IDs from account assets, with nested checkpoint rollback and independent shallow copies. Normal Token transfers through `runTx()` no longer fail with an unimplemented-method error.
 - Preserve MerkleStateManager Token registrations in shallow copies. Copy the registry and trie root from before the outermost open checkpoint, excluding uncommitted registrations and keeping subsequent writes isolated.
 
