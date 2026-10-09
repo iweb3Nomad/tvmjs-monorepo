@@ -2,6 +2,7 @@ import { createServer } from 'node:http'
 import { isIP } from 'node:net'
 
 import { CLIENT_NAME, CLIENT_VERSION } from '../config.ts'
+import { BlockTimeChangeError } from '../core/mining.ts'
 import { BodyFormatError, allowHeader } from '../dialect/httpDialect.ts'
 import { defaultRegistry } from '../dialect/index.ts'
 import { TextBody } from '../dialect/registry.ts'
@@ -269,7 +270,11 @@ async function serveRPC(
     sendJSON(dialect, res, 200, {
       jsonrpc: '2.0',
       id,
-      error: { code, message: String((err as Error).message ?? err) },
+      error: {
+        code,
+        message: String((err as Error).message ?? err),
+        ...(err instanceof BlockTimeChangeError ? { data: err.data } : {}),
+      },
     })
   }
 }

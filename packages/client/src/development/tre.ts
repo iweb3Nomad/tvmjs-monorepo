@@ -17,7 +17,11 @@ export interface TreApi {
   mine(blocks?: number): Promise<NodeBlock>
   /** Advance time by whole seconds and mine a block. */
   increaseTime(seconds: number): Promise<NodeBlock>
-  /** Set the mining interval in seconds; zero mines each transaction immediately. */
+  /**
+   * Set the mining interval in seconds; zero drains the queue before enabling instant mining.
+   * A failed drain throws BlockTimeChangeError with committed and pending transaction IDs,
+   * preserving the previous interval and timer.
+   */
   blockTime(seconds: number): Promise<void>
   /** Set a balance in sun and mine a block. */
   setAccountBalance(account: string, balance: IntegerInput): Promise<true>

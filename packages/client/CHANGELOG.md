@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Preserve the previous mining interval and scheduled tick when switching to instant mining fails. Keep earlier committed blocks and queued transactions retryable, and report their IDs through `BlockTimeChangeError` and JSON-RPC error data.
+
 ## 1.0.0
 
 - Add a local TRON development node with deterministic accounts, mining and chain controls, a `/wallet/*` HTTP API, and programmatic `TronNode` / `TronProvider` interfaces.

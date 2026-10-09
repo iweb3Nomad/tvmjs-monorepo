@@ -199,6 +199,8 @@ The client mines each transaction in its own block by default. Set `tre_blockTim
 | `tre_increaseTime` | `[seconds]` | Advances chain time, mines a block, and returns the new block timestamp in milliseconds. |
 | `tre_blockTime` | `[seconds]` | Sets the mining interval in seconds, from 0 to 60. |
 
+Switching to `0` drains pending transactions into separate blocks before the mode changes. If a block fails, already committed blocks remain, and the previous interval and timer stay active for the remaining queue. The JSON-RPC error uses code `-32000` and includes `data` with `requestedBlockTime`, `activeBlockTime`, `committedTransactionIds`, and `pendingTransactionIds` (64-character hexadecimal IDs without `0x`). Programmatic calls throw `BlockTimeChangeError` with the same `data` and the original `cause`. These lists describe the queue at failure; query transaction receipts before retrying because interval mining continues.
+
 Mine three blocks:
 
 ```sh

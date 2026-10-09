@@ -12,6 +12,7 @@ import { assert, afterEach, beforeEach, describe, it, vi } from 'vitest'
 import { accountsFromMnemonic, resolveConfig } from '../../src/config.ts'
 import { Clock } from '../../src/core/clock.ts'
 import { NodeCore } from '../../src/core/node.ts'
+import { BlockTimeChangeError } from '../../src/index.ts'
 import type { TronNode } from '../../src/node.ts'
 import { TronProvider } from '../../src/provider.ts'
 import { startHttpServer } from '../../src/transport/httpServer.ts'
@@ -556,13 +557,28 @@ describe('instant and interval transaction mining', () => {
     await send(txs[0])
     await send(txs[1])
     const before = await probeState(node)
-    const seal = vi
-      .spyOn(nodeCore(node), 'sealBlock')
-      .mockRejectedValueOnce(new Error('seal unavailable'))
-    await rejects(node.tre.blockTime(0), /seal unavailable/)
+    const cause = new Error('seal unavailable')
+    const seal = vi.spyOn(nodeCore(node), 'sealBlock').mockRejectedValueOnce(cause)
+    await rejects(node.tre.blockTime(0), (error: BlockTimeChangeError) => {
+      assert.instanceOf(error, BlockTimeChangeError)
+      assert.strictEqual(error.cause, cause)
+      assert.deepEqual(error.data, {
+        requestedBlockTime: 0,
+        activeBlockTime: 5,
+        committedTransactionIds: [],
+        pendingTransactionIds: txs.slice(0, 2).map((tx) => tx.txID),
+      })
+      return true
+    })
     assert.deepEqual(await probeState(node), before)
     seal.mockRestore()
     await send(txs[2])
+    assert.strictEqual(nodeCore(node).head().number, before.height)
+    assert.deepEqual(
+      nodeCore(node).pendingIds(),
+      txs.map((tx) => tx.txID),
+    )
+    await setInterval(0)
     for (const [index, tx] of txs.entries()) {
       const receipt = await info(tx.txID)
       assert.strictEqual(receipt.blockNumber, Number(before.height) + index + 1)
@@ -573,6 +589,83 @@ describe('instant and interval transaction mining', () => {
       )
     }
   })
+
+  it.each(['node', 'provider', 'http'] as const)(
+    'keeps the original interval after a partially committed instant switch through %s',
+    async (controls) => {
+      await setInterval(60, controls)
+      const core = nodeCore(node)
+      const before = core.head().number
+      const held = await balance()
+      const txs = [await transfer(100), await transfer(200)]
+      for (const tx of txs) {
+        tx.raw_data.expiration = NOW + 600_000
+        await send(sign(tx))
+        assert.isEmpty(await info(tx.txID))
+      }
+      assert.deepEqual(
+        core.pendingIds(),
+        txs.map((tx) => tx.txID),
+      )
+      assert.strictEqual(core.head().number, before)
+      // A failed switch must preserve the original tick, not restart its 60-second wait.
+      await vi.advanceTimersByTimeAsync(20_000)
+      const sealBlock = core.sealBlock.bind(core)
+      const cause = new Error('seal unavailable')
+      const seal = vi
+        .spyOn(core, 'sealBlock')
+        .mockImplementationOnce(sealBlock)
+        .mockRejectedValueOnce(cause)
+      let failure: { message: string; data?: unknown } | undefined
+      if (controls === 'http') {
+        const reply = await post<{
+          result?: unknown
+          error: { code: number; message: string; data?: unknown }
+        }>('tre', { jsonrpc: '2.0', id: 1, method: 'tre_blockTime', params: [0] })
+        assert.isUndefined(reply.result)
+        assert.strictEqual(reply.error.code, -32000)
+        assert.match(reply.error.message, /seal unavailable/)
+        failure = reply.error
+      } else {
+        await rejects(setInterval(0, controls), (error: BlockTimeChangeError) => {
+          assert.instanceOf(error, BlockTimeChangeError)
+          assert.strictEqual(error.cause, cause)
+          assert.match(error.message, /seal unavailable/)
+          failure = error
+          return true
+        })
+      }
+      seal.mockRestore()
+      const firstReceipt = await info(txs[0].txID)
+      assert.strictEqual(firstReceipt.blockNumber, Number(before + 1n))
+      assert.strictEqual(firstReceipt.blockTimeStamp, NOW)
+      assert.isEmpty(await info(txs[1].txID))
+      assert.strictEqual(core.head().number, before + 1n)
+      assert.strictEqual(await balance(), held + 100)
+      assert.deepEqual(core.pendingIds(), [txs[1].txID])
+      await vi.advanceTimersByTimeAsync(39_999)
+      assert.strictEqual((await head()).block_header.raw_data.number, Number(before + 1n))
+      await vi.advanceTimersByTimeAsync(1)
+      const secondReceipt = await info(txs[1].txID)
+      assert.strictEqual(secondReceipt.blockNumber, Number(before + 2n))
+      assert.strictEqual(secondReceipt.blockTimeStamp, NOW + 60_000)
+      assert.deepEqual(await info(txs[0].txID), firstReceipt)
+      assert.strictEqual(await balance(), held + 300)
+      assert.deepEqual(core.pendingIds(), [])
+      assert.deepEqual(
+        core.blocks
+          .range(before + 1n, core.head().number + 1n)
+          .map((block) => block.txs.map((tx) => tx.txid)),
+        [[txs[0].txID], [txs[1].txID]],
+      )
+      assert.deepEqual(failure?.data, {
+        requestedBlockTime: 0,
+        activeBlockTime: 60,
+        committedTransactionIds: [txs[0].txID],
+        pendingTransactionIds: [txs[1].txID],
+      })
+    },
+  )
 
   it('rejects pending duplicates and owns a copy of programmatically submitted transactions', async () => {
     await setInterval(5)

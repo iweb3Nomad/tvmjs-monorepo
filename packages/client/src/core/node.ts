@@ -24,7 +24,11 @@ import { AssetRegistry } from './assets.ts'
 import { BlockStore, BlockStoreBlockchain, rawHeaderOf } from './blockStore.ts'
 import { Clock } from './clock.ts'
 import { executeTransaction } from './execution.ts'
-import { DuplicateTransactionError, TransactionRejectedError } from './mining.ts'
+import {
+  BlockTimeChangeError,
+  DuplicateTransactionError,
+  TransactionRejectedError,
+} from './mining.ts'
 import { rawHeaderHash, transactionMerkleRoot } from './tronBlock.ts'
 import { MAX_BLOCK_TIME_SECONDS, MAX_MINE_BLOCKS, requireInteger } from './validation.ts'
 import {
@@ -968,19 +972,16 @@ export class NodeCore {
 
   private async minePendingIndividually(): Promise<void> {
     for (const transaction of this.pendingTransactions.values()) {
-      await this.produceBlock([transaction], { allowEmpty: false })
+      await this.produceBlock([transaction], { allowEmpty: false, intervalSeconds: 0 })
     }
   }
 
   private async produceBlock(
     transactions: PendingTransaction[],
-    { skipRejected = true, allowEmpty = true } = {},
+    { skipRejected = true, allowEmpty = true, intervalSeconds = this.blockTimeSeconds } = {},
   ): Promise<BlockRecord> {
     const parent = this.head()
-    const timestampMs = Math.max(
-      this.clock.nowMs(),
-      parent.timestampMs + this.blockTimeSeconds * 1000,
-    )
+    const timestampMs = Math.max(this.clock.nowMs(), parent.timestampMs + intervalSeconds * 1000)
     requireInteger(timestampMs, 'block time')
     this.blockTimestampMs = timestampMs
     const rejected: { txid: string; error: unknown }[] = []
@@ -1055,19 +1056,36 @@ export class NodeCore {
   /**
    * Zero mines each transaction immediately. A positive interval queues
    * transactions for the next block. Switching back drains the existing queue
-   * one transaction per block before completing.
+   * one transaction per block before changing the mode or cancelling its timer.
+   * A failed drain preserves committed blocks and the previous mining mode.
    */
   async setBlockTime(seconds: number): Promise<void> {
     requireInteger(seconds, 'block time', 0, MAX_BLOCK_TIME_SECONDS)
     return this.withWriteLock(async () => {
+      if (seconds === 0) {
+        const pendingIds = this.pendingIds()
+        try {
+          await this.minePendingIndividually()
+        } catch (cause) {
+          throw new BlockTimeChangeError(
+            {
+              requestedBlockTime: 0,
+              activeBlockTime: this.blockTimeSeconds,
+              committedTransactionIds: pendingIds.filter((txid) => this.txs.has(txid)),
+              pendingTransactionIds: this.pendingIds(),
+            },
+            cause,
+          )
+        }
+      }
+      // Interval ticks wait on this lock. Keep their timer valid until the drain
+      // succeeds, so a failure preserves both the mode and the next scheduled tick.
       if (this.blockTimer !== undefined) {
         clearInterval(this.blockTimer)
         this.blockTimer = undefined
       }
       this.blockTimeSeconds = seconds
-      if (seconds === 0) {
-        await this.minePendingIndividually()
-      } else {
+      if (seconds > 0) {
         const timer = this.lockHolder.exit(() =>
           setInterval(() => {
             void this.withWriteLock(async () => {
