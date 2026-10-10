@@ -214,6 +214,9 @@ export class MerkleStateManager implements StateManagerInterface {
     }
 
     this._caches?.deleteAccount(address)
+    // Storage tries are indexed by the hashed address, as in _getStorageTrie().
+    const storageTrieKey = bytesToUnprefixedHex(this.keccakFunction(address.bytes))
+    delete this._storageTries[storageTrieKey]
 
     if (this._caches?.account === undefined) {
       await this._trie.del(address.bytes)
@@ -383,11 +386,6 @@ export class MerkleStateManager implements StateManagerInterface {
       const storageTrie = this._getStorageTrie(address, account)
 
       modifyTrie(storageTrie, async () => {
-        // update storage cache
-        // Using deprecated bytesToUnprefixedHex for performance: used as object keys for trie cache lookups.
-        const addressHex = bytesToUnprefixedHex(address.bytes)
-        this._storageTries[addressHex] = storageTrie
-
         // update contract storageRoot
         account.storageRoot = storageTrie.root()
         await this.putAccount(address, account)
@@ -581,8 +579,8 @@ export class MerkleStateManager implements StateManagerInterface {
 
   /**
    * Gets the state-root of the Merkle-Patricia trie representation
-   * of the state of this StateManager. Will error if there are uncommitted
-   * checkpoints on the instance.
+   * of the state of this StateManager, flushing cached writes first.
+   * Open checkpoints remain available for commit or revert after this call.
    * @returns {Promise<Uint8Array>} - Returns the state-root of the `StateManager`
    */
   async getStateRoot(): Promise<Uint8Array> {
