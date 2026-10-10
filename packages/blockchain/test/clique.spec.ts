@@ -797,6 +797,112 @@ describe('Clique: Initialization', () => {
   })
 })
 
+describe('Clique: Redundant votes', () => {
+  const reload = async (blockchain: Blockchain) =>
+    createBlockchain({
+      common: blockchain.common,
+      genesisBlock: blockchain.genesisBlock,
+      db: blockchain.db,
+      validateBlocks: true,
+      validateConsensus: true,
+      consensusDict: { [ConsensusAlgorithm.Clique]: new CliqueConsensus() },
+    })
+
+  describe.each([false, true])('reload after voting: %s', (reopen) => {
+    const cases: {
+      name: string
+      vote?: [Signer, boolean]
+      expected: Signer[]
+      nextSigner: Signer
+    }[] = [
+      { name: 'no vote', expected: [SIGNER_A], nextSigner: SIGNER_A },
+      {
+        name: 'redundant authorization',
+        vote: [SIGNER_A, true],
+        expected: [SIGNER_A],
+        nextSigner: SIGNER_A,
+      },
+      {
+        name: 'redundant removal',
+        vote: [SIGNER_B, false],
+        expected: [SIGNER_A],
+        nextSigner: SIGNER_A,
+      },
+      {
+        name: 'valid authorization',
+        vote: [SIGNER_B, true],
+        expected: [SIGNER_A, SIGNER_B],
+        nextSigner: SIGNER_B,
+      },
+    ]
+
+    it.each(cases)(
+      'continues producing blocks after $name',
+      async ({ vote, expected, nextSigner }) => {
+        const initial = await initWithSigners([SIGNER_A])
+        const { blocks } = initial
+        let { blockchain } = initial
+        await addNextBlock(blockchain, blocks, SIGNER_A, vote)
+        if (reopen) blockchain = await reload(blockchain)
+
+        const expectedAddresses = expected.map((signer) => signer.address)
+        assert.deepEqual(
+          (blockchain.consensus as CliqueConsensus).cliqueActiveSigners(2n),
+          expectedAddresses,
+        )
+        const second = await addNextBlock(blockchain, blocks, nextSigner)
+        assert.strictEqual(second.header.number, 2n)
+        assert.deepEqual((await blockchain.getCanonicalHeadBlock()).hash(), second.hash())
+        assert.deepEqual(
+          (blockchain.consensus as CliqueConsensus).cliqueActiveSigners(3n),
+          expectedAddresses,
+        )
+      },
+    )
+
+    it.each([
+      { name: 'A', beneficiary: SIGNER_A },
+      { name: 'B', beneficiary: SIGNER_B },
+    ])('ignores a majority authorizing existing signer $name', async ({ beneficiary }) => {
+      const initial = await initWithSigners([SIGNER_A, SIGNER_B])
+      const { blocks } = initial
+      let { blockchain } = initial
+      await addNextBlock(blockchain, blocks, SIGNER_A, [beneficiary, true])
+      await addNextBlock(blockchain, blocks, SIGNER_B, [beneficiary, true])
+      if (reopen) blockchain = await reload(blockchain)
+
+      assert.deepEqual((blockchain.consensus as CliqueConsensus).cliqueActiveSigners(3n), [
+        SIGNER_A.address,
+        SIGNER_B.address,
+      ])
+      await addNextBlock(blockchain, blocks, SIGNER_A)
+
+      // A real membership change must still work after the redundant votes.
+      await addNextBlock(blockchain, blocks, SIGNER_B, [SIGNER_C, true])
+      await addNextBlock(blockchain, blocks, SIGNER_A, [SIGNER_C, true])
+      assert.deepEqual((blockchain.consensus as CliqueConsensus).cliqueActiveSigners(6n), [
+        SIGNER_A.address,
+        SIGNER_B.address,
+        SIGNER_C.address,
+      ])
+    })
+  })
+
+  it('preserves the signer list across an epoch after repeated redundant authorizations', async () => {
+    const common = cliqueCommon(3)
+    const { blocks, blockchain } = await initWithSigners([SIGNER_A], common)
+    await addNextBlock(blockchain, blocks, SIGNER_A, [SIGNER_A, true], undefined, common)
+    await addNextBlock(blockchain, blocks, SIGNER_A, [SIGNER_A, true], undefined, common)
+    await addNextBlock(blockchain, blocks, SIGNER_A, undefined, [SIGNER_A], common)
+    const fourth = await addNextBlock(blockchain, blocks, SIGNER_A, undefined, undefined, common)
+
+    assert.strictEqual(fourth.header.number, 4n)
+    assert.deepEqual((blockchain.consensus as CliqueConsensus).cliqueActiveSigners(5n), [
+      SIGNER_A.address,
+    ])
+  })
+})
+
 describe('clique: reorgs', () => {
   it('Two signers, voting to add one other signer, then reorg and revoke this addition', async () => {
     const { blocks, blockchain } = await initWithSigners([SIGNER_A, SIGNER_B])

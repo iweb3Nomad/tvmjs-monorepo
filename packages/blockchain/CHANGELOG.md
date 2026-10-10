@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Ignore redundant Clique authorizations of active signers and removals of inactive signers when applying voting majorities, preventing duplicate members and false `recently signed` errors after database reload.
 - Update database caches only after a batch succeeds, so a failed block import cannot leave a cached parent that allows its child to be imported without a stored parent.
 - Remove the London activation-block fee override. Validate fees against the parent's `calcNextBaseFee()` and retain normal gas-limit bounds, rejection behavior and canonical-head selection.
 - Migrate Geth allocation examples and genesis regressions to explicitly supplied local TRON metadata after removal of the Geth execution constructor; preserve the allocation state root and custom consensus contracts.
