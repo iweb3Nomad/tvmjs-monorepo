@@ -160,6 +160,7 @@ export class BinaryTree {
 
   /**
    * Stores a given `value` at the given `key` or performs a deletion if `value` is null.
+   * Concurrent put() and del() calls on this instance are serialized.
    * @param stem - the stem (must be 31 bytes) to store the value at.
    * @param suffixes - array of suffixes at which to store individual values.
    * @param values - the value(s) to store (or null for deletion).
@@ -174,6 +175,20 @@ export class BinaryTree {
       )
     suffixes.forEach(assertValidSuffixIndex)
 
+    await this._lock.acquire()
+    try {
+      await this._put(stem, suffixes, values)
+    } finally {
+      this._lock.release()
+    }
+  }
+
+  /** Updates the tree while the caller holds the write lock, including node and root persistence. */
+  private async _put(
+    stem: Uint8Array,
+    suffixes: number[],
+    values: (Uint8Array | null)[],
+  ): Promise<void> {
     this.DEBUG && this.debug(`Stem: ${bytesToHex(stem)}`, ['put'])
     const putStack: [Uint8Array, BinaryNode | null][] = [] // A stack of updated nodes starting with the stem node being updated/created to be saved to the DB
 
@@ -716,14 +731,16 @@ export class BinaryTree {
    * @throws If not during a checkpoint phase
    */
   async commit(): Promise<void> {
-    if (!this.hasCheckpoints()) {
-      throw EthereumJSErrorWithoutCode('trying to commit when not checkpointed')
-    }
-
     await this._lock.acquire()
-    await this._db.commit()
-    await this.persistRoot()
-    this._lock.release()
+    try {
+      if (!this.hasCheckpoints()) {
+        throw EthereumJSErrorWithoutCode('trying to commit when not checkpointed')
+      }
+      await this._db.commit()
+      await this.persistRoot()
+    } finally {
+      this._lock.release()
+    }
   }
 
   /**
@@ -732,14 +749,16 @@ export class BinaryTree {
    * parent checkpoint as current.
    */
   async revert(): Promise<void> {
-    if (!this.hasCheckpoints()) {
-      throw EthereumJSErrorWithoutCode('trying to revert when not checkpointed')
-    }
-
     await this._lock.acquire()
-    this.root(await this._db.revert())
-    await this.persistRoot()
-    this._lock.release()
+    try {
+      if (!this.hasCheckpoints()) {
+        throw EthereumJSErrorWithoutCode('trying to revert when not checkpointed')
+      }
+      this.root(await this._db.revert())
+      await this.persistRoot()
+    } finally {
+      this._lock.release()
+    }
   }
 
   /**

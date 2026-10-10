@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
+- Serialize `put()` and `del()` through node and root persistence so concurrent writes on one tree cannot lose successful updates. Share the lock with `commit()` and `revert()`, check checkpoint availability under the lock, and always release it on errors.
 - Clear child references and update ancestor hashes when deleting a stem's last value, including nested branches, so deleted values cannot remain reachable
 - Collapse branches left with a single stem after deletion, so the state root equals the root of a tree built from the remaining stems only
 - Accept non-existence proofs that end at an internal node or at an empty root in `verifyBinaryProof()` instead of throwing a `TypeError`
