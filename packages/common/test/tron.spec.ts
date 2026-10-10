@@ -4,6 +4,8 @@ import { assert, describe, it } from 'vitest'
 import {
   Common,
   TronMainnet,
+  TronNile,
+  TronShasta,
   createCustomCommon,
   parseGethGenesis,
   tronProposalsDict,
@@ -18,8 +20,32 @@ describe('[Common]: TRON proposal gating state', () => {
     assert.isFalse(c.isActivatedProposal(96))
   })
 
+  it('should default Nile to proposal 65', () => {
+    const c = new Common({ chain: TronNile })
+    assert.deepEqual(c.activatedProposals(), [65])
+    assert.isTrue(c.isActivatedProposal(65))
+  })
+
+  it('should default Shasta to proposal 65', () => {
+    const c = new Common({ chain: TronShasta })
+    assert.deepEqual(c.activatedProposals(), [65])
+    assert.isTrue(c.isActivatedProposal(65))
+  })
+
   it('should allow historical execution to clear mainnet defaults', () => {
     const c = new Common({ chain: TronMainnet, activatedProposals: [] })
+    assert.deepEqual(c.activatedProposals(), [])
+    assert.isFalse(c.isActivatedProposal(65))
+  })
+
+  it('should allow historical execution to clear Nile defaults', () => {
+    const c = new Common({ chain: TronNile, activatedProposals: [] })
+    assert.deepEqual(c.activatedProposals(), [])
+    assert.isFalse(c.isActivatedProposal(65))
+  })
+
+  it('should allow historical execution to clear Shasta defaults', () => {
+    const c = new Common({ chain: TronShasta, activatedProposals: [] })
     assert.deepEqual(c.activatedProposals(), [])
     assert.isFalse(c.isActivatedProposal(65))
   })

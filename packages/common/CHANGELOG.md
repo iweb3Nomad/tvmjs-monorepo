@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Default the `TronNile` and `TronShasta` presets to Proposal 65 so memory-opcode Energy matches their current testnet schedules. Historical execution can still pass `activatedProposals: []` explicitly. Shasta's [chain parameters](https://api.shasta.trongrid.io/wallet/getchainparameters) reported `getAllowHigherLimitForMaxCpuTimeOfOneTx = 1` when checked on 2026-10-10.
 - Reject inherited and non-enumerable Blob gas fields in `parseGethGenesis()` before copying input properties or invoking their getters.
 - Use the TRON profile for both EIP selection and parameter queries, while allowing queries for supported optional EIPs without activating them.
 - Reject Geth blob schedules explicitly, including empty schedules and entries named `tron`, instead of reporting a misleading unknown-hardfork error.

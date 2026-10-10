@@ -210,16 +210,18 @@ export const TronMainnet: TronExecutionChainConfig = createTronExecutionChainCon
   [65],
 )
 
-/** Execution-only TRON Nile testnet chainId configuration. */
+/** Execution-only TRON Nile configuration, defaulting its established Proposal 65 rule. */
 export const TronNile: TronExecutionChainConfig = createTronExecutionChainConfig(
   'tron-nile',
   3448148188,
+  [65],
 )
 
-/** Execution-only TRON Shasta testnet chainId configuration. */
+/** Execution-only TRON Shasta configuration, defaulting its established Proposal 65 rule. */
 export const TronShasta: TronExecutionChainConfig = createTronExecutionChainConfig(
   'tron-shasta',
   2494104990,
+  [65],
 )
 
 export const Sepolia: EthereumChainData = {

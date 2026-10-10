@@ -50,7 +50,7 @@ The exported `tronExecutionProfile` lists the shared implementation groups expli
 - Baseline execution includes the existing TRON opcode set, transient storage, PUSH0, MCOPY and SELFDESTRUCT behavior.
 - `eips: [7939]` explicitly enables CLZ. `common.eips()` returns explicit selections; `common.isActivatedEIP(id)` includes baseline selections.
 - Unsupported capabilities, including Blob transactions, beacon roots, withdrawals and Ethereum consensus transitions, cannot be activated through `setEIPs()` or a custom hardfork.
-- Mainnet defaults Proposal 65 on so direct TVM use has its current memory-opcode Energy. Pass `activatedProposals: []` for execution before that proposal. Proposal 95 and 96 remain independent governance flags and do not automatically activate CLZ or the complete Prague/Osaka feature sets. Nile and Shasta do not assume proposal history.
+- Mainnet, Nile and Shasta default Proposal 65 on so direct TVM use matches their current memory-opcode Energy. Pass `activatedProposals: []` for execution before that proposal. Proposal 95 and 96 remain independent governance flags and do not automatically activate CLZ or the complete Prague/Osaka feature sets.
 
 For the current mainnet rules used by `@tvmjs/client` in v1.2.0, use
 `createCurrentTronMainnetCommon()`. It selects proposals 65 and 96 and enables
