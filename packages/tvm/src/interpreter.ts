@@ -175,6 +175,7 @@ export class Interpreter {
   private profilerOpts?: TVMProfilerOpts
   private performanceLogger: TVMPerformanceLogger
   private readonly _runCall: (message: Message) => Promise<TVMResult>
+  private _cachedOpcodes?: OpcodeMapEntry[]
 
   // TODO remove gasLeft as constructor argument
   constructor(
@@ -230,6 +231,11 @@ export class Interpreter {
     }
     this.profilerOpts = profilerOpts
     this.performanceLogger = performanceLogs
+  }
+
+  private _resetJumpAnalysis(): void {
+    this._cachedOpcodes = undefined
+    this._runState.shouldDoJumpAnalysis = true
   }
 
   async run(code: Uint8Array, opts: InterpreterOpts = {}): Promise<InterpreterResult> {
@@ -291,8 +297,7 @@ export class Interpreter {
     }
 
     let err
-    let cachedOpcodes: OpcodeMapEntry[]
-    let doJumpAnalysis = true
+    this._resetJumpAnalysis()
 
     let timer: Timer | undefined
     let overheadTimer: Timer | undefined
@@ -306,21 +311,10 @@ export class Interpreter {
       const programCounter = this._runState.programCounter
       let opCode: number
       let opCodeObj: OpcodeMapEntry | undefined
-      if (doJumpAnalysis) {
+      if (this._cachedOpcodes === undefined) {
         opCode = this._runState.code[programCounter]
-        // Only run the jump destination analysis if `code` actually contains a JUMP/JUMPI/JUMPSUB opcode
-        if (opCode === 0x56 || opCode === 0x57 || opCode === 0x5e) {
-          const { jumps, pushes, opcodesCached } = this._getValidJumpDestinations(
-            this._runState.code,
-          )
-          this._runState.validJumps = jumps
-          this._runState.cachedPushes = pushes
-          this._runState.shouldDoJumpAnalysis = false
-          cachedOpcodes = opcodesCached
-          doJumpAnalysis = false
-        }
       } else {
-        opCodeObj = cachedOpcodes![programCounter]
+        opCodeObj = this._cachedOpcodes[programCounter]
         opCode = opCodeObj.opcodeInfo.code
       }
 
@@ -431,8 +425,17 @@ export class Interpreter {
         throw new TVMError(TVMError.errorMessages.INVALID_OPCODE)
       }
 
-      // Reduce opcode's base fee
+      // Charge the opcode's full gas cost before jump analysis or execution.
       this.useGas(gas, opInfo)
+
+      // Analyze only when executing the first JUMP or JUMPI that can pay its gas cost.
+      if (this._runState.shouldDoJumpAnalysis && (opInfo.code === 0x56 || opInfo.code === 0x57)) {
+        const { jumps, pushes, opcodesCached } = this._getValidJumpDestinations(this._runState.code)
+        this._runState.validJumps = jumps
+        this._runState.cachedPushes = pushes
+        this._cachedOpcodes = opcodesCached
+        this._runState.shouldDoJumpAnalysis = false
+      }
 
       // Advance program counter
       this._runState.programCounter++

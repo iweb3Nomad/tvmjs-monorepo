@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Fixes
 
+- Charge the full gas cost of jump instructions before analyzing jump destinations, avoiding full code scans on calls with insufficient gas. Remove the obsolete jump-analysis trigger for MCOPY.
 - Validate explicit EIPs against the same `tronExecutionProfile` used by Common, accepting its base groups as well as optional CLZ. Retired implementations are no longer listed as supported capabilities.
 - Delete unused EIP-1283/EIP-2200 storage-metering modules and EIP-2929 storage/refund/BAL helpers. Retain the address-access helpers used by inactive EOF calls; verify fixed TRON Energy, zero refunds and failure rollback.
 - Remove conflicting EOF data-instruction registrations and fees at `0xd0`–`0xd3`, preserving TRON Token opcode results, stack behavior and Energy costs. Retain independent EOF parsing and reject EOF activation through the TRON profile.
