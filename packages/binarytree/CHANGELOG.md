@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Bug Fixes
 
+- Retain the final checkpoint and its pending changes until the database batch succeeds. Failed commits remain readable and can be retried or reverted to the previous root.
 - Serialize `put()` and `del()` through node and root persistence so concurrent writes on one tree cannot lose successful updates. Share the lock with `commit()` and `revert()`, check checkpoint availability under the lock, and always release it on errors.
 - Clear child references and update ancestor hashes when deleting a stem's last value, including nested branches, so deleted values cannot remain reachable
 - Collapse branches left with a single stem after deletion, so the state root equals the root of a tree built from the remaining stems only
@@ -28,4 +29,3 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Rename package namespace from `@ethereumjs/binarytree` to `@tvmjs/binarytree`; update all internal imports from `@ethereumjs/util` / `@ethereumjs/rlp` to `@tvmjs/util` / `@tvmjs/rlp`
 - Bump package version to `1.0.0`
 - Lock all dependency versions by removing `^` and `~` prefixes (`@noble/hashes`, `debug`, `@types/debug`)
-
