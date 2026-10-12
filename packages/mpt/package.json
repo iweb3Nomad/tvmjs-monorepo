@@ -57,7 +57,7 @@
   },
   "dependencies": {
     "@tvmjs/rlp": "1.0.0",
-    "@tvmjs/util": "1.1.0",
+    "@tvmjs/util": "1.2.0",
     "@noble/hashes": "2.0.1",
     "debug": "4.4.0",
     "lru-cache": "11.0.2"

@@ -17,7 +17,7 @@
     "examples:build": "npm run examples:build --workspaces --if-present",
     "preinstall": "npm run checkNpmVersion",
     "postinstall": "npm run build --workspaces --if-present",
-    "install-browser-deps": "npm install playwright@1.62.1 @vitest/browser@4.1.11 @vitest/browser-playwright@4.1.11",
+    "install-browser-deps": "npm install --save-exact playwright@1.62.1 @vitest/browser@4.1.11 @vitest/browser-playwright@4.1.11",
     "lint": "npm run biome && eslint  --config ./eslint.config.mjs .",
     "lint:diff": "./config/cli/lint-diff.sh",
     "lint:fix": "npm run biome:fix && eslint --fix --config ./eslint.config.mjs .",
